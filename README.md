@@ -7,6 +7,6 @@ Requirements:
 
 PyEvolve. 
 
-To install:
+To install, issue the following command:
 
 pip install https://github.com/perone/Pyevolve/zipball/master
