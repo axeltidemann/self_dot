@@ -137,5 +137,5 @@ And you should be good to go!
  is robust across several cats (I'm not betting my savings on it,
  no). However, it is evident that 10.7 is a *lot* more mature for
  compiling code than 10.8. What about 10.9, you say? Well, by now it
- should be obvious why I _won't_ be upgrading _anytime soon_, since I
+ should be obvious why I won't be upgrading _anytime soon_, since I
  have some colleagues who have. They wish they hadn't.
