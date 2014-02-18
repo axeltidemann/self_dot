@@ -3,44 +3,17 @@ self_dot
 
 An artificial being. Uses evolution to write its own program.
 
-Requirements: 
+# Requirements: 
 
-You should definitely user virtualenvwrapper. These steps depend on
-whether you have virtualenvwrapper installed system-wide or locally
-only. Both are possible. I guess for many systems where you are system
-admin as well, it makes sense to have virtualenvwrapper
-system-wide. In any case, virtualenvwrapper will copy your python and
-include it locally.
+You should definitely user virtualenvwrapper. This assumes you have a virtualenv called self_dot, instantiated like so:
 
-
-
-Download virtualenvXXX.tar.gz
-
-
-
-mkdir ~/.local
-
-cd virtualenv-x-x
-
-python virtualenv.py ~/.local
-
-~/.local/bin/pip install virtualenvwrapper
-
-Changes need in your .profile:
-
-export PATH=$PATH:$HOME/.local/bin
-
-export WORKON_HOME=$HOME/.virtualenvs
-
-export VIRTUALENVWRAPPER_PYTHON=~/.local/bin/python #To avoid using system python, in case it changes over time.
-
-source $HOME/.local/bin/virtualenvwrapper.sh
-
-mkvirtualenv smartgrid
+> mkvirtualenv smartgrid
 
 pip install https://github.com/perone/Pyevolve/zipball/master
 pip install numpy
+pip install scipy
 pip install ipdb
+pip install MDP
 
 Manually installed packages:
 
@@ -50,9 +23,32 @@ Download the tarball, run
 
 python setup.py install
 
+Note: when you install the following software, it is advised that you install them into $VIRTUAL_ENV/local, so they will be contained within the virtualenv, and more robust. This is shown as an example under "Mac stuff".
+
 OpenCV must be installed. Installers can be found here: http://opencv.org
 
-On Mac, this required the installation of CMake http://www.cmake.org/cmake/resources/software.html
+PortAudio: http://www.portaudio.com
+
+libsnd: http://www.mega-nerd.com/libsndfile/
+
+pip install cffi 
+pip install psoundfile
+pip install pysoundcard
+
+
+# Specific mac stuff:
+
+These are some experiences found when installing the software under 10.7 and 10.8.
+
+On Mac 10.7, CMake was required http://www.cmake.org/cmake/resources/software.html 
+
+On 10.7 this had to be set prior to installation of scipy:
+export CC=clang
+export CXX=clang
+
+In order to use the new shared libraries, you must specify where they are.
+
+export DYLD_LIBRARY_PATH=$VIRTUAL_ENV/local/lib 
 
 Important: in order to install OpenCV specific to the virtualenv you
 are using, specify this the following way. This has the advantage that
@@ -67,11 +63,7 @@ cmake -D CMAKE_INSTALL_PREFIX=$VIRTUAL_ENV/local/ -D PYTHON_EXECUTABLE=$VIRTUAL_
 make -j8
 make install 
 
-Note the cmake step: multiple Python versions can be quite a nuisance
-- it will automatically find the one that is system-wide, however I
-prefer to copy the python into the virtualenv as well, making it (in
-theory) more robust towards possible python system changes (as
-mentioned above). HOWEVER: it took me a long time to discover that the
+It took me a long time to discover that the
 flag -D
 PYTHON_LIBRARY=/Library/Frameworks/Python.framework/Versions/2.7/lib/libpython2.7.dylib
 was necessary in order to compile against the correct version -
@@ -96,14 +88,3 @@ make clean
 make -j8
 make install
 
-cffi:
-
-pip install cffi
-pip install psoundfile, pysoundcard
-
-Specific mac stuff:
-
-export CC=clang
-export CXX=clang
-
-export DYLD_LIBRARY_PATH=$VIRTUAL_ENV/local/lib
