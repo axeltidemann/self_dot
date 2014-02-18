@@ -27,9 +27,13 @@ python virtualenv.py ~/.local
 ~/.local/bin/pip install virtualenvwrapper
 
 Changes need in your .profile:
+
 export PATH=$PATH:$HOME/.local/bin
+
 export WORKON_HOME=$HOME/.virtualenvs
+
 export VIRTUALENVWRAPPER_PYTHON=~/.local/bin/python #To avoid using system python, in case it changes over time.
+
 source $HOME/.local/bin/virtualenvwrapper.sh
 
 mkvirtualenv smartgrid
