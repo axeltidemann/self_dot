@@ -5,13 +5,25 @@ An artificial being. Uses evolution to write its own program.
 
 Requirements: 
 
-You should definitely user virtualenvwrapper. 
+You should definitely user virtualenvwrapper. These steps depend on
+whether you have virtualenvwrapper installed system-wide or locally
+only. Both are possible. I guess for many systems where you are system
+admin as well, it makes sense to have virtualenvwrapper
+system-wide. In any case, virtualenvwrapper will copy your python and
+include it locally.
+
+
 
 Download virtualenvXXX.tar.gz
 
+
+
 mkdir ~/.local
+
 cd virtualenv-x-x
+
 python virtualenv.py ~/.local
+
 ~/.local/bin/pip install virtualenvwrapper
 
 Changes need in your .profile:
