@@ -50,9 +50,9 @@ pip install pysoundcard
 
 ## Specific Mac OS X stuff:
 
-These are some experiences found when installing the software under 10.7.5 and 10.8.5
+These are some experiences found when installing the software under 10.7.5 and 10.8.5.
 
-On Mac 10.7.5, CMake was required before installing OpenCV http://www.cmake.org/cmake/resources/software.html 
+On Mac 10.7.5, CMake was required before installing OpenCV: http://www.cmake.org/cmake/resources/software.html 
 
 On 10.7.5 this had to be set prior to installation of scipy:
 
@@ -68,7 +68,7 @@ below. This has the advantage that OpenCV will be installed locally
 *and* linked to the Python version of the virtualenv - if not
 specified this way, it will use the system Python instead, which is
 sure to cause massive headaches and the death of many adorable kittens
-in the future. So upon downloading and unpacking the opencv tarball:
+in the future. So after downloading and unpacking the opencv tarball:
 
 ```
 cd opencv*
@@ -134,7 +134,7 @@ And you should be good to go!
  $VIRTUAL_ENV/local - the programs are also copied, and with the
  DYLD_LIBRARY_PATH set, this is a _very_ smooth transition. Only
  tested for 10.7 -> 10.8 though. It will be interesting to see if this
- is robust across several OSes (I'm not betting my savings on it,
+ is robust across several cats (I'm not betting my savings on it,
  no). However, it is evident that 10.7 is a *lot* more mature for
  compiling code than 10.8. What about 10.9, you say? Well, by now it
  should be obvious why I _won't_ be upgrading _anytime soon_, since I
