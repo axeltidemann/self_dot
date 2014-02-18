@@ -9,21 +9,28 @@ You should definitely user virtualenvwrapper. This assumes you have a virtualenv
 
 > mkvirtualenv smartgrid
 
+Proceed by installing these packages:
+
+```
 pip install https://github.com/perone/Pyevolve/zipball/master
 pip install numpy
 pip install scipy
 pip install ipdb
 pip install MDP
+```
 
-Manually installed packages:
+Unfortunately, there are a few packages that must be installed manually. 
 
 Oger: http://organic.elis.ugent.be/installing_oger
 
 Download the tarball, run 
 
-python setup.py install
+> python setup.py install
 
-Note: when you install the following software, it is advised that you install them into $VIRTUAL_ENV/local, so they will be contained within the virtualenv, and more robust. This is shown as an example under "Mac stuff".
+Note: when you install the following software, it is advised that you
+install them into $VIRTUAL_ENV/local, so they will be contained within
+the virtualenv, and more robust. This is shown as an example under
+"Mac stuff".
 
 OpenCV must be installed. Installers can be found here: http://opencv.org
 
@@ -31,10 +38,11 @@ PortAudio: http://www.portaudio.com
 
 libsnd: http://www.mega-nerd.com/libsndfile/
 
+```
 pip install cffi 
 pip install psoundfile
 pip install pysoundcard
-
+```
 
 # Specific mac stuff:
 
