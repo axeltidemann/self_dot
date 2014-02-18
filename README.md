@@ -34,11 +34,13 @@ install them into $VIRTUAL_ENV/local, so they will be contained within
 the virtualenv, and more robust. This is shown as an example under
 "Mac stuff".
 
-OpenCV must be installed. Installers can be found here: http://opencv.org
+OpenCV: http://opencv.org
 
 PortAudio: http://www.portaudio.com
 
 libsnd: http://www.mega-nerd.com/libsndfile/
+
+OpenCV installs Python bindings by itself. To be able to use the sound software:
 
 ```
 pip install cffi 
