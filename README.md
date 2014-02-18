@@ -50,11 +50,11 @@ pip install pysoundcard
 
 ## Specific Mac OS X stuff:
 
-These are some experiences found when installing the software under 10.7 and 10.8.
+These are some experiences found when installing the software under 10.7.5 and 10.8.5
 
-On Mac 10.7, CMake was required before installing OpenCV http://www.cmake.org/cmake/resources/software.html 
+On Mac 10.7.5, CMake was required before installing OpenCV http://www.cmake.org/cmake/resources/software.html 
 
-On 10.7 this had to be set prior to installation of scipy:
+On 10.7.5 this had to be set prior to installation of scipy:
 
 ```
 export CC=clang
