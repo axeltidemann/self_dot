@@ -7,7 +7,7 @@ An artificial being. Uses evolution to write its own program.
 
 You should definitely user virtualenvwrapper. This assumes you have a virtualenv called self_dot, instantiated like so:
 
-> mkvirtualenv smartgrid
+> mkvirtualenv self_dot
 
 Proceed by installing these packages:
 
@@ -17,6 +17,8 @@ pip install numpy
 pip install scipy
 pip install ipdb
 pip install MDP
+easy_install readline
+pip install ipython
 ```
 
 Unfortunately, there are a few packages that must be installed manually. 
