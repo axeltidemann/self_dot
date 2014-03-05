@@ -29,8 +29,7 @@ def learn(learn_q, brain_q):
     while True:
         photos.append(learn_q.get())
 
-        if len(photos) < 10:
-            print 'Too few examples.'
+        if len(photos) < 2:
             continue
 
         if len(photos) > 20:
