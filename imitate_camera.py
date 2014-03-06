@@ -1,30 +1,36 @@
+# Tries to predict next frame by reading the webcamera. Uses reservoir
+# computing (e.g. Echo State Networks). Input, output and learning in
+# sepearate processes.
+#
+# Author: Axel Tidemann, axel.tidemann@gmail.com
+
 import multiprocessing
 
 import numpy as np
 import cv2
 
 def see(eye_q, memorize_q):
-    cv2.namedWindow("Input", cv2.WINDOW_NORMAL)
+    cv2.namedWindow('Input', cv2.WINDOW_NORMAL)
     camera = cv2.VideoCapture(0)
 
     i = 0
     while True:
         _, frame = camera.read()
-        frame = cv2.resize(frame, (640,360))
+        frame = cv2.resize(frame, (320,180))
         gray_image = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        cv2.imshow("Input", gray_image)    
+        cv2.imshow('Input', gray_image)    
         eye_q.put(np.ndarray.flatten(gray_image)/255.)
-        cv2.waitKey(10)
 
         i += 1
         if i == 100:
             memorize_q.put(np.ndarray.flatten(gray_image)/255.)
             i = 0
+
+        cv2.waitKey(10)
     
 def learn(memorize_q, brain_q):
-    # Interestingly enough, importing Oger in the main file causes
-    # troubles due to the parallelism. But if imported only in this
-    # process, we are right as rain.
+    # Interestingly enough, importing Oger at the top of this file
+    # causes troubles due to the parallelism.
     import Oger
     import mdp
 
@@ -55,7 +61,7 @@ def learn(memorize_q, brain_q):
         print 'Learning phase completed, using', len(photos), 'photos.'
 
 def display(eye_q, brain_q):
-    cv2.namedWindow("Output", cv2.WINDOW_NORMAL)
+    cv2.namedWindow('Output', cv2.WINDOW_NORMAL)
 
     neural_net = brain_q.get()
 
@@ -68,30 +74,22 @@ def display(eye_q, brain_q):
         except:
             pass
 
-        cv2.imshow("Output", np.reshape(neural_net(input_photo), (360,640)))           
-
-def buttons():
-    import Tkinter # Same as with Oger - fine to import it here, disaster elsewhere.
-    top = Tkinter.Tk()
+        cv2.imshow('Output', np.reshape(neural_net(input_photo), (180,320)))           
     
-    def memorize():
-        print 'Remember the time!'
-
-    def forget():
-        print 'Forget the time!'
-
-    Tkinter.Button(top, text='Memorize', command=memorize).pack()
-    Tkinter.Button(top, text='Forget', command=forget).pack()
-    top.mainloop()
-
-if __name__ == "__main__":
+if __name__ == '__main__':
     eye_q = multiprocessing.Queue()
     brain_q = multiprocessing.Queue()
     memorize_q = multiprocessing.Queue()
-    
+        
     multiprocessing.Process(target=see, args=(eye_q, memorize_q)).start()
     multiprocessing.Process(target=learn, args=(memorize_q, brain_q)).start()
     multiprocessing.Process(target=display, args=(eye_q, brain_q)).start()
-    multiprocessing.Process(target=buttons).start()
 
-    cv2.destroyAllWindows()
+    try:
+        raw_input('')
+    except KeyboardInterrupt:
+        map(lambda x: x.terminate(), multiprocessing.active_children())
+
+
+    
+
