@@ -1,11 +1,9 @@
 import multiprocessing
 
 import numpy as np
-import mdp
-from reservoir_nodes import LeakyReservoirNode
 import cv2
 
-def see(photo_q, learn_q):
+def see(eye_q, memorize_q):
     cv2.namedWindow("Input", cv2.WINDOW_NORMAL)
     camera = cv2.VideoCapture(0)
 
@@ -15,19 +13,25 @@ def see(photo_q, learn_q):
         frame = cv2.resize(frame, (640,360))
         gray_image = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         cv2.imshow("Input", gray_image)    
-        photo_q.put(np.ndarray.flatten(gray_image)/255.)
+        eye_q.put(np.ndarray.flatten(gray_image)/255.)
         cv2.waitKey(10)
 
         i += 1
         if i == 100:
-            learn_q.put(np.ndarray.flatten(gray_image)/255.)
+            memorize_q.put(np.ndarray.flatten(gray_image)/255.)
             i = 0
     
-def learn(learn_q, brain_q):
+def learn(memorize_q, brain_q):
+    # Interestingly enough, importing Oger in the main file causes
+    # troubles due to the parallelism. But if imported only in this
+    # process, we are right as rain.
+    import Oger
+    import mdp
+
     photos = []
 
     while True:
-        photos.append(learn_q.get())
+        photos.append(memorize_q.get())
 
         if len(photos) < 2:
             continue
@@ -36,7 +40,7 @@ def learn(learn_q, brain_q):
             photos.pop(np.random.randint(len(photos)-1))
             print '>20 examples. Removing at random.'
 
-        reservoir = LeakyReservoirNode(output_dim=100, leak_rate=0.8, bias_scaling=.2) 
+        reservoir = Oger.nodes.LeakyReservoirNode(output_dim=100, leak_rate=0.8, bias_scaling=.2) 
         readout = mdp.nodes.LinearRegressionNode(use_pinv=True)
         neural_net = mdp.hinet.FlowNode(reservoir + readout)
 
@@ -48,15 +52,15 @@ def learn(learn_q, brain_q):
 
         brain_q.put(neural_net)
 
-        print 'Learning phase completed, using ', len(photos), 'photos.'
+        print 'Learning phase completed, using', len(photos), 'photos.'
 
-def display(photo_q, brain_q):
+def display(eye_q, brain_q):
     cv2.namedWindow("Output", cv2.WINDOW_NORMAL)
 
-    neural_net = False
+    neural_net = brain_q.get()
 
     while True:
-        input_photo = photo_q.get()
+        input_photo = eye_q.get()
         input_photo.shape = (1, input_photo.shape[0])
 
         try:
@@ -64,22 +68,30 @@ def display(photo_q, brain_q):
         except:
             pass
 
-        if not neural_net:
-            output = np.random.rand(360, 640)
-        else:
-            output = np.reshape(neural_net(input_photo), (360,640))
+        cv2.imshow("Output", np.reshape(neural_net(input_photo), (360,640)))           
 
-        cv2.imshow("Output", output)            
+def buttons():
+    import Tkinter # Same as with Oger - fine to import it here, disaster elsewhere.
+    top = Tkinter.Tk()
+    
+    def memorize():
+        print 'Remember the time!'
+
+    def forget():
+        print 'Forget the time!'
+
+    Tkinter.Button(top, text='Memorize', command=memorize).pack()
+    Tkinter.Button(top, text='Forget', command=forget).pack()
+    top.mainloop()
 
 if __name__ == "__main__":
-    photo_q = multiprocessing.Queue()
+    eye_q = multiprocessing.Queue()
     brain_q = multiprocessing.Queue()
-    learn_q = multiprocessing.Queue()
+    memorize_q = multiprocessing.Queue()
     
-    multiprocessing.Process(target=see, args=(photo_q, learn_q)).start()
-    multiprocessing.Process(target=learn, args=(learn_q, brain_q)).start()
-    p = multiprocessing.Process(target=display, args=(photo_q, brain_q))
-    p.start()
-    p.join()
-    
+    multiprocessing.Process(target=see, args=(eye_q, memorize_q)).start()
+    multiprocessing.Process(target=learn, args=(memorize_q, brain_q)).start()
+    multiprocessing.Process(target=display, args=(eye_q, brain_q)).start()
+    multiprocessing.Process(target=buttons).start()
+
     cv2.destroyAllWindows()
