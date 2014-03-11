@@ -74,7 +74,8 @@ def display(eye_q, brain_q):
         except:
             pass
 
-        cv2.imshow('Output', np.reshape(neural_net(input_photo), (180,320)))           
+        cv2.imshow('Output', np.reshape(neural_net(input_photo), (180,320)))
+        cv2.waitKey(1) # Needed for Windows compatability?
     
 if __name__ == '__main__':
     eye_q = multiprocessing.Queue()
