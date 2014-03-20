@@ -14,7 +14,7 @@ import time
 import numpy
 
 cs = csnd6.Csound()
-cs.Compile("self_audio_csnd.csd")
+cs.Compile("self_audio_csnd_test.csd")
 cs.Start()
 stopflag = 0
 #fft_audio_in1 = numpy.zeros(1024)
@@ -23,12 +23,13 @@ offset = 0
 while not stopflag:
     stopflag = cs.PerformKsmps()
     
-    #offset += 0.01
-    #offset %= 200
-    #cs.SetChannel("freq_offset", offset)
+    offset += 0.01
+    offset %= 200
+    cs.SetChannel("freq_offset", offset)
     #test1 = cs.GetPvsChannel(fft_audio_in1, 0)
     #test2 = cs.GetPvsChannel(fft_audio_in2, 1)
 
+    # get Csound channel data
     level1 = cs.GetChannel("level1")
     level2 = cs.GetChannel("level2")
     envelope1 = cs.GetChannel("envelope1")
@@ -43,7 +44,7 @@ while not stopflag:
         
     # set Csound channel data
     cs.SetChannel("imitateLevel1", level1)
-    cs.SetChannel("imitateEnvelope1", envelope1)
+    cs.SetChannel("simitateEnvelope1", envelope1)
     cs.SetChannel("imitatePitch1", pitch1)
     cs.SetChannel("imitateCentroid1", centr1)
 

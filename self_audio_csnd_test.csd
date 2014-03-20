@@ -17,7 +17,7 @@
 ; analysis  of audio input 
 	instr 1  
 
-/*
+
 	; test tone
 	iamp	= ampdbfs(-5)
 	icps	= 220
@@ -28,9 +28,9 @@
 
 	a1	soundin "fox.wav"
 	a2	= 0
-*/
+
 	; live audio input
-	a1,a2	inch 1,2
+	;a1,a2	inch 1,2
 
 
 
@@ -159,8 +159,8 @@ endif
 
 <CsScore>
 ; run for N sec
-i1 0 86400
-i2 0 86400
+i1 0 10
+i2 0 10
 
 </CsScore>
 
