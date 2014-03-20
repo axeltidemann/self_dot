@@ -44,7 +44,7 @@ while not stopflag:
         
     # set Csound channel data
     cs.SetChannel("imitateLevel1", level1)
-    cs.SetChannel("simitateEnvelope1", envelope1)
+    cs.SetChannel("imitateEnvelope1", envelope1)
     cs.SetChannel("imitatePitch1", pitch1)
     cs.SetChannel("imitateCentroid1", centr1)
 
