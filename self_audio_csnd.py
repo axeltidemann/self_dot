@@ -29,6 +29,7 @@ while not stopflag:
     #test1 = cs.GetPvsChannel(fft_audio_in1, 0)
     #test2 = cs.GetPvsChannel(fft_audio_in2, 1)
 
+    # get Csound channel data
     level1 = cs.GetChannel("level1")
     level2 = cs.GetChannel("level2")
     envelope1 = cs.GetChannel("envelope1")
