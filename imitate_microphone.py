@@ -23,36 +23,30 @@ import multiprocessing
 import numpy as np
 from sklearn import preprocessing
     
-def scale(dataset):
-    results = []
-    for data in dataset:
-        scaler = preprocessing.MinMaxScaler()
-        scaled_data = scaler.fit_transform(np.transpose(np.array([ data ] )))
-        results.append( (scaled_data, scaler ))
-    return results
-
 def hear(ear_q, memorize_q):
     # This should be changed to use microphone input instead
     print 'I am listening'
 
     
 def learn(memorize_q, brain_q, output):
-    # Interestingly enough, importing Oger at the top of this file
-    # causes troubles due to the parallelism.
     import Oger
     import mdp
     import matplotlib.pyplot as plt
 
-    sound = []
-
     while True:
-        sound = memorize_q.get()
+        data, scaler = memorize_q.get()
+        scaled = scaler.inverse_transform(data)
 
-        output.extend(range(10))
-        for data, scaler in sound:
-            plt.plot(data)
-        plt.show()
+        for row in scaled:
+            output.append(row)
 
+        plt.ion()
+        plt.figure('[self.] just learned these sequences. Scaled to unity.')
+        plt.plot(data)
+        plt.draw()
+        
+
+        # For illustration purposes, plot what self just learned.
 
         # reservoir = Oger.nodes.LeakyReservoirNode(output_dim=100, leak_rate=0.8, bias_scaling=.2) 
         # readout = mdp.nodes.LinearRegressionNode(use_pinv=True)
@@ -71,12 +65,9 @@ def learn(memorize_q, brain_q, output):
 def play(ear_q, brain_q):
     neural_net = brain_q.get()
 
+    # For illustration purposes: display what self heard, and what it predicted as graph plots 
+
     # while True:
-        # set Csound channel data
-        # cs.SetChannel("imitateLevel1", level1[-1])
-        # cs.SetChannel("imitateEnvelope1", envelope1[-1])
-        # cs.SetChannel("imitatePitch1", pitch1[-1])
-        # cs.SetChannel("imitateCentroid1", centr1[-1])
 
         # input_photo = ear_q.get()
         # input_photo.shape = (1, input_photo.shape[0])
@@ -85,6 +76,11 @@ def play(ear_q, brain_q):
         #     neural_net = brain_q.get_nowait()
         # except:
         #     pass
+
+def scale(dataset):
+    scaler = preprocessing.MinMaxScaler()
+    all_data = np.hstack([ np.array( [data] ).T for data in dataset ])
+    return scaler.fit_transform(all_data), scaler
     
 if __name__ == '__main__':
     ear_q = multiprocessing.Queue()
@@ -136,10 +132,18 @@ if __name__ == '__main__':
             memorize_q.put(scale([ level1, envelope1, pitch1, centr1 ]))
 
         try:
-            print output.pop(0)
+            # set Csound channel data
+            imitation = output.pop(0)
+            print 'IMITATION', imitation
+            cs.SetChannel("imitateLevel1", imitation[0])
+            cs.SetChannel("imitateEnvelope1", imitation[1])
+            cs.SetChannel("imitatePitch1", imitation[2])
+            cs.SetChannel("imitateCentroid1", imitation[3])
         except:
-            continue
-                
+            cs.SetChannel("imitateLevel1", 0)
+            cs.SetChannel("imitateEnvelope1", 0)
+            cs.SetChannel("imitatePitch1", 0)
+            cs.SetChannel("imitateCentroid1", 0)
     
     try:
         raw_input('')
