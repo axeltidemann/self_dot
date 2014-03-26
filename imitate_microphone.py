@@ -114,8 +114,8 @@ if __name__ == '__main__':
     cs.Compile("self_audio_csnd_test.csd")
     cs.Start()
     stopflag = 0
-    #fft_audio_in1 = numpy.zeros(1024)
-    #fft_audio_in2 = numpy.zeros(1024)
+    #fft_audio_in1 = np.zeros(1024)
+    #fft_audio_in2 = np.zeros(1024)
     offset = 0
 
     level1 = deque(maxlen=1000)
