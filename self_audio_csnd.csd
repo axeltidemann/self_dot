@@ -1,6 +1,6 @@
 <CsoundSynthesizer>
 <CsOptions>
--odac
+-odac42 -iadc44
 ; -iadc -d
 </CsOptions>
 
@@ -151,7 +151,7 @@ endif
 	afilt1e		butterbp anoise, kcps1*5, kcps1*0.05
 	asum		sum afilt1a, afilt1b, afilt1c, afilt1d, afilt1e
 	aout		butterbp asum*5+(anoise*0.01), kcentro1, kcentro1*0.2
-	aout		= aout*kenv1*10
+	aout		= aout*kenv1*1
 			outs aout, aout
 	endin
 

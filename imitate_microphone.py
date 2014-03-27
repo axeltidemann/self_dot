@@ -111,7 +111,7 @@ if __name__ == '__main__':
 
     import csnd6
     cs = csnd6.Csound()
-    cs.Compile("self_audio_csnd_test.csd")
+    cs.Compile("self_audio_csnd.csd")
     cs.Start()
     stopflag = 0
     #fft_audio_in1 = np.zeros(1024)
@@ -147,7 +147,8 @@ if __name__ == '__main__':
 
         if i == 2000:
             ear_q.put(np.asarray([ level1, envelope1, pitch1, centr1 ]).T)
-
+            i = 0
+            
         try:
             imitation = output.pop(0)
             cs.SetChannel("imitateLevel1", imitation[0])
