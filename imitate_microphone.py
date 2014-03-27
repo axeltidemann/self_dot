@@ -25,13 +25,38 @@ from collections import deque
 
 import numpy as np
 from sklearn import preprocessing
+
+def plot(learned_q, imitated_q):
+    import matplotlib.pyplot as plt
+    import matplotlib.gridspec as gridspec
+    plt.ion()
+    plt.figure(figsize=(16,9)) # Change this if figure is too big (i.e. laptop)
+    gs = gridspec.GridSpec(1, 2, width_ratios=[1,2])
     
-def learn(memorize_q, brain_q):
+    while True:
+        plt.subplot(gs[0])
+        plt.cla()
+        plt.title('Learned.')
+        plt.legend(plt.plot(learned_q.get()), ['level1', 'envelope1', 'pitch1', 'centroid1'])
+        plt.draw()
+
+        plt.subplot(gs[1])
+        plt.cla()
+        plt.title('Listening + imitation.')
+        input_data, sound = imitated_q.get()
+        plt.plot(np.vstack( [input_data, sound] ))
+        ylim = plt.gca().get_ylim()
+        plt.vlines(input_data.shape[0], ylim[0], ylim[1])
+        plt.gca().annotate('imitation starts', xy=(input_data.shape[0],0), 
+                           xytext=(input_data.shape[0] + 10, ylim[0] + .1))
+        plt.gca().set_ylim(ylim)
+        plt.draw()
+
+        plt.tight_layout()
+
+def learn(memorize_q, brain_q, learned_q):
     import Oger
     import mdp
-    import matplotlib.pyplot as plt
-    plt.ion()
-    plt.figure()
 
     while True:
         input_data = memorize_q.get()
@@ -42,10 +67,6 @@ def learn(memorize_q, brain_q):
                                                   leak_rate=0.8, 
                                                   bias_scaling=.2, 
                                                   reset_states=False)
-        # readout = Oger.nodes.RidgeRegressionNode(ridge_param=.001)
-        # neural_net = Oger.nodes.FreerunFlow(reservoir + readout, freerun_steps=data.shape[0])
-        # neural_net.train([[], [[data]]])
-
         readout = mdp.nodes.LinearRegressionNode(use_pinv=True)
         neural_net = mdp.hinet.FlowNode(reservoir + readout)
 
@@ -56,42 +77,19 @@ def learn(memorize_q, brain_q):
         neural_net.stop_training()
         
         brain_q.put((neural_net, scaler))
+        learned_q.put(scaled_data)
 
-        plt.clf()
-        plt.title('[self.] just learned these sequences. Scaled to unity.')
-        plt.legend(plt.plot(scaled_data), ['level1', 'envelope1', 'pitch1', 'centroid1'])
-        plt.draw()
-
-
-def play(ear_q, brain_q, output):
+def play(ear_q, brain_q, output, imitated_q):
     neural_net, scaler = brain_q.get()
-
-    import matplotlib.pyplot as plt
-    plt.ion()
-    plt.figure()
     
     while True:
         input_data = scaler.transform(ear_q.get())
-
-        # sound = neural_net(np.vstack( [scaled_data, np.zeros(raw_data.shape)] ))
-        # for row in scaler.inverse_transform(sound[-raw_data.shape[0]:]):
-        #     output.append(row)
-
         sound = neural_net(input_data)
 
         for row in scaler.inverse_transform(sound):
             output.append(row)
 
-        plt.clf()
-        plt.title('[self.] just heard and played back this.')
-        plt.legend(plt.plot(np.vstack( [input_data, sound] )), 
-                   ['level1', 'envelope1', 'pitch1', 'centroid1'])
-        ylim = plt.gca().get_ylim()
-        plt.vlines(input_data.shape[0], ylim[0], ylim[1])
-        plt.gca().annotate('imitation starts', xy=(input_data.shape[0],0), 
-                           xytext=(input_data.shape[0] + 10, ylim[0] + .1))
-        plt.gca().set_ylim(ylim)
-        plt.draw()
+        imitated_q.put((input_data, sound))
 
         try:
             neural_net, scaler = brain_q.get_nowait()
@@ -102,12 +100,14 @@ if __name__ == '__main__':
     ear_q = multiprocessing.Queue()
     brain_q = multiprocessing.Queue()
     memorize_q = multiprocessing.Queue()
-
-    manager = multiprocessing.Manager()
-    output = manager.list()
+    learned_q = multiprocessing.Queue()
+    imitated_q = multiprocessing.Queue()
+    
+    output = multiprocessing.Manager().list()
             
-    multiprocessing.Process(target=learn, args=(memorize_q, brain_q)).start()
-    multiprocessing.Process(target=play, args=(ear_q, brain_q, output)).start()
+    multiprocessing.Process(target=learn, args=(memorize_q, brain_q, learned_q)).start()
+    multiprocessing.Process(target=play, args=(ear_q, brain_q, output, imitated_q)).start()
+    multiprocessing.Process(target=plot, args=(learned_q, imitated_q)).start()
 
     import csnd6
     cs = csnd6.Csound()
@@ -148,7 +148,7 @@ if __name__ == '__main__':
         if i == 2000:
             ear_q.put(np.asarray([ level1, envelope1, pitch1, centr1 ]).T)
             i = 0
-            
+
         try:
             imitation = output.pop(0)
             cs.SetChannel("imitateLevel1", imitation[0])
@@ -160,8 +160,5 @@ if __name__ == '__main__':
             cs.SetChannel("imitateEnvelope1", 0)
             cs.SetChannel("imitatePitch1", 0)
             cs.SetChannel("imitateCentroid1", 0)
-    
-    try:
-        raw_input('')
-    except KeyboardInterrupt:
-        map(lambda x: x.terminate(), multiprocessing.active_children())
+
+    map(lambda x: x.terminate(), multiprocessing.active_children())
