@@ -14,10 +14,8 @@ properly. If not, there will be problems related to certain external
 libraries. However, a workaround (that allows us to keep using the
 simple and nice multiprocessing module) is to import the troublesome
 libraries in their respective processes. This is why the code does not
-have all the imports at the beginning of the file. CSound in
-particular, needs to be in the main thread, and cannot be in another
-process at all.
-
+have all the imports at the beginning of the file. Under Windows, a
+separate process is spawned, so this is not an issue.
 '''
 
 import multiprocessing
@@ -79,7 +77,7 @@ def learn(memorize_q, brain_q, learned_q):
         brain_q.put((neural_net, scaler))
         learned_q.put(scaled_data)
 
-def play(ear_q, brain_q, output, imitated_q):
+def imitate(ear_q, brain_q, output, imitated_q):
     neural_net, scaler = brain_q.get()
     
     while True:
@@ -95,20 +93,8 @@ def play(ear_q, brain_q, output, imitated_q):
             neural_net, scaler = brain_q.get_nowait()
         except:
             pass
-    
-if __name__ == '__main__':
-    ear_q = multiprocessing.Queue()
-    brain_q = multiprocessing.Queue()
-    memorize_q = multiprocessing.Queue()
-    learned_q = multiprocessing.Queue()
-    imitated_q = multiprocessing.Queue()
-    
-    output = multiprocessing.Manager().list()
-            
-    multiprocessing.Process(target=learn, args=(memorize_q, brain_q, learned_q)).start()
-    multiprocessing.Process(target=play, args=(ear_q, brain_q, output, imitated_q)).start()
-    multiprocessing.Process(target=plot, args=(learned_q, imitated_q)).start()
 
+def csound(memorize_q, ear_q, output):
     import csnd6
     cs = csnd6.Csound()
     cs.Compile("self_audio_csnd.csd")
@@ -160,5 +146,22 @@ if __name__ == '__main__':
             cs.SetChannel("imitateEnvelope1", 0)
             cs.SetChannel("imitatePitch1", 0)
             cs.SetChannel("imitateCentroid1", 0)
-
-    map(lambda x: x.terminate(), multiprocessing.active_children())
+            
+if __name__ == '__main__':
+    ear_q = multiprocessing.Queue()
+    brain_q = multiprocessing.Queue()
+    memorize_q = multiprocessing.Queue()
+    learned_q = multiprocessing.Queue()
+    imitated_q = multiprocessing.Queue()
+    
+    output = multiprocessing.Manager().list()
+            
+    multiprocessing.Process(target=learn, args=(memorize_q, brain_q, learned_q)).start()
+    multiprocessing.Process(target=imitate, args=(ear_q, brain_q, output, imitated_q)).start()
+    multiprocessing.Process(target=plot, args=(learned_q, imitated_q)).start()
+    multiprocessing.Process(target=csound, args=(memorize_q, ear_q, output)).start()
+    
+    try:
+        raw_input('')
+    except KeyboardInterrupt:
+        map(lambda x: x.terminate(), multiprocessing.active_children())
