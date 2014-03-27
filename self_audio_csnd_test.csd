@@ -159,8 +159,8 @@ endif
 
 <CsScore>
 ; run for N sec
-i1 0 10
-i2 0 10
+i1 0 100
+i2 0 100
 
 </CsScore>
 

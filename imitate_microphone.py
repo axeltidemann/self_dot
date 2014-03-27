@@ -111,7 +111,7 @@ if __name__ == '__main__':
 
     import csnd6
     cs = csnd6.Csound()
-    cs.Compile("self_audio_csnd.csd")
+    cs.Compile("self_audio_csnd_test.csd")
     cs.Start()
     stopflag = 0
     #fft_audio_in1 = np.zeros(1024)
