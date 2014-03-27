@@ -118,10 +118,10 @@ if __name__ == '__main__':
     #fft_audio_in2 = np.zeros(1024)
     offset = 0
 
-    level1 = deque(maxlen=1000)
-    envelope1 = deque(maxlen=1000)
-    pitch1 = deque(maxlen=1000)
-    centr1 = deque(maxlen=1000)
+    level1 = deque(maxlen=4000)
+    envelope1 = deque(maxlen=4000)
+    pitch1 = deque(maxlen=4000)
+    centr1 = deque(maxlen=4000)
 
     i = 0
     while not stopflag:
@@ -142,10 +142,10 @@ if __name__ == '__main__':
         # self does its imitation magic and writes new values to Csound channels
 
         i += 1
-        if i == 1000: # These will be replaced with controls, i.e. someone saying LEARN! IMITATE!
+        if i == 2000: # These will be replaced with controls, i.e. someone saying LEARN! IMITATE!
             memorize_q.put(np.asarray([ level1, envelope1, pitch1, centr1 ]).T)
 
-        if i == 2000:
+        if i == 4000:
             ear_q.put(np.asarray([ level1, envelope1, pitch1, centr1 ]).T)
             i = 0
 
