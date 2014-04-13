@@ -26,16 +26,7 @@
 	a1 	oscili iamp, kcps, giSine	; sine test tone
   	a2 	oscili iamp, kcps*2, giSine	; sine test tone 2
 
-	kmetro	metro 0.2
-	if kmetro > 0 then
-	reinit play
-	endif
-play:
-	irnd	rnd31 0.3, 1
-	ispeed	= 1 + irnd
-	a1	diskin "fox.wav", ispeed, 0
-rireturn
-	;a1	diskin "C:/Projects/TheColourofMagic.wav", 1, 1, 1
+	a1	soundin "fox.wav"
 	a2	= 0
 
 	; live audio input
@@ -126,7 +117,7 @@ endif
 			chnset kcentro1, "centroid1"
 			chnset kcentro2, "centroid2"
 
-  		out a1,a2
+;  		out a1,a2
 	endin
 
 
@@ -141,14 +132,6 @@ endif
 	kenv1 		chnget "imitateEnvelope1"
 	kcps1 		chnget "imitatePitch1"
 	kcentro1 	chnget "imitateCentroid1"
-
-/*
-	imedianSize	= 200
-	krms1		mediank krms1, imedianSize, imedianSize
-	kenv1 		mediank kenv1, imedianSize, imedianSize
-	kcps1 		mediank kcps1, imedianSize, imedianSize
-	kcentro1	mediank kcentro1, imedianSize, imedianSize
-*/
 
 /*
 	; only for csound standalone testing
@@ -169,8 +152,7 @@ endif
 	asum		sum afilt1a, afilt1b, afilt1c, afilt1d, afilt1e
 	aout		butterbp asum*5+(anoise*0.01), kcentro1, kcentro1*0.2
 	aout		= aout*kenv1*10
-	a0		= 0
-			outs a0, aout
+			outs aout, aout
 	endin
 
 </CsInstruments>
