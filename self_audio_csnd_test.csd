@@ -1,6 +1,6 @@
 <CsoundSynthesizer>
 <CsOptions>
--odac
+-odac34 -m256 -B512
 ; -iadc -d
 </CsOptions>
 
@@ -17,7 +17,7 @@
 ; analysis  of audio input 
 	instr 1  
 
-
+/*
 	; test tone
 	iamp	= ampdbfs(-5)
 	icps	= 220
@@ -25,6 +25,7 @@
   	kcps	= icps + koffset
 	a1 	oscili iamp, kcps, giSine	; sine test tone
   	a2 	oscili iamp, kcps*2, giSine	; sine test tone 2
+*/
 /*
 	kmetro	metro 0.2
 	if kmetro > 0 then
