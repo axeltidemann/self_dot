@@ -110,6 +110,9 @@ def csound(memorize_q, ear_q, output):
     centr1 = deque(maxlen=4000)
 
     i = 0
+    somethingLearned = 0
+    learnStatus = 0
+    imitateStatus = 0
     while not stopflag:
         stopflag = cs.PerformKsmps()
 
@@ -120,20 +123,30 @@ def csound(memorize_q, ear_q, output):
         #test2 = cs.GetPvsChannel(fft_audio_in2, 1)
 
         # get Csound channel data
+        audioStatus = cs.GetChannel("audioStatus")
         level1.append(cs.GetChannel("level1"))
         envelope1.append(cs.GetChannel("envelope1"))
         pitch1.append(cs.GetChannel("pitch1"))
         centr1.append(cs.GetChannel("centroid1"))
 
-        # self does its imitation magic and writes new values to Csound channels
+        if (audioStatus-learnStatus) < 0: imitateTrig = 1
+        else: imitateTrig = 0
+        learnStatus = audioStatus
+        if learnStatus > 0: somethingLearned = 1 
+        if somethingLearned: 
+            imitateStatus = 1-learnStatus
+        
 
         i += 1
-        if i == 2000: # These will be replaced with controls, i.e. someone saying LEARN! IMITATE!
+        if learnStatus and ((i%1000)==0): # if something is happening on audio input
             memorize_q.put(np.asarray([ level1, envelope1, pitch1, centr1 ]).T)
 
-        if i == 4000:
+        # will make a response when the audio input segment (sentence) is done
+        # however, now it seems to continue playback even if a new sentence starts at audio input
+        # it might be nice if it would (optionally?) stop talking when new audio input arrives
+        if imitateStatus and imitateTrig:
             ear_q.put(np.asarray([ level1, envelope1, pitch1, centr1 ]).T)
-            i = 0
+        
 
         try:
             imitation = output.pop(0)

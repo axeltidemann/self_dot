@@ -1,6 +1,6 @@
 <CsoundSynthesizer>
 <CsOptions>
--odac
+-odac34 -m256 -B512
 ; -iadc -d
 </CsOptions>
 
@@ -17,7 +17,7 @@
 ; analysis  of audio input 
 	instr 1  
 
-
+/*
 	; test tone
 	iamp	= ampdbfs(-5)
 	icps	= 220
@@ -25,7 +25,8 @@
   	kcps	= icps + koffset
 	a1 	oscili iamp, kcps, giSine	; sine test tone
   	a2 	oscili iamp, kcps*2, giSine	; sine test tone 2
-
+*/
+/*
 	kmetro	metro 0.2
 	if kmetro > 0 then
 	reinit play
@@ -35,11 +36,36 @@ play:
 	ispeed	= 1 + irnd
 	a1	diskin "fox.wav", ispeed, 0
 rireturn
-	;a1	diskin "C:/Projects/TheColourofMagic.wav", 1, 1, 1
+*/
+	a1	diskin "TheColourofMagic_pauses.wav", 1, 1, 1
 	a2	= 0
 
 	; live audio input
 	;a1,a2	inch 1,2
+
+; ***************
+; segmentation, set kstatus = 1 when something interesting happens (spoken sentence or some other coherent sound)
+	kattack		= 0.01
+	krelease	= 2.0
+	arms		follow2 a1, kattack, krelease
+	krms		downsamp arms*1.6
+	krms_dB		= dbfsamp(krms)
+	iAttackThresh	= -25
+	iReleaseThresh	= iAttackThresh-6
+	kstate 		init  0 	
+	if krms_dB > iAttackThresh then
+	kstate		= 1
+	endif
+	if (kstate == 1) && (krms_dB > iReleaseThresh) then
+	kstate		= 1
+	else
+	kstate 		= 0
+	endif
+	; fade in and out, cleanly separate segments from noise floor
+	astate		upsamp kstate
+	astate		butterlp astate, 5
+	a1del		delay a1, 0.1
+	a1		= a1del * astate
 
 
 
@@ -117,6 +143,7 @@ endif
 
 ; ***************
 ; write to chn
+			chnset kstate, "audioStatus"
 			chnset krms1, "level1"
 			chnset krms2, "level2"
 			chnset kFollow1, "envelope1"
@@ -141,6 +168,10 @@ endif
 	kenv1 		chnget "imitateEnvelope1"
 	kcps1 		chnget "imitatePitch1"
 	kcentro1 	chnget "imitateCentroid1"
+	krms1		limit krms1, 0, 1
+	kenv1		limit kenv1, 0, 1
+	kcps1		limit kcps1, 20, 10000
+	kcentro1	limit kcentro1, 20, 10000
 
 /*
 	imedianSize	= 200
@@ -168,7 +199,7 @@ endif
 	afilt1e		butterbp anoise, kcps1*5, kcps1*0.05
 	asum		sum afilt1a, afilt1b, afilt1c, afilt1d, afilt1e
 	aout		butterbp asum*5+(anoise*0.01), kcentro1, kcentro1*0.2
-	aout		= aout*kenv1*10
+	aout		= aout*krms1*10
 	a0		= 0
 			outs a0, aout
 	endin
