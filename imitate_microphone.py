@@ -24,13 +24,15 @@ from collections import deque
 import numpy as np
 from sklearn import preprocessing
 
+from communication import receive
+
 def plot(learned_q, imitated_q):
     import matplotlib.pyplot as plt
     import matplotlib.gridspec as gridspec
     plt.ion()
     plt.figure(figsize=(16,9)) # Change this if figure is too big (i.e. laptop)
     gs = gridspec.GridSpec(1, 2, width_ratios=[1,2])
-    
+
     while True:
         plt.subplot(gs[0])
         plt.cla()
@@ -79,7 +81,7 @@ def learn(memorize_q, brain_q, learned_q):
 
 def imitate(ear_q, brain_q, output, imitated_q):
     neural_net, scaler = brain_q.get()
-    
+
     while True:
         input_data = scaler.transform(ear_q.get())
         sound = neural_net(input_data)
@@ -94,7 +96,7 @@ def imitate(ear_q, brain_q, output, imitated_q):
         except:
             pass
 
-def csound(memorize_q, ear_q, output):
+def csound(memorize_q, ear_q, output, learn_state, imitate_state):
     import csnd6
     cs = csnd6.Csound()
     cs.Compile("self_audio_csnd.csd")
@@ -109,10 +111,6 @@ def csound(memorize_q, ear_q, output):
     pitch1 = deque(maxlen=4000)
     centr1 = deque(maxlen=4000)
 
-    i = 0
-    somethingLearned = 0
-    learnStatus = 0
-    imitateStatus = 0
     while not stopflag:
         stopflag = cs.PerformKsmps()
 
@@ -123,30 +121,20 @@ def csound(memorize_q, ear_q, output):
         #test2 = cs.GetPvsChannel(fft_audio_in2, 1)
 
         # get Csound channel data
-        audioStatus = cs.GetChannel("audioStatus")
+        #audioStatus = cs.GetChannel("audioStatus")
         level1.append(cs.GetChannel("level1"))
         envelope1.append(cs.GetChannel("envelope1"))
         pitch1.append(cs.GetChannel("pitch1"))
         centr1.append(cs.GetChannel("centroid1"))
 
-        if (audioStatus-learnStatus) < 0: imitateTrig = 1
-        else: imitateTrig = 0
-        learnStatus = audioStatus
-        if learnStatus > 0: somethingLearned = 1 
-        if somethingLearned: 
-            imitateStatus = 1-learnStatus
-        
-
-        i += 1
-        if learnStatus and ((i%1000)==0): # if something is happening on audio input
+        if learn_state.value:
+            print '[self.] learns'
             memorize_q.put(np.asarray([ level1, envelope1, pitch1, centr1 ]).T)
-
-        # will make a response when the audio input segment (sentence) is done
-        # however, now it seems to continue playback even if a new sentence starts at audio input
-        # it might be nice if it would (optionally?) stop talking when new audio input arrives
-        if imitateStatus and imitateTrig:
+            learn_state.value = 0
+        if imitate_state.value:
+            print '[self.] imitates'
             ear_q.put(np.asarray([ level1, envelope1, pitch1, centr1 ]).T)
-        
+            imitate_state.value = 0
 
         try:
             imitation = output.pop(0)
@@ -160,6 +148,19 @@ def csound(memorize_q, ear_q, output):
             cs.SetChannel("imitatePitch1", 0)
             cs.SetChannel("imitateCentroid1", 0)
             
+class Parser:
+    def __init__(self, learn_state, imitate_state):
+        self.learn_state = learn_state
+        self.imitate_state = imitate_state
+        
+    def parse(self, message):
+        print '[self.] received:', message
+        if message == 'learn':
+            self.learn_state.value = 1
+        if message == 'imitate':
+            self.imitate_state.value = 1
+
+
 if __name__ == '__main__':
     ear_q = multiprocessing.Queue()
     brain_q = multiprocessing.Queue()
@@ -168,12 +169,17 @@ if __name__ == '__main__':
     imitated_q = multiprocessing.Queue()
     
     output = multiprocessing.Manager().list()
+
+    learn_state = multiprocessing.Value('i', 0)
+    imitate_state = multiprocessing.Value('i', 0)
+    parser = Parser(learn_state, imitate_state)
             
     multiprocessing.Process(target=learn, args=(memorize_q, brain_q, learned_q)).start()
     multiprocessing.Process(target=imitate, args=(ear_q, brain_q, output, imitated_q)).start()
     multiprocessing.Process(target=plot, args=(learned_q, imitated_q)).start()
-    multiprocessing.Process(target=csound, args=(memorize_q, ear_q, output)).start()
-    
+    multiprocessing.Process(target=csound, args=(memorize_q, ear_q, output, learn_state, imitate_state)).start()
+    multiprocessing.Process(target=receive, args=(parser.parse,)).start()
+
     try:
         raw_input('')
     except KeyboardInterrupt:
