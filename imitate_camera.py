@@ -1,8 +1,13 @@
-# Tries to predict next frame by reading the webcamera. Uses reservoir
-# computing (e.g. Echo State Networks). Input, output and learning in
-# sepearate processes.
-#
-# Author: Axel Tidemann, axel.tidemann@gmail.com
+#!/usr/bin/python
+# -*- coding: latin-1 -*-
+
+'''Tries to predict next frame by reading the webcamera. Uses reservoir
+computing (e.g. Echo State Networks).
+
+@author: Axel Tidemann
+@contact: axel.tidemann@gmail.com
+@license: GPL
+'''
 
 import multiprocessing
 
@@ -29,8 +34,6 @@ def see(eye_q, memorize_q):
         cv2.waitKey(10)
     
 def learn(memorize_q, brain_q):
-    # Interestingly enough, importing Oger at the top of this file
-    # causes troubles due to the parallelism.
     import Oger
     import mdp
 
@@ -90,7 +93,3 @@ if __name__ == '__main__':
         raw_input('')
     except KeyboardInterrupt:
         map(lambda x: x.terminate(), multiprocessing.active_children())
-
-
-    
-

@@ -1,6 +1,6 @@
 <CsoundSynthesizer>
 <CsOptions>
--odac42 -iadc44
+-odac0 -iadc0
 ; -iadc -d
 </CsOptions>
 
@@ -128,10 +128,10 @@ endif
 	instr 2
 
 
-	krms1 		chnget "imitateLevel1"
-	kenv1 		chnget "imitateEnvelope1"
-	kcps1 		chnget "imitatePitch1"
-	kcentro1 	chnget "imitateCentroid1"
+	krms1 		chnget "respondLevel1"
+	kenv1 		chnget "respondEnvelope1"
+	kcps1 		chnget "respondPitch1"
+	kcentro1 	chnget "respondCentroid1"
 
 /*
 	; only for csound standalone testing
