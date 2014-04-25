@@ -1,6 +1,6 @@
 <CsoundSynthesizer>
 <CsOptions>
--odac0 -iadc0
+-odac1 -iadc0
 ; -iadc -d
 </CsOptions>
 

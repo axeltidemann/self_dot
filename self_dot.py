@@ -9,7 +9,6 @@
 '''
 
 import multiprocessing as mp
-from collections import deque
 
 import numpy as np
 from sklearn import preprocessing as pp
@@ -18,8 +17,8 @@ import cv2
 from communication import receive as receive_messages
 from utils import net_rmse, Parser
 
-# The new maxlen parameter, since deque cannot be shared, and we use a
-# list with shared memory instead.
+# The new maxlen parameter, since deque cannot be shared between
+# processes we use a list with shared memory instead.
 MAXLEN_AUDIO = 4000
 MAXLEN_VIDEO = 100
 
@@ -37,9 +36,9 @@ def video(camera, projector):
             del camera[0]
             
         try:
-            cv2.imshow('Output', np.reshape(projector.pop(0), (180,320)))
+            cv2.imshow('Output', cv2.resize(np.reshape(projector.pop(0), (180,320)), (640,360)))
         except:
-            cv2.imshow('Output', np.zeros((180,320)))
+            cv2.imshow('Output', np.random.rand(360,640))
 
         cv2.waitKey(100)
 
@@ -89,10 +88,8 @@ def learn(state_q, mic, camera, brain):
     while True:
         state_q.get()
 
-        audio_data = np.asarray(mic)
-        audio_data = np.resize(audio_data, (MAXLEN_AUDIO, len(mic[0])))
-        video_data = np.asarray(camera)
-        video_data = np.resize(video_data, (MAXLEN_VIDEO, len(camera[0])))
+        audio_data = np.asarray(mic[:MAXLEN_AUDIO])
+        video_data = np.asarray(camera[:MAXLEN_VIDEO])
                 
         scaler = pp.MinMaxScaler() 
         scaled_data = scaler.fit_transform(audio_data)
@@ -134,10 +131,9 @@ def learn(state_q, mic, camera, brain):
 def respond(state_q, mic, speaker, camera, projector, brain):
     while True:
         state_q.get()
-        audio_data = np.asarray(mic)
-        audio_data = np.resize(audio_data, (MAXLEN_AUDIO, len(mic[0])))
-        video_data = np.asarray(camera)
-        video_data = np.resize(video_data, (MAXLEN_VIDEO, len(camera[0])))
+
+        audio_data = np.asarray(mic[:MAXLEN_AUDIO])
+        video_data = np.asarray(camera[:MAXLEN_VIDEO])
 
         rmse = net_rmse([ (net, scaler) for net,_,scaler in brain ], audio_data)
         print 'RMSE for neural networks in brain:', rmse
