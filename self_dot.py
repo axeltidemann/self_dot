@@ -70,11 +70,11 @@ def audio(mic, speaker):
             del mic[0]
             
         try:
-            response = speaker.pop(0)
-            cs.SetChannel("respondLevel1", response[0])
-            cs.SetChannel("respondEnvelope1", response[1])
-            cs.SetChannel("respondPitch1", response[2])
-            cs.SetChannel("respondCentroid1", response[3])
+            sound = speaker.pop(0)
+            cs.SetChannel("respondLevel1", sound[0])
+            cs.SetChannel("respondEnvelope1", sound[1])
+            cs.SetChannel("respondPitch1", sound[2])
+            cs.SetChannel("respondCentroid1", sound[3])
         except:
             cs.SetChannel("respondLevel1", 0)
             cs.SetChannel("respondEnvelope1", 0)
