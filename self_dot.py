@@ -9,6 +9,7 @@
 '''
 
 import multiprocessing as mp
+import myCsoundAudioOptions
 
 import numpy as np
 from sklearn import preprocessing as pp
@@ -45,8 +46,14 @@ def video(camera, projector):
 def audio(mic, speaker):
     import csnd6
     cs = csnd6.Csound()
-    cs.Compile("self_audio_csnd.csd")
-    cs.Start()
+    arguments = csnd6.CsoundArgVList()
+    arguments.Append("dummy")
+    arguments.Append("self_dot.csd")
+    csoundCommandline = myCsoundAudioOptions.myAudioDevices
+    comlineParmsList = csoundCommandline.split(' ')
+    for item in comlineParmsList:
+        arguments.Append("%s"%item)
+    cs.Compile(arguments.argc(), arguments.argv())
     stopflag = 0
     #fft_audio_in1 = np.zeros(1024)
     #fft_audio_in2 = np.zeros(1024)

@@ -1,6 +1,7 @@
 <CsoundSynthesizer>
 <CsOptions>
--odac34 -m256 -B512
+-odac18 -iadc20
+;-odac34 -m256 -B512
 ; -iadc -d
 </CsOptions>
 
