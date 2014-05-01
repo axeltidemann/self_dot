@@ -16,9 +16,12 @@ import socket
 import sys
 
 def receive(callback, host='localhost', port=7777):
+    import os
+    print('RECEIVE PID {}'.format(os.getpid()))
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.bind((host, port))
     sock.listen(1)
+
     print('Communication channel listening on {}:{}'.format(host, port))
     while True:
         try:

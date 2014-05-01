@@ -9,174 +9,68 @@
 '''
 
 import multiprocessing as mp
-import myCsoundAudioOptions
+from multiprocessing.managers import BaseManager, ListProxy
+import os
+from collections import deque
 
 import numpy as np
-from sklearn import preprocessing as pp
-import cv2
 
+from AI import learn, respond
+from IO import audio, video
 from communication import receive as receive_messages
-from utils import net_rmse, Parser
-
-# The new maxlen parameter, since deque cannot be shared between
-# processes we use a list with shared memory instead.
-MAXLEN_AUDIO = 4000
-MAXLEN_VIDEO = 100
-
-def video(camera, projector):
-    cv2.namedWindow('Output', cv2.WINDOW_NORMAL)
-    video_feed = cv2.VideoCapture(0)
-
-    while True:
-        _, frame = video_feed.read()
-        frame = cv2.resize(frame, (320,180))
-        gray_image = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        camera.append(np.ndarray.flatten(gray_image)/255.)
-
-        if len(camera) > MAXLEN_VIDEO: 
-            del camera[0]
-            
-        try:
-            cv2.imshow('Output', cv2.resize(np.reshape(projector.pop(0), (180,320)), (640,360)))
-        except:
-            cv2.imshow('Output', np.random.rand(360,640))
-
-        cv2.waitKey(100)
-
-def audio(mic, speaker):
-    import csnd6
-    cs = csnd6.Csound()
-    arguments = csnd6.CsoundArgVList()
-    arguments.Append("dummy")
-    arguments.Append("self_dot.csd")
-    csoundCommandline = myCsoundAudioOptions.myAudioDevices
-    comlineParmsList = csoundCommandline.split(' ')
-    for item in comlineParmsList:
-        arguments.Append("%s"%item)
-    cs.Compile(arguments.argc(), arguments.argv())
-    stopflag = 0
-    #fft_audio_in1 = np.zeros(1024)
-    #fft_audio_in2 = np.zeros(1024)
-    offset = 0
-
-    while not stopflag:
-        stopflag = cs.PerformKsmps()
-
-        offset += 0.01
-        offset %= 200
-        cs.SetChannel("freq_offset", offset)
-        #test1 = cs.GetPvsChannel(fft_audio_in1, 0)
-        #test2 = cs.GetPvsChannel(fft_audio_in2, 1)
-
-        # get Csound channel data
-        #audioStatus = cs.GetChannel("audioStatus")
-        mic.append([ cs.GetChannel("level1"), cs.GetChannel("envelope1"),
-                     cs.GetChannel("pitch1"), cs.GetChannel("centroid1") ])
-
-        if len(mic) > MAXLEN_AUDIO:
-            del mic[0]
-            
-        try:
-            sound = speaker.pop(0)
-            cs.SetChannel("respondLevel1", sound[0])
-            cs.SetChannel("respondEnvelope1", sound[1])
-            cs.SetChannel("respondPitch1", sound[2])
-            cs.SetChannel("respondCentroid1", sound[3])
-        except:
-            cs.SetChannel("respondLevel1", 0)
-            cs.SetChannel("respondEnvelope1", 0)
-            cs.SetChannel("respondPitch1", 0)
-            cs.SetChannel("respondCentroid1", 0)
-
-def learn(state_q, mic, camera, brain):
-    import Oger
-    import mdp
-
-    while True:
-        state_q.get()
-
-        audio_data = np.asarray(mic[:MAXLEN_AUDIO])
-        video_data = np.asarray(camera[:MAXLEN_VIDEO])
-                
-        scaler = pp.MinMaxScaler() 
-        scaled_data = scaler.fit_transform(audio_data)
-
-        reservoir = Oger.nodes.LeakyReservoirNode(output_dim=100, 
-                                                  leak_rate=0.8, 
-                                                  bias_scaling=.2, 
-                                                  reset_states=True)
-        readout = mdp.nodes.LinearRegressionNode(use_pinv=True)
-        audio_net = mdp.hinet.FlowNode(reservoir + readout)
-
-        x = scaled_data[:-1]
-        y = scaled_data[1:]
-
-        audio_net.train(x,y)
-        audio_net.stop_training()
-
-        reservoir = Oger.nodes.LeakyReservoirNode(output_dim=500, 
-                                                  leak_rate=0.8, 
-                                                  bias_scaling=.2, 
-                                                  reset_states=True)
-        readout = mdp.nodes.LinearRegressionNode(use_pinv=True)
-        video_net = mdp.hinet.FlowNode(reservoir + readout)
-
-        # Audio is associated with video, but due to the higher
-        # sampling frequency of the sound compared to video, we make a
-        # selection of the audio data. 
-        stride = audio_data.shape[0]/video_data.shape[0]
-        x = scaled_data[::stride]
-        y = video_data
-
-        video_net.train(x,y)
-        video_net.stop_training()
         
-        brain.append((audio_net, video_net, scaler))
-
-        print 'Finished learning audio-video association'
-
-def respond(state_q, mic, speaker, camera, projector, brain):
-    while True:
-        state_q.get()
-
-        audio_data = np.asarray(mic[:MAXLEN_AUDIO])
-        video_data = np.asarray(camera[:MAXLEN_VIDEO])
-
-        rmse = net_rmse([ (net, scaler) for net,_,scaler in brain ], audio_data)
-        print 'RMSE for neural networks in brain:', rmse
-        audio_net, video_net, scaler = brain[np.argmin(rmse)]
+class Controller:
+    def __init__(self, sense, learn_state, respond_state):
+        self.sense = sense
+        self.learn_state = learn_state
+        self.respond_state = respond_state
         
-        input_data = scaler.transform(audio_data)
-        sound = audio_net(input_data)
+    def parse(self, message):
+        print '[self.] received:', message
+        if message == 'startrec':
+            self.sense.value = 1
+        if message == 'stoprec':
+            self.sense.value = 0
 
-        for row in scaler.inverse_transform(sound):
-            speaker.append(row)
+        if message == 'learn':
+            self.learn_state.put(True)
 
-        stride = audio_data.shape[0]/video_data.shape[0]
-        projection = video_net(input_data[::stride]) 
+        if message == 'respond':
+            self.respond_state.put(True)
 
-        for row in projection:
-            projector.append(row)
+class MyManager(BaseManager):
+    pass
 
+class MyDeque(deque):
+    def array(self):
+        return np.array(list(self))
+                        
 if __name__ == '__main__':
+    print 'MAIN PID', os.getpid()
+    
+    MyManager.register('deque', MyDeque)
+    MyManager.register('list', list, proxytype=ListProxy)
+
+    manager = MyManager()
+    manager.start()
+
+    brain = manager.list()
+    mic = manager.deque()
+    speaker = manager.deque()
+    camera = manager.deque()
+    projector = manager.deque()
+
+    sense = mp.Value('i',0)
     learn_state = mp.Queue()
     respond_state = mp.Queue()
 
-    parser = Parser(learn_state, respond_state)
+    controller = Controller(sense, learn_state, respond_state)
 
-    manager = mp.Manager()
-
-    brain = manager.list()
-    mic = manager.list()
-    speaker = manager.list()
-    camera = manager.list()
-    projector = manager.list()
-    
-    mp.Process(target=audio, args=(mic, speaker)).start()
-    mp.Process(target=video, args=(camera, projector)).start()
+    mp.Process(target=audio, args=(sense, mic, speaker)).start()
+    mp.Process(target=video, args=(sense, camera, projector)).start()
     mp.Process(target=learn, args=(learn_state, mic, camera, brain)).start()
     mp.Process(target=respond, args=(respond_state, mic, speaker, camera, projector, brain)).start()
-    mp.Process(target=receive_messages, args=(parser.parse,)).start()
+    mp.Process(target=receive_messages, args=(controller.parse,)).start()
     
     try:
         raw_input('')
