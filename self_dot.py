@@ -8,9 +8,9 @@
 @license: GPL
 '''
 
+import os
 import multiprocessing as mp
 from multiprocessing.managers import BaseManager, ListProxy
-import os
 from collections import deque
 
 import numpy as np
@@ -27,8 +27,10 @@ class Controller:
         
     def parse(self, message):
         print '[self.] received:', message
+
         if message == 'startrec':
             self.sense.value = 1
+
         if message == 'stoprec':
             self.sense.value = 0
 
@@ -76,4 +78,3 @@ if __name__ == '__main__':
         raw_input('')
     except KeyboardInterrupt:
         map(lambda x: x.terminate(), mp.active_children())
-

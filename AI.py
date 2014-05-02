@@ -45,9 +45,7 @@ def learn(state_q, mic, camera, brain):
         stride = audio_data.shape[0]/video_data.shape[0]
         x = scaled_data[scaled_data.shape[0] - stride*video_data.shape[0]::stride]
         y = video_data
-
-        print x.shape, y.shape
-
+        
         video_net.train(x,y)
         video_net.stop_training()
         
@@ -73,14 +71,14 @@ def respond(state_q, mic, speaker, camera, projector, brain):
         print 'RMSE for neural networks in brain:', rmse
         audio_net, video_net, scaler = brain[np.argmin(rmse)]
         
-        input_data = scaler.transform(audio_data)
-        sound = audio_net(input_data)
+        scaled_data = scaler.transform(audio_data)
+        sound = audio_net(scaled_data)
 
         for row in scaler.inverse_transform(sound):
             speaker.append(row)
 
         stride = audio_data.shape[0]/video_data.shape[0]
-        projection = video_net(input_data[input_data.shape[0] - stride*video_data.shape[0]::stride]) 
+        projection = video_net(scaled_data[scaled_data.shape[0] - stride*video_data.shape[0]::stride]) 
 
         for row in projection:
             projector.append(row)

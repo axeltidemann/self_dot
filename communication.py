@@ -12,11 +12,11 @@ Talk to [self.] over sockets.
 
 from __future__ import print_function
 
-import socket
+import os
 import sys
+import socket
 
 def receive(callback, host='localhost', port=7777):
-    import os
     print('RECEIVE PID {}'.format(os.getpid()))
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.bind((host, port))
