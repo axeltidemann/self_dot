@@ -71,6 +71,25 @@
 	kFollow1	downsamp aFollow1	
 
 ; ***************
+; (very coarse) segmentation, set kstatus = 1 when something interesting happens (spoken sentence or some other coherent sound)
+	kattack		= 0.01
+	krelease	= 2.0
+	arms		follow2 a1, kattack, krelease
+	krms		downsamp arms*1.6
+	krms_dB		= dbfsamp(krms)
+	iAttackThresh	= -25
+	iReleaseThresh	= iAttackThresh-6
+	kstate 		init  0 	
+	if krms_dB > iAttackThresh then
+	kstate		= 1
+	endif
+	if (kstate == 1) && (krms_dB > iReleaseThresh) then
+	kstate		= 1
+	else
+	kstate 		= 0
+	endif
+
+; ***************
 ; epoch filtering
 	a20		butterbp a1, 20, 5
 	a20		dcblock2 a20*40
@@ -209,6 +228,7 @@ endif
 
 ; ***************
 ; write to chn
+			chnset kstate, "audioStatus"
 			chnset krms1, "level1"
 			chnset kFollow1, "envelope1"
 			chnset kcps1, "pitch1ptrack"

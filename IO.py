@@ -51,7 +51,7 @@ def audio(sense, mic, speaker):
         #test1 = cs.GetPvsChannel(fft_audio_in1, 0)
 
         # get Csound channel data
-        #audioStatus = cs.GetChannel("audioStatus")
+        audioStatus = cs.GetChannel("audioStatus")
         if sense.value:
             mic.append([cs.GetChannel("level1"), 
 			            cs.GetChannel("envelope1"), 
