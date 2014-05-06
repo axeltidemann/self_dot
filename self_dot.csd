@@ -14,6 +14,12 @@
 
 	giSine		ftgen	0, 0, 65536, 10, 1
 
+; pvs ftables
+	gifftsize 	= 256
+	giFftTabSize	= (gifftsize / 2)+1
+	gifna     	ftgen   0 ,0 ,giFftTabSize, 7, 0, giFftTabSize, 0   ; make ftable for pvs analysis
+	gifnf     	ftgen   0 ,0 ,giFftTabSize, 7, 0, giFftTabSize, 0   ; make ftable for pvs analysis
+
 ;******************************
 ; audio file input 
 	instr 3
@@ -51,89 +57,174 @@
 	a0		= 0
 			chnset a0, "in1"
 			chnset a0, "in2"
+; ***************
+; extract stereo position here, then collapse input signal to mono
+	kpos		= 0.5	; ...as if we already had implemented position tracking
+	a1		= a1+a2
 
 ; ***************
 ; amplitude tracking
 	krms1		rms a1				; simple level measure
-	krms2		rms a2
 	kAttack		= 0.01
 	kRelease	= 0.3
 	aFollow1	follow2	a1, kAttack, kRelease	; envelope follower
 	kFollow1	downsamp aFollow1	
-	aFollow2	follow2	a2, kAttack, kRelease
-	kFollow2	downsamp aFollow2	
 
 ; ***************
-; centroid
-	irefrtm		= 20				; interval for generating new values for the spectral centroid
-	ifftsize	= 1024
-	ioverlap	= ifftsize / 4
-	iwinsize	= ifftsize
-	iwinshape	= 1				; von-Hann window
-	fftin1		pvsanal	a1, ifftsize, ioverlap, iwinsize, iwinshape
-	fftin2		pvsanal	a2, ifftsize, ioverlap, iwinsize, iwinshape
-	ktrig		metro irefrtm
-if ktrig == 1 then
-	kcentro1	pvscent	fftin1
-	kcentro2	pvscent	fftin2
+; epoch filtering
+	a20		butterbp a1, 20, 5
+	a20		dcblock2 a20*40
+	aepochSig	butlp a20, 200
+	kepochSig	downsamp aepochSig
+	kepochRms	rms aepochSig
+
+; count epoch zero crossings
+	ktime		times	
+	kZC		trigger kepochSig, 0, 0
+	kprevZCtim	init 0
+	kinterval1	init 0
+	kinterval2	init 0
+	kinterval3	init 0
+	kinterval4	init 0
+	if kZC > 0 then
+	kZCtim	 	= ktime
+	kinterval4	= kinterval3
+	kinterval3	= kinterval2
+	kinterval2	= kinterval1
+	kinterval1	= kZCtim-kprevZCtim
+	kprevZCtim	= kZCtim
+	endif
+	kmax		max kinterval1, kinterval2, kinterval3, kinterval4
+	kmin		min kinterval1, kinterval2, kinterval3, kinterval4
+	kZCmedi		= (kinterval1+kinterval2+kinterval3+kinterval4-kmax-kmin)/2
+	kepochZCcps	divz 1, kZCmedi, 1
+
+
+; ***************
+; spectral analysis
+
+
+	iwtype 			= 1
+	fsin 			pvsanal	a1, gifftsize, gifftsize/4, gifftsize, iwtype
+	kflag   		pvsftw	fsin,gifna,gifnf          	; export  amps  and freqs to table,
+
+	kupdateRate		= 1000	; correlation interval
+	kflatness		init -1
+	kmetro			metro kupdateRate
+	kdoflag			init 0
+	kdoflag			= kdoflag + kmetro
+
+	; copy pvs data from table to array
+	; analyze spectral features
+	kArrA[]  		init    giFftTabSize-2
+	kArrAprev[]  		init    giFftTabSize-2
+	kArrF[]  		init    giFftTabSize-2
+	kArrCorr[]  		init    giFftTabSize-2
+	kflatness		init -1
+
+if (kdoflag > 0) && (kflag > 0) then
+	kArrAprev[]		= kArrA
+        			copyf2array kArrA, gifna
+        			copyf2array kArrF, gifnf	
+	kindx 			= 0
+	kcentroid		= 0
+	ksumAmp			sumarray kArrA
+	kflatsum		= 0
+	kflatlogsum		= 0
+	kcorrSum		= 0
+	kthisSum2		= 0
+	kprevSum2		= 0
+
+  process:
+	kArrCorr[kindx]		= kArrA[kindx]*kArrAprev[kindx]
+	knormAmp		= kArrA[kindx] / ksumAmp
+	kcentroid		= kcentroid + (kArrF[kindx]*knormAmp)
+	kflatsum		= kflatsum + kArrA[kindx]
+	kflatlogsum		= kflatlogsum + log(kArrA[kindx])
+	kcorrSum		= kcorrSum + (kArrAprev[kindx]*kArrA[kindx])
+	kprevSum2		= kprevSum2 + (kArrAprev[kindx]^2)
+	kthisSum2		= kthisSum2 + (kArrA[kindx]^2)
+	kindx 			= kindx + 1
+  if kindx < giFftTabSize-2 then
+  kgoto process
+  endif
+
+; separate loop for spread
+	kindx 			= 0
+	kspread			= 0
+	kskewness		= 0
+	kurtosis		= 0
+  spread:
+	knormAmp		= kArrA[kindx] / ksumAmp
+	kspread			= ((kArrF[kindx] - kcentroid)^2)*knormAmp
+	kskewness		= ((kArrF[kindx] - kcentroid)^3)*knormAmp
+	kurtosis		= ((kArrF[kindx] - kcentroid)^4)*knormAmp
+	kindx 			= kindx + 1
+  if kindx < giFftTabSize-2 then
+  kgoto spread
+  endif
+	kspread			= kspread^0.5
+	kskewness		= (kskewness / (kspread^3))/200000
+	kurtosis		= kurtosis / (kspread^4)/1000000000
+	kflatness		= exp(1/(giFftTabSize-2)*kflatlogsum) / (1/(giFftTabSize-2)*kflatsum)
+	kmaxAmp			maxarray kArrA
+	kcrest			= kmaxAmp / (1/(giFftTabSize-2)*kflatsum)
+	kflux			= 1-(kcorrSum / (sqrt(kprevSum2)*sqrt(kthisSum2)))
+	kdoflag 		= 0
 endif
-	kcentro1	tonek kcentro1, 100	
-	kcentro2	tonek kcentro2, 100	
+
+	kautocorr		sumarray kArrCorr
+	krmsA			sumarray kArrA
+	krmsAprev		sumarray kArrAprev
+	kautocorr		= (kautocorr / (krmsA*krmsAprev)*1.79)
 
 ; ***************
 ; dump fft to python
          	;pvsout  fftin1, 0 			; write signal to pvs out bus channel 0
-         	;pvsout  fftin1, 1			; write signal to pvs out bus channel 0
 
 ; ***************
 ; pitch tracking
-; choose from two different methods 
+; using two different methods, keeping both signals
 ; ptrack may be better for polyphonic signals
 ; plltrack probably better for speech
 
-/*
+
 	kcps1 		init 0	
-	kcps2 		init 0	
 	ihopsize	= 512
 
 	kcps1a, kamp1 	ptrack a1, ihopsize
-	kcps2a, kamp2 	ptrack a2, ihopsize
 
 	kcps1b		init 100
 	kcps1b		= (kcps1a > 800 ? kcps1b : kcps1a) ; avoid high intermittencies
 	kcps1		init 100
 	kcps1		= (krms1 < 0.03 ? kcps1 : kcps1b)  ; don't track (keep last value) at low amplitude
 
-	kcps2b		init 100
-	kcps2b		= (kcps2a > 800 ? kcps2b : kcps2a) 
-	kcps2		init 100
-	kcps2		= (krms2 < 0.03 ? kcps2 : kcps2b)
-
 	imedianSize	= ihopsize
 	kcps1		mediank	kcps1, imedianSize, imedianSize
-	kcps2		mediank	kcps2, imedianSize, imedianSize
-*/
 
-	acps1, alock1 	plltrack a1, 0.2 
-	kcps1		downsamp acps1
-	acps2, alock2 	plltrack a2, 0.2 
-	kcps2		downsamp acps2
+	acps1p, alock1p	plltrack a1, 0.2 
+	kcps1p		downsamp acps1p
 	imedianSize	= 200
-	kcps1		mediank	kcps1, imedianSize, imedianSize
-	kcps2		mediank	kcps2, imedianSize, imedianSize
-
-
+	kcps1p		mediank	kcps1p, imedianSize, imedianSize
 
 ; ***************
 ; write to chn
 			chnset krms1, "level1"
-			chnset krms2, "level2"
 			chnset kFollow1, "envelope1"
-			chnset kFollow2, "envelope2"
-			chnset kcps1, "pitch1"
-			chnset kcps2, "pitch2"
-			chnset kcentro1, "centroid1"
-			chnset kcentro2, "centroid2"
+			chnset kcps1, "pitch1ptrack"
+			chnset kcps1p, "pitch1pll"
+			chnset kautocorr, "autocorr1"
+			chnset kcentroid, "centroid1"
+			chnset kspread, "spread1"
+			chnset kskewness, "skewness1"
+			chnset kurtosis, "kurtosis1"
+			chnset kflatness, "flatness1"
+			chnset kcrest, "crest1"
+			chnset kflux, "flux1"
+			chnset kepochSig, "epochSig1"
+			chnset kepochRms, "epochRms1"
+			chnset kepochZCcps, "epochZCcps1"
+
 
 ;  		out a1,a2
 	endin
@@ -148,7 +239,8 @@ endif
 
 	krms1 		chnget "respondLevel1"
 	kenv1 		chnget "respondEnvelope1"
-	kcps1 		chnget "respondPitch1"
+	kcps1 		chnget "respondPitch1ptrack"
+	kcps1p 		chnget "respondPitch1pll"
 	kcentro1 	chnget "respondCentroid1"
 
 /*
@@ -177,7 +269,7 @@ endif
 
 <CsScore>
 ; run for N sec
-i3 0 86400	; audio file input
+;i3 0 86400	; audio file input
 i4 0 86400	; audio input
 i5 0 86400	; analysis
 i9 0 86400	; resynthesis

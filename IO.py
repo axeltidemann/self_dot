@@ -40,7 +40,6 @@ def audio(sense, mic, speaker):
     cs.Compile(arguments.argc(), arguments.argv())
     stopflag = 0
     #fft_audio_in1 = np.zeros(1024)
-    #fft_audio_in2 = np.zeros(1024)
     offset = 0
 
     while not stopflag:
@@ -50,23 +49,38 @@ def audio(sense, mic, speaker):
         offset %= 200
         cs.SetChannel("freq_offset", offset)
         #test1 = cs.GetPvsChannel(fft_audio_in1, 0)
-        #test2 = cs.GetPvsChannel(fft_audio_in2, 1)
 
         # get Csound channel data
         #audioStatus = cs.GetChannel("audioStatus")
         if sense.value:
-            mic.append([ cs.GetChannel("level1"), cs.GetChannel("envelope1"),
-                         cs.GetChannel("pitch1"), cs.GetChannel("centroid1") ])
-        
+            mic.append([cs.GetChannel("level1"), 
+			            cs.GetChannel("envelope1"), 
+			            cs.GetChannel("pitch1ptrack"), 
+			            cs.GetChannel("pitch1pll"), 
+			            cs.GetChannel("autocorr1"), 
+			            cs.GetChannel("centroid1"), 
+			            cs.GetChannel("spread1"), 
+			            cs.GetChannel("skewness1"), 
+			            cs.GetChannel("kurtosis1"), 
+			            cs.GetChannel("flatness1"), 
+			            cs.GetChannel("crest1"), 
+			            cs.GetChannel("flux1"), 
+			            cs.GetChannel("epochSig1"), 
+			            cs.GetChannel("epochRms1"), 
+			            cs.GetChannel("epochZCcps1") ])
+
+
         try:
             sound = speaker.popleft()
             cs.SetChannel("respondLevel1", sound[0])
             cs.SetChannel("respondEnvelope1", sound[1])
-            cs.SetChannel("respondPitch1", sound[2])
-            cs.SetChannel("respondCentroid1", sound[3])
+            cs.SetChannel("respondPitch1ptrack", sound[2])
+            cs.SetChannel("respondPitch1pll", sound[3])
+            cs.SetChannel("respondCentroid1", sound[4])
         except:
             cs.SetChannel("respondLevel1", 0)
             cs.SetChannel("respondEnvelope1", 0)
-            cs.SetChannel("respondPitch1", 0)
+            cs.SetChannel("respondPitch1ptrack", 0)
+            cs.SetChannel("respondPitch1pll", 0)
             cs.SetChannel("respondCentroid1", 0)
 
