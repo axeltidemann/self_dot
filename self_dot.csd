@@ -15,8 +15,8 @@
 	giSine		ftgen	0, 0, 65536, 10, 1
 
 ;******************************
-; analysis  of audio input 
-	instr 1  
+; audio file input 
+	instr 3
 
 /*
 	; test tone
@@ -26,14 +26,31 @@
   	kcps	= icps + koffset
 	a1 	oscili iamp, kcps, giSine	; sine test tone
   	a2 	oscili iamp, kcps*2, giSine	; sine test tone 2
-
-	a1	soundin "fox.wav"
-	a2	= 0
 */
-	; live audio input
+
+	a1	soundin "bkup/fox.wav"
+	a2	= 0
+		chnmix a1, "in1"
+		chnmix a2, "in2"
+	endin
+
+;******************************
+; live audio input
+	instr 4
 	a1,a2	inch 1,2
+		chnmix a1, "in1"
+		chnmix a2, "in2"
+	endin
 
-
+;******************************
+; analysis  of audio input 
+	instr 5
+	
+	a1		chnget "in1"
+	a2		chnget "in2"
+	a0		= 0
+			chnset a0, "in1"
+			chnset a0, "in2"
 
 ; ***************
 ; amplitude tracking
@@ -126,7 +143,7 @@ endif
 ; resynthesis/imitation
 ; only using channel 1 for now
 
-	instr 2
+	instr 9
 
 
 	krms1 		chnget "respondLevel1"
@@ -160,8 +177,10 @@ endif
 
 <CsScore>
 ; run for N sec
-i1 0 86400
-i2 0 86400
+i3 0 86400	; audio file input
+i4 0 86400	; audio input
+i5 0 86400	; analysis
+i9 0 86400	; resynthesis
 
 </CsScore>
 
