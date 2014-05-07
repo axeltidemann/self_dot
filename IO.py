@@ -89,5 +89,6 @@ def playfile():
     print 'playfile called'
     global cs
     print cs
-    cs.SetChannel("respondLevel1", 0)#InputMessage('i 3 0 3')
+    cs.SetChannel("respondLevel1", 0) # just testing connection to Csound
+    #cs.InputMessage('i 3 0 3') # this is the actual message I want to send
     
