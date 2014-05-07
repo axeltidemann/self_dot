@@ -3,6 +3,7 @@ import os
 import cv2
 import numpy as np
 import myCsoundAudioOptions
+cs = '' # pointer to global csound instance, updated in audio()
 
 def video(sense, camera, projector):
     print 'VIDEO PID', os.getpid()
@@ -29,6 +30,7 @@ def video(sense, camera, projector):
 def audio(sense, mic, speaker):
     print 'AUDIO PID', os.getpid()
     import csnd6
+    global cs
     cs = csnd6.Csound()
     arguments = csnd6.CsoundArgVList()
     arguments.Append("dummy")
@@ -56,19 +58,18 @@ def audio(sense, mic, speaker):
             mic.append([cs.GetChannel("level1"), 
 			            cs.GetChannel("envelope1"), 
 			            cs.GetChannel("pitch1ptrack"), 
-			            cs.GetChannel("pitch1pll"), 
-			            cs.GetChannel("autocorr1"), 
-			            cs.GetChannel("centroid1"), 
-			            cs.GetChannel("spread1"), 
-			            cs.GetChannel("skewness1"), 
-			            cs.GetChannel("kurtosis1"), 
-			            cs.GetChannel("flatness1"), 
-			            cs.GetChannel("crest1"), 
-			            cs.GetChannel("flux1"), 
-			            cs.GetChannel("epochSig1"), 
-			            cs.GetChannel("epochRms1"), 
-			            cs.GetChannel("epochZCcps1") ])
-
+                        cs.GetChannel("pitch1pll"), 
+			            cs.GetChannel("centroid1"),
+                        cs.GetChannel("autocorr1"), 
+                        cs.GetChannel("spread1"), 
+                        cs.GetChannel("skewness1"), 
+                        cs.GetChannel("kurtosis1"), 
+                        cs.GetChannel("flatness1"), 
+                        cs.GetChannel("crest1"), 
+                        cs.GetChannel("flux1"), 
+                        cs.GetChannel("epochSig1"), 
+                        cs.GetChannel("epochRms1"), 
+                        cs.GetChannel("epochZCcps1") ])
 
         try:
             sound = speaker.popleft()
@@ -84,3 +85,9 @@ def audio(sense, mic, speaker):
             cs.SetChannel("respondPitch1pll", 0)
             cs.SetChannel("respondCentroid1", 0)
 
+def playfile():
+    print 'playfile called'
+    global cs
+    print cs
+    cs.SetChannel("respondLevel1", 0)#InputMessage('i 3 0 3')
+    

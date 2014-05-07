@@ -231,6 +231,7 @@ endif
 			chnset kstate, "audioStatus"
 			chnset krms1, "level1"
 			chnset kFollow1, "envelope1"
+;printk2 kFollow1
 			chnset kcps1, "pitch1ptrack"
 			chnset kcps1p, "pitch1pll"
 			chnset kautocorr, "autocorr1"

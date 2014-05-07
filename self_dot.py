@@ -16,7 +16,7 @@ from collections import deque
 import numpy as np
 
 from AI import learn, respond
-from IO import audio, video
+from IO import audio, video, playfile
 from communication import receive as receive_messages
         
 class Controller:
@@ -40,6 +40,10 @@ class Controller:
         if message == 'respond':
             self.respond_state.put(True)
 
+        if message == 'playfile':
+            print 'controller calling playfile'
+            playfile()
+            
 class MyManager(BaseManager):
     pass
 
