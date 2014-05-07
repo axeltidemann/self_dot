@@ -10,15 +10,15 @@
 
 import os
 import multiprocessing as mp
-from multiprocessing.managers import BaseManager, ListProxy
-from collections import deque
 
 import numpy as np
+import csnd6
 
 from AI import learn, respond
-from IO import audio, video, playfile
+from IO import audio, video
 from communication import receive as receive_messages
-        
+from utils import MyManager, MyDeque
+       
 class Controller:
     def __init__(self, sense, learn_state, respond_state):
         self.sense = sense
@@ -38,24 +38,13 @@ class Controller:
             self.learn_state.put(True)
 
         if message == 'respond':
-            self.respond_state.put(True)
-
-        if message == 'playfile':
-            print 'controller calling playfile'
-            playfile()
-            
-class MyManager(BaseManager):
-    pass
-
-class MyDeque(deque):
-    def array(self):
-        return np.array(list(self))
+            self.respond_state.put(True)            
                         
 if __name__ == '__main__':
     print 'MAIN PID', os.getpid()
     
     MyManager.register('deque', MyDeque)
-    MyManager.register('list', list, proxytype=ListProxy)
+    MyManager.register('list', list, proxytype=mp.managers.ListProxy)
 
     manager = MyManager()
     manager.start()

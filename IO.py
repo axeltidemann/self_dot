@@ -3,7 +3,6 @@ import os
 import cv2
 import numpy as np
 import myCsoundAudioOptions
-cs = '' # pointer to global csound instance, updated in audio()
 
 def video(sense, camera, projector):
     print 'VIDEO PID', os.getpid()
@@ -30,7 +29,6 @@ def video(sense, camera, projector):
 def audio(sense, mic, speaker):
     print 'AUDIO PID', os.getpid()
     import csnd6
-    global cs
     cs = csnd6.Csound()
     arguments = csnd6.CsoundArgVList()
     arguments.Append("dummy")
@@ -54,12 +52,16 @@ def audio(sense, mic, speaker):
 
         # get Csound channel data
         audioStatus = cs.GetChannel("audioStatus")
+
+        if audioStatus:
+            print 'THE HEAT IS ON!'
+        
         if sense.value:
             mic.append([cs.GetChannel("level1"), 
-			            cs.GetChannel("envelope1"), 
-			            cs.GetChannel("pitch1ptrack"), 
+                        cs.GetChannel("envelope1"), 
+                        cs.GetChannel("pitch1ptrack"), 
                         cs.GetChannel("pitch1pll"), 
-			            cs.GetChannel("centroid1"),
+                        cs.GetChannel("centroid1"),
                         cs.GetChannel("autocorr1"), 
                         cs.GetChannel("spread1"), 
                         cs.GetChannel("skewness1"), 
@@ -84,11 +86,3 @@ def audio(sense, mic, speaker):
             cs.SetChannel("respondPitch1ptrack", 0)
             cs.SetChannel("respondPitch1pll", 0)
             cs.SetChannel("respondCentroid1", 0)
-
-def playfile():
-    print 'playfile called'
-    global cs
-    print cs
-    cs.SetChannel("respondLevel1", 0) # just testing connection to Csound
-    #cs.InputMessage('i 3 0 3') # this is the actual message I want to send
-    
