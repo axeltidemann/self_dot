@@ -15,6 +15,7 @@ Proceed by installing these packages:
 pip install https://github.com/perone/Pyevolve/zipball/master
 pip install numpy
 pip install scipy
+pip install scikit-learn
 pip install ipdb
 pip install MDP
 easy_install readline
@@ -29,24 +30,14 @@ Download the tarball, run
 
 > python setup.py install
 
-Note: when you install the following software, it is advised that you
-install them into $VIRTUAL_ENV/local, so they will be contained within
+Note: when you install OpenCV following software, it is advised that you
+install it into $VIRTUAL_ENV/local, so it will be contained within
 the virtualenv, and more robust. This is shown as an example under
 "Mac stuff".
 
 OpenCV: http://opencv.org
 
-PortAudio: http://www.portaudio.com
-
-libsnd: http://www.mega-nerd.com/libsndfile/
-
-OpenCV installs Python bindings by itself. To be able to use the sound software:
-
-```
-pip install cffi 
-pip install psoundfile
-pip install pysoundcard
-```
+Csound: http://www.csounds.com
 
 ## Specific Mac OS X stuff:
 
@@ -91,24 +82,6 @@ libpython2.7.dylib in ~/.local/lib is a bit beyond me (and maybe I'm
 missing something important here). However, in this particular case,
 the VIRTUALENVWRAPPER_PYTHON was the same as the system wide python,
 so this worked.
-
-PortAudio: download the source code from http://www.portaudio.com Keeping in with the good virtualenv tradition:
-
-```
-./configure --prefix=$VIRTUAL_ENV/local
-make clean
-make -j8
-make install
-```
-
-libsnd: http://www.mega-nerd.com/libsndfile/
-
-```
-./configure --prefix=$VIRTUAL_ENV/local
-make clean
-make -j8
-make install
-```
 
 In order to use the new shared libraries, you must specify where they are.
 
