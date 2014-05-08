@@ -4,7 +4,7 @@ import cv2
 import numpy as np
 import myCsoundAudioOptions
 
-def video(sense, camera, projector):
+def video(state, camera, projector):
     print 'VIDEO PID', os.getpid()
     cv2.namedWindow('Output', cv2.WINDOW_NORMAL)
     video_feed = cv2.VideoCapture(0)
@@ -15,7 +15,7 @@ def video(sense, camera, projector):
         frame = cv2.resize(frame, frame_size)
         gray_image = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
-        if sense.value:
+        if state['record']:
             camera.append(np.ndarray.flatten(gray_image)/255.)
 
         try:
@@ -26,7 +26,7 @@ def video(sense, camera, projector):
 
         cv2.waitKey(100)
 
-def audio(sense, mic, speaker):
+def audio(state, mic, speaker):
     print 'AUDIO PID', os.getpid()
     import csnd6
     cs = csnd6.Csound()
@@ -53,10 +53,11 @@ def audio(sense, mic, speaker):
         # get Csound channel data
         audioStatus = cs.GetChannel("audioStatus")
 
-        if audioStatus:
-            print 'THE HEAT IS ON!'
+        if state['playfile']:
+            print '[self.] wants to play {}'.format(state['playfile'])
+            state['playfile'] = False
         
-        if sense.value:
+        if state['record']:
             mic.append([cs.GetChannel("level1"), 
                         cs.GetChannel("envelope1"), 
                         cs.GetChannel("pitch1ptrack"), 

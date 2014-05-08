@@ -11,40 +11,37 @@
 import os
 import multiprocessing as mp
 
-import numpy as np
-import csnd6
-
 from AI import learn, respond
 from IO import audio, video
 from communication import receive as receive_messages
 from utils import MyManager, MyDeque
        
 class Controller:
-    def __init__(self, sense, learn_state, respond_state):
-        self.sense = sense
-        self.learn_state = learn_state
-        self.respond_state = respond_state
+    def __init__(self, state):
+        self.state = state
         
     def parse(self, message):
         print '[self.] received:', message
 
         if message == 'startrec':
-            self.sense.value = 1
+            self.state['record'] = True
 
         if message == 'stoprec':
-            self.sense.value = 0
+            self.state['record'] = False
 
         if message == 'learn':
-            self.learn_state.put(True)
+            self.state['learn'] = True
 
         if message == 'respond':
-            self.respond_state.put(True)            
+            self.state['respond'] = True
+
+        if 'playfile' in message:
+            self.state['playfile'] = message[9:]
                         
 if __name__ == '__main__':
     print 'MAIN PID', os.getpid()
     
     MyManager.register('deque', MyDeque)
-    MyManager.register('list', list, proxytype=mp.managers.ListProxy)
 
     manager = MyManager()
     manager.start()
@@ -55,16 +52,17 @@ if __name__ == '__main__':
     camera = manager.deque()
     projector = manager.deque()
 
-    sense = mp.Value('i',0)
-    learn_state = mp.Queue()
-    respond_state = mp.Queue()
+    state = manager.dict({'record': False,
+                          'learn': False,
+                          'respond': False,
+                          'playfile': False}) 
 
-    controller = Controller(sense, learn_state, respond_state)
+    controller = Controller(state)
 
-    mp.Process(target=audio, args=(sense, mic, speaker)).start()
-    mp.Process(target=video, args=(sense, camera, projector)).start()
-    mp.Process(target=learn, args=(learn_state, mic, camera, brain)).start()
-    mp.Process(target=respond, args=(respond_state, mic, speaker, camera, projector, brain)).start()
+    mp.Process(target=audio, args=(state, mic, speaker)).start()
+    mp.Process(target=video, args=(state, camera, projector)).start()
+    mp.Process(target=learn, args=(state, mic, camera, brain)).start()
+    mp.Process(target=respond, args=(state, mic, speaker, camera, projector, brain)).start()
     mp.Process(target=receive_messages, args=(controller.parse,)).start()
     
     try:

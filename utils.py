@@ -1,9 +1,9 @@
-from multiprocessing.managers import BaseManager
+from multiprocessing.managers import SyncManager
 from collections import deque
 
 import numpy as np
 
-class MyManager(BaseManager):
+class MyManager(SyncManager):
     pass
 
 class MyDeque(deque):

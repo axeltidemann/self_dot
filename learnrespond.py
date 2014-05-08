@@ -7,7 +7,7 @@ secs = int(sys.argv[1]) if len(sys.argv) >= 2 else 5
 mode = (sys.argv[2]) if len(sys.argv) >= 3 else 'both'
 
 if mode == 'filelearn':
-    send('playfile')
+    send('playfile {}'.format(sys.argv[3]))
     print 'learning'
     send('startrec')
     time.sleep(3)
