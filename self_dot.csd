@@ -24,7 +24,6 @@
 ; audio file input 
 	instr 3
 
-print p1, p2, p3
 	Ssound	strget p4
 	Spath	="testsounds/"
 	S1	strcat Spath, Ssound
