@@ -55,6 +55,8 @@ def audio(state, mic, speaker):
 
         if state['playfile']:
             print '[self.] wants to play {}'.format(state['playfile'])
+            print '{}'.format(state['playfile'])
+            cs.InputMessage('i3 0 5 "%s"'%'{}'.format(state['playfile']))
             state['playfile'] = False
         
         if state['record']:

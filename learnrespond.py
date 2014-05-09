@@ -15,7 +15,7 @@ if mode == 'filelearn':
     send('learn')
     print 'done learning'
 elif mode == 'filerespond':
-    send('playfile')
+    send('playfile {}'.format(sys.argv[3]))
     print 'responding'
     send('startrec')
     time.sleep(3)

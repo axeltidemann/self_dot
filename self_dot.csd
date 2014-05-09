@@ -24,18 +24,13 @@
 ; audio file input 
 	instr 3
 
-/*
-	; test tone
-	iamp	= ampdbfs(-5)
-	icps	= 220
-	koffset	chnget "freq_offset"
-  	kcps	= icps + koffset
-	a1 	oscili iamp, kcps, giSine	; sine test tone
-  	a2 	oscili iamp, kcps*2, giSine	; sine test tone 2
-*/
-
-	a1	soundin "bkup/fox.wav"
+print p1, p2, p3
+	Ssound	strget p4
+	Spath	="testsounds/"
+	S1	strcat Spath, Ssound
+	a1	soundin S1
 	a2	= 0
+		outs a1, a2
 		chnmix a1, "in1"
 		chnmix a2, "in2"
 	endin
