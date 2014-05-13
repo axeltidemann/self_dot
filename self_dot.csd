@@ -225,7 +225,7 @@ endif
 
 ; ***************
 ; dump fft to python
-         	;pvsout  fftin1, 0 			; write signal to pvs out bus channel 0
+         			pvsout  fsin, 0 			; write signal to pvs out bus channel 0
 
 ; ***************
 ; pitch tracking

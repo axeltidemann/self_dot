@@ -39,7 +39,8 @@ def audio(state, mic, speaker):
         arguments.Append("%s"%item)
     cs.Compile(arguments.argc(), arguments.argv())
     stopflag = 0
-    #fft_audio_in1 = np.zeros(1024)
+    #fft_audio_in1 = np.zeros(256)
+    fft_audio_in1 = csnd6.PVSDATEXT()
     offset = 0
 
     while not stopflag:
@@ -48,8 +49,10 @@ def audio(state, mic, speaker):
         offset += 0.01
         offset %= 200
         cs.SetChannel("freq_offset", offset)
-        #test1 = cs.GetPvsChannel(fft_audio_in1, 0)
-
+        test1 = cs.PvsoutGet(fft_audio_in1, "0")
+        ## examine fft_audio_in1
+        #print fft_audio_in1.frame
+        
         # get Csound channel data
         audioStatus = cs.GetChannel("audioStatus")
 
