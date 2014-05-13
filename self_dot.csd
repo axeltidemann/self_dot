@@ -51,6 +51,11 @@
 	a0		= 0
 			chnset a0, "in1"
 			chnset a0, "in2"
+	krms		rms a1
+	kgate		= (krms < ampdbfs(-30) ? 0 : 1)	; don't bother analyzing very quiet sections
+	kgate		tonek kgate, 10
+	a1		= a1 * kgate
+
 ; ***************
 ; extract stereo position here, then collapse input signal to mono
 	kpos		= 0.5	; ...as if we already had implemented position tracking
@@ -59,29 +64,55 @@
 ; ***************
 ; amplitude tracking
 	krms1		rms a1				; simple level measure
-	kAttack		= 0.01
-	kRelease	= 0.3
+	kAttack		= 0.001				; envelope follower attack
+	kRelease	= 0.3 				; envelope follower release
 	aFollow1	follow2	a1, kAttack, kRelease	; envelope follower
 	kFollow1	downsamp aFollow1	
 
 ; ***************
-; (very coarse) segmentation, set kstatus = 1 when something interesting happens (spoken sentence or some other coherent sound)
-	kattack		= 0.01
-	krelease	= 2.0
-	arms		follow2 a1, kattack, krelease
-	krms		downsamp arms*1.6
-	krms_dB		= dbfsamp(krms)
-	iAttackThresh	= -25
-	iReleaseThresh	= iAttackThresh-6
-	kstate 		init  0 	
-	if krms_dB > iAttackThresh then
-	kstate		= 1
+;analyze transients
+	iResponse	= 10 		; response time in milliseconds
+	kAtck_db	= 3		; attack threshold (in dB)
+	iLowThresh	= 0.005		; lower threshold for transient detection (adaptive, relative to recent transient strength)
+	idoubleLimit	= 0.02		; minimum duration between events, (double trig limit)
+	
+	kFollowdb1	= dbfsamp(kFollow1)			; convert to dB
+	kFollowDel1	delayk	kFollowdb1, iResponse/1000	; delay with response time for comparision of levels
+	kTrig1		init 0
+	kLowThresh1	init 0
+	kTrig1		= ((kFollowdb1 > kFollowDel1 + kAtck_db) ? 1 : 0) 	; if current rms plus threshold is larger than previous rms, set trig signal to current rms
+	
+	; avoid transient detection of very soft signals (adaptive level)
+	if kTrig1 > 0 then
+	kLowThresh1	= (kLowThresh1*0.7)+(kFollow1*0.3)		; (the coefficients can be used to adjust adapt rate)
 	endif
-	if (kstate == 1) && (krms_dB > iReleaseThresh) then
-	kstate		= 1
-	else
-	kstate 		= 0
+	kTrig1		= (kLowThresh1 > iLowThresh ? kTrig1 : 0)
+	
+	; avoid closely spaced transient triggers (first trig priority)
+	kDouble1	init 1
+	kTrig1		= kTrig1*kDouble1
+	if kTrig1 > 0 then
+	reinit double1
 	endif
+	double1:
+	kDouble1	linseg	0, idoubleLimit, 0, 0, 1, 1, 1
+	rireturn
+		
+; ***************
+; segmentation, set kstatus = 1 when a transient occurs, 
+; keep status = 1 until level drops 6dB below the level at which the transient was detected
+; and keep status = 1 for a release time period after the level has dropped below the threshold
+	iStatusThresh	= 6			; status release threshold, signal must drop this much below transient level before we say that the audio segment is finished
+	iStatusRel	= 0.01			; status release time, hold status=1 for this long after signal has dropped below threshold
+	kstate		init 0
+	kstate		= (kTrig1 > 0 ? 1 : kstate)
+	ksegStart	trigger kstate, 0.5, 0
+	kdBStart	init 0
+	kdBStart 	= (ksegStart > 0 ? kFollowdb1 : kdBStart)
+	kstate		= (kFollowdb1 < (kdBStart-iStatusThresh) ? 0 : kstate)
+	kstate_Dly	delayk kstate, iStatusRel
+	kstate_Rel	= ((kstate == 0) && (kstate_Dly == 0)? 0 : 1)
+	kstatus		= kstate_Rel
 
 ; ***************
 ; epoch filtering
@@ -93,14 +124,14 @@
 
 ; count epoch zero crossings
 	ktime		times	
-	kZC		trigger kepochSig, 0, 0
+	kZC		trigger kepochSig, 0, 0		; zero cross
 	kprevZCtim	init 0
 	kinterval1	init 0
 	kinterval2	init 0
 	kinterval3	init 0
 	kinterval4	init 0
 	if kZC > 0 then
-	kZCtim	 	= ktime
+	kZCtim	 	= ktime				; get time between zero crossings
 	kinterval4	= kinterval3
 	kinterval3	= kinterval2
 	kinterval2	= kinterval1
@@ -116,12 +147,11 @@
 ; ***************
 ; spectral analysis
 
-
 	iwtype 			= 1
 	fsin 			pvsanal	a1, gifftsize, gifftsize/4, gifftsize, iwtype
 	kflag   		pvsftw	fsin,gifna,gifnf          	; export  amps  and freqs to table,
 
-	kupdateRate		= 1000	; correlation interval
+	kupdateRate		= 1000	
 	kflatness		init -1
 	kmetro			metro kupdateRate
 	kdoflag			init 0
@@ -150,7 +180,7 @@ if (kdoflag > 0) && (kflag > 0) then
 
   process:
 	kArrCorr[kindx]		= kArrA[kindx]*kArrAprev[kindx]
-	knormAmp		= kArrA[kindx] / ksumAmp
+	knormAmp		divz kArrA[kindx], ksumAmp, 0
 	kcentroid		= kcentroid + (kArrF[kindx]*knormAmp)
 	kflatsum		= kflatsum + kArrA[kindx]
 	kflatlogsum		= kflatlogsum + log(kArrA[kindx])
@@ -162,13 +192,13 @@ if (kdoflag > 0) && (kflag > 0) then
   kgoto process
   endif
 
-; separate loop for spread
+; separate loop for spread, skewness, kurtosis (as they depend on centroid being previously calculated) 
 	kindx 			= 0
 	kspread			= 0
 	kskewness		= 0
 	kurtosis		= 0
   spread:
-	knormAmp		= kArrA[kindx] / ksumAmp
+	knormAmp		divz kArrA[kindx], ksumAmp, 0
 	kspread			= ((kArrF[kindx] - kcentroid)^2)*knormAmp
 	kskewness		= ((kArrF[kindx] - kcentroid)^3)*knormAmp
 	kurtosis		= ((kArrF[kindx] - kcentroid)^4)*knormAmp
@@ -176,20 +206,22 @@ if (kdoflag > 0) && (kflag > 0) then
   if kindx < giFftTabSize-2 then
   kgoto spread
   endif
+	kflat_1			divz 1, (giFftTabSize-2)*kflatlogsum, 1
+	kflat_2			divz 1, (giFftTabSize-2)*kflatsum, 1
+	kflatness		= exp(kflat_1) / kflat_2
 	kspread			= kspread^0.5
-	kskewness		= (kskewness / (kspread^3))/200000
-	kurtosis		= kurtosis / (kspread^4)/1000000000
-	kflatness		= exp(1/(giFftTabSize-2)*kflatlogsum) / (1/(giFftTabSize-2)*kflatsum)
+	kskewness		divz kskewness, kspread^3, 0
+	kurtosis		divz kurtosis, (kspread^4), 0
 	kmaxAmp			maxarray kArrA
-	kcrest			= kmaxAmp / (1/(giFftTabSize-2)*kflatsum)
-	kflux			= 1-(kcorrSum / (sqrt(kprevSum2)*sqrt(kthisSum2)))
+	kcrest			= kmaxAmp / kflat_2
+	kflux_1			divz kcorrSum, (sqrt(kprevSum2)*sqrt(kthisSum2)), 1
+	kflux			= 1-kflux_1
 	kdoflag 		= 0
 endif
-
 	kautocorr		sumarray kArrCorr
 	krmsA			sumarray kArrA
 	krmsAprev		sumarray kArrAprev
-	kautocorr		= (kautocorr / (krmsA*krmsAprev)*1.79)
+	kautocorr		divz kautocorr*2, (krmsA*krmsAprev) , 0
 
 ; ***************
 ; dump fft to python
@@ -222,24 +254,30 @@ endif
 
 ; ***************
 ; write to chn
-			chnset kstate, "audioStatus"
+	kcentroidG	= kcentroid*kgate	; limit noise contribution in quiet sections
+	kautocorrG	= kautocorr * kgate	
+	kspreadG	= kspread * kgate
+	kskewnessG	= kskewness * kgate
+	kurtosisM	mediank kurtosis, 6, 6
+	kflatnessG	= kflatness * kgate
+	kfluxG		= kflux * kgate
+
+			chnset kstatus, "audioStatus"
 			chnset krms1, "level1"
 			chnset kFollow1, "envelope1"
-;printk2 kFollow1
 			chnset kcps1, "pitch1ptrack"
 			chnset kcps1p, "pitch1pll"
-			chnset kautocorr, "autocorr1"
-			chnset kcentroid, "centroid1"
-			chnset kspread, "spread1"
-			chnset kskewness, "skewness1"
-			chnset kurtosis, "kurtosis1"
-			chnset kflatness, "flatness1"
+			chnset kautocorrG, "autocorr1"
+			chnset kcentroidG, "centroid1"
+			chnset kspreadG, "spread1"
+			chnset kskewnessG, "skewness1"
+			chnset kurtosisM, "kurtosis1"
+			chnset kflatnessG, "flatness1"
 			chnset kcrest, "crest1"
-			chnset kflux, "flux1"
+			chnset kfluxG, "flux1"
 			chnset kepochSig, "epochSig1"
 			chnset kepochRms, "epochRms1"
 			chnset kepochZCcps, "epochZCcps1"
-
 
 ;  		out a1,a2
 	endin
