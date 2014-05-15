@@ -33,7 +33,6 @@ def learn(state, mic, camera, brain):
             y = scaled_data[1:]
 
             audio_net.train(x,y)
-            audio_net.stop_training()
 
             reservoir = Oger.nodes.LeakyReservoirNode(output_dim=500,
                                                       leak_rate=0.8,
@@ -48,7 +47,6 @@ def learn(state, mic, camera, brain):
             y = video_data
 
             video_net.train(x,y)
-            video_net.stop_training()
 
             brain.append((audio_net, video_net, scaler))
 
