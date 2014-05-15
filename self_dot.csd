@@ -17,8 +17,8 @@
 ; pvs ftables
 	gifftsize 	= 256
 	giFftTabSize	= (gifftsize / 2)+1
-	gifna     	ftgen   0 ,0 ,giFftTabSize, 7, 0, giFftTabSize, 0   ; make ftable for pvs analysis
-	gifnf     	ftgen   0 ,0 ,giFftTabSize, 7, 0, giFftTabSize, 0   ; make ftable for pvs analysis
+	gifna     	ftgen   1 ,0 ,giFftTabSize, 7, 0, giFftTabSize, 0   ; make ftable for pvs analysis
+	gifnf     	ftgen   2 ,0 ,giFftTabSize, 7, 0, giFftTabSize, 0   ; make ftable for pvs analysis
 
 ;******************************
 ; audio file input 

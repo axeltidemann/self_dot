@@ -39,20 +39,23 @@ def audio(state, mic, speaker):
         arguments.Append("%s"%item)
     cs.Compile(arguments.argc(), arguments.argv())
     stopflag = 0
-    #fft_audio_in1 = np.zeros(256)
-    fft_audio_in1 = csnd6.PVSDATEXT()
-    offset = 0
-
+    
+    #fft_audio_in1 = csnd6.PVSDATEXT()
+    
+    fft_size = 256
+    fftin_amptab = 1
+    fftin_freqtab = 2
+    fftin_amps = np.zeros(fft_size)
+    fftin_freqs = np.zeros(fft_size)
+    
     while not stopflag:
         stopflag = cs.PerformKsmps()
 
-        offset += 0.01
-        offset %= 200
-        cs.SetChannel("freq_offset", offset)
-        test1 = cs.PvsoutGet(fft_audio_in1, "0")
-        ## examine fft_audio_in1
-        #print fft_audio_in1.frame
-        
+        #test1 = cs.PvsoutGet(fft_audio_in1, "0")
+        for i in range(fft_size):
+            fftin_amps[i] = cs.TableGet(fftin_amptab, i)
+            fftin_freqs[i] = cs.TableGet(fftin_freqtab, i)
+               
         # get Csound channel data
         audioStatus = cs.GetChannel("audioStatus")
 
@@ -77,7 +80,11 @@ def audio(state, mic, speaker):
                         cs.GetChannel("flux1"), 
                         cs.GetChannel("epochSig1"), 
                         cs.GetChannel("epochRms1"), 
-                        cs.GetChannel("epochZCcps1") ])
+                        cs.GetChannel("epochZCcps1")])
+            # Her: jeg aner hvorfor det ikke funker, men ser ikke akkurat naa hvordan jeg skal faa appendet til lista som lages like ovenfor her.
+            #for i in range(fft_size):
+            #    mic.append(fftin_amps[i])
+            #    mic.append(fftin_freqs[i])
 
         try:
             sound = speaker.popleft()
