@@ -16,8 +16,8 @@ class InvertibleLeakyReservoirNode(Oger.nodes.LeakyReservoirNode):
         self.w_in_inv = np.linalg.pinv(self.w_in)
         self.w_inv = np.linalg.pinv(self.w)
         self.w_bias_inv = np.linalg.pinv(self.w_bias)
-        self.initial_state_inv = mdp.numx.zeros((1, self.input_dim))
-        self.states_inv = mdp.numx.zeros((1, self.input_dim))
+        self.initial_x = mdp.numx.zeros((1, self.input_dim))
+        self.x = mdp.numx.zeros((1, self.input_dim))
         self._inv_initialized = True
         
     def _inverse(self, y):
@@ -26,22 +26,25 @@ class InvertibleLeakyReservoirNode(Oger.nodes.LeakyReservoirNode):
             self.inv_initialize()
 
         if self.reset_states:
-            self.initial_state_inv = mdp.numx.zeros((1, self.input_dim))
+            self.initial_x = mdp.numx.zeros((1, self.input_dim))
         else:
-            self.initial_state_inv = mdp.numx.atleast_2d(self.states_inv[-1, :])
+            self.initial_x = mdp.numx.atleast_2d(self.x[-1])
 
         steps = y.shape[0]
         
-        states = mdp.numx.concatenate((self.initial_state_inv, mdp.numx.zeros((steps, self.input_dim))))
+        x = mdp.numx.concatenate((self.initial_x, mdp.numx.zeros((steps, self.input_dim))))
 
         nonlinear_function_pointer = self.nonlin_func
 
+        import ipdb
         for n in range(steps):
-            states[n + 1, :] = nonlinear_function_pointer(mdp.numx.dot(self.w_inv, states[n, :]) + mdp.numx.dot(self.w_in_inv, y[n, :]) + self.w_bias_inv)
-            self._post_update_hook(states, y, n)
+            #ipdb.set_trace()
+            #x[n + 1] = nonlinear_function_pointer(mdp.numx.dot(self.w_inv, y[n]) +  self.w_bias_inv)mdp.numx.dot(self.w_in_inv, x[n])
+            x[n + 1] = nonlinear_function_pointer(mdp.numx.dot( mdp.numx.dot(self.w_inv, y[n] ) + self.w_bias, self.w_in ))
+            self._post_update_hook(x, y, n)
 
-        self.states_inv = states[1:]
-        return self.states_inv
+        self.x = x[1:]
+        return self.x
 
 class InvertibleLinearRegressionNode(mdp.nodes.LinearRegressionNode):
     """Linear regression node that is invertible."""
@@ -55,7 +58,7 @@ class InvertibleLinearRegressionNode(mdp.nodes.LinearRegressionNode):
 
 if __name__ == '__main__':
     readout = InvertibleLinearRegressionNode(with_bias=False)
-    reservoir = InvertibleLeakyReservoirNode(output_dim=100, leak_rate=.8, bias_scaling=.2, reset_states=True)
+    reservoir = InvertibleLeakyReservoirNode(output_dim=100, leak_rate=.8, bias_scaling=.2, reset_states=True, nonlin_func=lambda x: x)
     flow = mdp.hinet.FlowNode(reservoir+readout)
     x = np.random.rand(100,5)
     y = np.random.rand(100,3)
