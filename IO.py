@@ -45,6 +45,8 @@ def audio(state, mic, speaker):
     fft_size = 256
     fftin_amptab = 1
     fftin_freqtab = 2
+    fftout_amptab = 11
+    fftout_freqtab = 12
     fftin_amps = np.zeros(fft_size)
     fftin_freqs = np.zeros(fft_size)
     
@@ -93,6 +95,38 @@ def audio(state, mic, speaker):
             cs.SetChannel("respondPitch1ptrack", sound[2])
             cs.SetChannel("respondPitch1pll", sound[3])
             cs.SetChannel("respondCentroid1", sound[4])
+            '''
+            # partikkel parameters ready to be set
+            partikkelparmOffset = 5
+            cs.SetChannel("partikkel1_amp_db",sound[partikkelparmOffset+0])
+            cs.SetChannel("partikkel1_grainrate",sound[partikkelparmOffset+1])
+            cs.SetChannel("partikkel1_graindur",sound[partikkelparmOffset+2])
+            cs.SetChannel("partikkel1_sustain",sound[partikkelparmOffset+3])
+            cs.SetChannel("partikkel1_adratio",sound[partikkelparmOffset+4])
+            cs.SetChannel("partikkel1_wavfreq",sound[partikkelparmOffset+5])
+            cs.SetChannel("partikkel1_octaviation",sound[partikkelparmOffset+6])
+            cs.SetChannel("partikkel1_async_amount",sound[partikkelparmOffset+7])
+            cs.SetChannel("partikkel1_distribution",sound[partikkelparmOffset+8])
+            cs.SetChannel("partikkel1_randomask",sound[partikkelparmOffset+9])
+            cs.SetChannel("partikkel1_grFmFreq",sound[partikkelparmOffset+10])
+            cs.SetChannel("partikkel1_grFmIndex",sound[partikkelparmOffset+11])
+            cs.SetChannel("partikkel1_wavekey1",sound[partikkelparmOffset+12])
+            cs.SetChannel("partikkel1_wavekey2",sound[partikkelparmOffset+13])
+            cs.SetChannel("partikkel1_wavekey3",sound[partikkelparmOffset+14])
+            cs.SetChannel("partikkel1_wavekey4",sound[partikkelparmOffset+15])
+            cs.SetChannel("partikkel1_pitchFmFreq",sound[partikkelparmOffset+16])
+            cs.SetChannel("partikkel1_pitchFmIndex",sound[partikkelparmOffset+17])
+            cs.SetChannel("partikkel1_trainPartials",sound[partikkelparmOffset+18])
+            cs.SetChannel("partikkel1_trainChroma",sound[partikkelparmOffset+19])
+            cs.SetChannel("partikkel1_wavemorf",sound[partikkelparmOffset+20])
+            '''
+            '''
+            # spectral parameters ready to be set
+            spectralparmOffset = 25
+            for i in range(fft_size):
+                cs.TableSet(fftout_amptab, i, sound[spectralparmOffset+(i*2)])
+                cs.TableSet(fftout_freqtab, i, sound[spectralparmOffset+(i*2)+1])
+            '''                            
         except:
             cs.SetChannel("respondLevel1", 0)
             cs.SetChannel("respondEnvelope1", 0)
