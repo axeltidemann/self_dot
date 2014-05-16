@@ -45,10 +45,14 @@ def audio(state, mic, speaker):
     fft_size = 256
     fftin_amptab = 1
     fftin_freqtab = 2
-    fftout_amptab = 11
-    fftout_freqtab = 12
+    fftout_amptab = 3
+    fftout_freqtab = 4
+    fftresyn_amptab = 11
+    fftresyn_freqtab = 12
     fftin_amps = np.zeros(fft_size)
     fftin_freqs = np.zeros(fft_size)
+    fftout_amps = np.zeros(fft_size)
+    fftout_freqs = np.zeros(fft_size)
     
     while not stopflag:
         stopflag = cs.PerformKsmps()
@@ -57,7 +61,12 @@ def audio(state, mic, speaker):
         for i in range(fft_size):
             fftin_amps[i] = cs.TableGet(fftin_amptab, i)
             fftin_freqs[i] = cs.TableGet(fftin_freqtab, i)
-               
+            #fftout_amps[i] = cs.TableGet(fftout_amptab, i)
+            #fftout_freqs[i] = cs.TableGet(fftout_freqtab, i)
+            # clean test of unmodified fft resynthesis
+            #cs.TableSet(fftresyn_amptab, i, fftin_amps[i])
+            #cs.TableSet(fftresyn_freqtab, i, fftin_freqs[i])
+            
         # get Csound channel data
         audioStatus = cs.GetChannel("audioStatus")
 
@@ -87,6 +96,9 @@ def audio(state, mic, speaker):
             #for i in range(fft_size):
             #    mic.append(fftin_amps[i])
             #    mic.append(fftin_freqs[i])
+            '''
+            To analyze self's own output and compare to it's input, do comparision of fftin (_amps, _freqs) with fftout (_amps, _freqs)
+            '''
 
         try:
             sound = speaker.popleft()
@@ -124,8 +136,8 @@ def audio(state, mic, speaker):
             # spectral parameters ready to be set
             spectralparmOffset = 25
             for i in range(fft_size):
-                cs.TableSet(fftout_amptab, i, sound[spectralparmOffset+(i*2)])
-                cs.TableSet(fftout_freqtab, i, sound[spectralparmOffset+(i*2)+1])
+                cs.TableSet(fftresyn_amptab, i, sound[spectralparmOffset+(i*2)])
+                cs.TableSet(fftresyn_freqtab, i, sound[spectralparmOffset+(i*2)+1])
             '''                            
         except:
             cs.SetChannel("respondLevel1", 0)

@@ -1,14 +1,14 @@
 <CsoundSynthesizer>
 <CsOptions>
 ;-odac1 -iadc0 
-;-odac18 -iadc20
+-odac18 -iadc20
 ; -iadc -d
 </CsOptions>
 
 <CsInstruments>
 
 	sr = 44100  
-	ksmps = 32
+	ksmps = 64
 	nchnls = 2	
 	0dbfs = 1
 
@@ -107,7 +107,7 @@
 			chnset kepochRms, "epochRms1"
 			chnset kepochZCcps, "epochZCcps1"
 
-;  		out a1,a2
+  		out a1,a2
 	endin
 
 
