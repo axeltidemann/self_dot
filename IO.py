@@ -107,10 +107,15 @@ def audio(state, mic, speaker):
             cs.SetChannel("respondPitch1ptrack", sound[2])
             cs.SetChannel("respondPitch1pll", sound[3])
             cs.SetChannel("respondCentroid1", sound[4])
+            # test partikkel generator
+            cs.SetChannel("partikkel1_amp", sound[0])
+            cs.SetChannel("partikkel1_grainrate", sound[2])
+            cs.SetChannel("partikkel1_wavfreq", sound[4])
+            
             '''
             # partikkel parameters ready to be set
             partikkelparmOffset = 5
-            cs.SetChannel("partikkel1_amp_db",sound[partikkelparmOffset+0])
+            cs.SetChannel("partikkel1_amp",sound[partikkelparmOffset+0])
             cs.SetChannel("partikkel1_grainrate",sound[partikkelparmOffset+1])
             cs.SetChannel("partikkel1_graindur",sound[partikkelparmOffset+2])
             cs.SetChannel("partikkel1_sustain",sound[partikkelparmOffset+3])
@@ -145,3 +150,5 @@ def audio(state, mic, speaker):
             cs.SetChannel("respondPitch1ptrack", 0)
             cs.SetChannel("respondPitch1pll", 0)
             cs.SetChannel("respondCentroid1", 0)
+            # partikkel test
+            cs.SetChannel("partikkel1_amp", 0)

@@ -1,6 +1,6 @@
 /*
 ; default
-	kdb		= -3		; amp in dB
+	kamp		= 1		; amp in dB
 	kGrainRate	= 10		; number of grains per second
 	kGrainDur	= 1		; length of each grain relative to grain rate 
 	ksustain_amount	= 0		; balance between enveloped time(attack+decay) and sustain level time, 0.0 = no time at sustain level
@@ -27,7 +27,7 @@
 */
 
 ; read values
-	kdb		chnget "partikkel1_amp_db"
+	kamp		chnget "partikkel1_amp"
 	kGrainRate	chnget "partikkel1_grainrate"	
 	kGrainDur	chnget "partikkel1_graindur"
 	ksustain_amount	chnget "partikkel1_sustain"
@@ -53,7 +53,7 @@
 	kwavemorf	chnget "partikkel1_wavemorf"
 
 ; range control
-	kdb		limit 	kdb, -96, -1		
+	kamp		limit 	kamp, 0, 1		
 	kGrainRate	limit   kGrainRate, 1, 1000	
 	kGrainDur	limit	kGrainDur, 0.1, 4
 	ksustain_amount	limit	ksustain_amount, 0, 1
@@ -79,9 +79,9 @@
 	kwavemorf	limit	kwavemorf, 0, 3
 	
 ; provide critical defaults if channel empty
-	if kdb == 0 then
-			chnset -1, "partikkel1_amp_db"		
-	endif
+	;if kamp == 0 then
+	;		chnset 1, "partikkel1_amp"		
+	;endif
 	if kGrainRate == 0 then
 			chnset 10, "partikkel1_grainrate"	
 	endif

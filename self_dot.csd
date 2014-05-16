@@ -107,7 +107,7 @@
 			chnset kepochRms, "epochRms1"
 			chnset kepochZCcps, "epochZCcps1"
 
-  		out a1,a2
+  		;outs a1,a2
 	endin
 
 
@@ -136,7 +136,7 @@
 	aout		butterbp asum*5+(anoise*0.01), kcentro1, kcentro1*0.2
 	aout		= aout*kenv1*1
 			chnset aout, "MasterOut1"
-			chnset aout, "MasterOut2"
+			;chnset aout, "MasterOut2"
 	endin
 
 ; ******************************
@@ -144,8 +144,8 @@
 	instr 12
 #include "partikkel_chn.inc"
 #include "partikkel_self.inc"
-			chnset a1, "MasterOut1"
-			chnset a2, "MasterOut2"
+			;chnset a1, "MasterOut1"
+			chnset a2*2, "MasterOut2"
 	endin
 
 ; ******************************
@@ -212,7 +212,7 @@
 i4 0 86400	; audio input
 i5 0 86400	; analysis
 i11 0 86400	; subtractive harmonic resynthesis
-;i12 0 86400	; partikkel resynthesis
+i12 0 86400	; partikkel resynthesis
 ;i13 0 86400	; fft resynthesis
 ;i98 0 86400	; analysis of own output
 i99 0 86400	; master out

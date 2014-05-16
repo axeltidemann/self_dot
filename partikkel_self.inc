@@ -60,8 +60,7 @@
 ;*******************************
 
 ; amplitude
-	;kdb		= -3
-	kamp		= ampdbfs(kdb)				; output amplitude
+	;kamp		= ampdbfs(-3)				; output amplitude
 
 ; grain rate
 	;kGrainRate	= 10					; number of grains per second
