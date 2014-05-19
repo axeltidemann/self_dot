@@ -8,12 +8,13 @@
 <CsInstruments>
 
 	sr = 44100  
-	ksmps = 64
+	ksmps = 128
 	nchnls = 2	
 	0dbfs = 1
 
 ; pvs ftables
-	gifftsize 	= 256
+	gifftsize 	= 512
+			chnset gifftsize, "fftsize"
 	giFftTabSize	= (gifftsize / 2)+1
 	gifna     	ftgen   1 ,0 ,giFftTabSize, 7, 0, giFftTabSize, 0   ; make ftable for pvs analysis
 	gifnf     	ftgen   2 ,0 ,giFftTabSize, 7, 0, giFftTabSize, 0   ; make ftable for pvs analysis
@@ -74,6 +75,7 @@
 	
 	a1		chnget "in1"
 	a2		chnget "in2"
+	;a1test		chnget "in1"
 	a0		= 0
 			chnset a0, "in1"
 			chnset a0, "in2"
@@ -82,6 +84,8 @@
 
 ; ***************
 ; write to chn
+			chnset kflag, "pvsinflag"
+	
 	kcentroidG	= kcentroid*kgate	; limit noise contribution in quiet sections
 	kautocorrG	= kautocorr * kgate	
 	kspreadG	= kspread * kgate
@@ -107,7 +111,7 @@
 			chnset kepochRms, "epochRms1"
 			chnset kepochZCcps, "epochZCcps1"
 
-  		;outs a1,a2
+  		outs a1*0.1,a1*0.1
 	endin
 
 
@@ -120,9 +124,14 @@
 
 	krms1 		chnget "respondLevel1"
 	kenv1 		chnget "respondEnvelope1"
-	kcps1 		chnget "respondPitch1ptrack"
-	kcps1p 		chnget "respondPitch1pll"
+	;kcps1 		chnget "respondPitch1ptrack"
+	kcps1 		chnget "respondPitch1pll"
 	kcentro1 	chnget "respondCentroid1"
+
+	kcps1		limit kcps1, 20, 2000
+	kcps1		tonek kcps1, 20
+	kcentro1	limit kcentro1, 20, 2000
+	kcentro1	tonek kcentro1, 20
 
 	; simple subtractive synth, creating N harmonic bands from pitch info,
 	; using centroid to further filter which of the harmonics are more prominent
@@ -134,7 +143,7 @@
 	afilt1e		butterbp anoise, kcps1*5, kcps1*0.05
 	asum		sum afilt1a, afilt1b, afilt1c, afilt1d, afilt1e
 	aout		butterbp asum*5+(anoise*0.01), kcentro1, kcentro1*0.2
-	aout		= aout*kenv1*1
+	aout		= aout*kenv1*10
 			chnset aout, "MasterOut1"
 			;chnset aout, "MasterOut2"
 	endin
@@ -164,6 +173,7 @@
 	a1	chnget "MasterOut1"
 	a2	= 0
 #include "audio_analyze.inc"
+			chnset kflag, "pvsoutflag"
 ; write to chn
 	kcentroidG	= kcentroid*kgate	; limit noise contribution in quiet sections
 	kautocorrG	= kautocorr * kgate	

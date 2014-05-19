@@ -42,33 +42,51 @@ def audio(state, mic, speaker):
     
     #fft_audio_in1 = csnd6.PVSDATEXT()
     
-    fft_size = 256
+    fftsize = int(cs.GetChannel("fftsize"))
     fftin_amptab = 1
     fftin_freqtab = 2
     fftout_amptab = 3
     fftout_freqtab = 4
     fftresyn_amptab = 11
     fftresyn_freqtab = 12
-    fftin_amps = np.zeros(fft_size)
-    fftin_freqs = np.zeros(fft_size)
-    fftout_amps = np.zeros(fft_size)
-    fftout_freqs = np.zeros(fft_size)
     
-    while not stopflag:
-        stopflag = cs.PerformKsmps()
+    # optimizations to avoid function lookup inside loop
+    tGet = cs.TableGet 
+    tSet = cs.TableSet
+    cGet = cs.GetChannel
+    cSet = cs.SetChannel
+    perfKsmps = cs.PerformKsmps
+    fftbinindices = range(fftsize)
+    fftin_amptabs = []
+    for i in range(fftsize): fftin_amptabs.append(fftin_amptab)
+    fftin_freqtabs = []
+    for i in range(fftsize): fftin_freqtabs.append(fftin_freqtab)
+    fftout_amptabs = []
+    for i in range(fftsize): fftout_amptabs.append(fftout_amptab)
+    fftout_freqtabs = []
+    for i in range(fftsize): fftout_freqtabs.append(fftout_freqtab)
+    fftresyn_amptabs = []
+    for i in range(fftsize): fftresyn_amptabs.append(fftresyn_amptab)
+    fftresyn_freqtabs = []
+    for i in range(fftsize): fftresyn_freqtabs.append(fftresyn_freqtab)
 
-        #test1 = cs.PvsoutGet(fft_audio_in1, "0")
-        for i in range(fft_size):
-            fftin_amps[i] = cs.TableGet(fftin_amptab, i)
-            fftin_freqs[i] = cs.TableGet(fftin_freqtab, i)
-            #fftout_amps[i] = cs.TableGet(fftout_amptab, i)
-            #fftout_freqs[i] = cs.TableGet(fftout_freqtab, i)
-            # clean test of unmodified fft resynthesis
-            #cs.TableSet(fftresyn_amptab, i, fftin_amps[i])
-            #cs.TableSet(fftresyn_freqtab, i, fftin_freqs[i])
-            
+
+    while not stopflag:
+        stopflag = perfKsmps()
+        fftinFlag = cGet("pvsinflag")
+        fftoutFlag = cGet("pvsoutflag")
+        
+        if fftinFlag:
+            fftin_amplist = map(tGet,fftin_amptabs,fftbinindices)
+            fftin_freqlist = map(tGet,fftin_freqtabs,fftbinindices)
+            #bogusamp = map(tSet,fftresyn_amptabs,fftbinindices,fftin_amplist)
+            #bogusfreq = map(tSet,fftresyn_freqtabs,fftbinindices,fftin_freqlist)
+        if fftoutFlag:
+            fftout_amplist = map(tGet,fftout_amptabs,fftbinindices)
+            fftout_freqlist = map(tGet,fftout_freqtabs,fftbinindices)
+        
         # get Csound channel data
-        audioStatus = cs.GetChannel("audioStatus")
+        audioStatus = cGet("audioStatus")
 
         if state['playfile']:
             print '[self.] wants to play {}'.format(state['playfile'])
@@ -77,21 +95,21 @@ def audio(state, mic, speaker):
             state['playfile'] = False
         
         if state['record']:
-            mic.append([cs.GetChannel("level1"), 
-                        cs.GetChannel("envelope1"), 
-                        cs.GetChannel("pitch1ptrack"), 
-                        cs.GetChannel("pitch1pll"), 
-                        cs.GetChannel("centroid1"),
-                        cs.GetChannel("autocorr1"), 
-                        cs.GetChannel("spread1"), 
-                        cs.GetChannel("skewness1"), 
-                        cs.GetChannel("kurtosis1"), 
-                        cs.GetChannel("flatness1"), 
-                        cs.GetChannel("crest1"), 
-                        cs.GetChannel("flux1"), 
-                        cs.GetChannel("epochSig1"), 
-                        cs.GetChannel("epochRms1"), 
-                        cs.GetChannel("epochZCcps1")])
+            mic.append([cGet("level1"), 
+                        cGet("envelope1"), 
+                        cGet("pitch1ptrack"), 
+                        cGet("pitch1pll"), 
+                        cGet("centroid1"),
+                        cGet("autocorr1"), 
+                        cGet("spread1"), 
+                        cGet("skewness1"), 
+                        cGet("kurtosis1"), 
+                        cGet("flatness1"), 
+                        cGet("crest1"), 
+                        cGet("flux1"), 
+                        cGet("epochSig1"), 
+                        cGet("epochRms1"), 
+                        cGet("epochZCcps1")])
             # Her: jeg aner hvorfor det ikke funker, men ser ikke akkurat naa hvordan jeg skal faa appendet til lista som lages like ovenfor her.
             #for i in range(fft_size):
             #    mic.append(fftin_amps[i])
@@ -102,53 +120,56 @@ def audio(state, mic, speaker):
 
         try:
             sound = speaker.popleft()
-            cs.SetChannel("respondLevel1", sound[0])
-            cs.SetChannel("respondEnvelope1", sound[1])
-            cs.SetChannel("respondPitch1ptrack", sound[2])
-            cs.SetChannel("respondPitch1pll", sound[3])
-            cs.SetChannel("respondCentroid1", sound[4])
+            cSet("respondLevel1", sound[0])
+            cSet("respondEnvelope1", sound[1])
+            #cSet("respondPitch1ptrack", sound[2])
+            cSet("respondPitch1pll", sound[3])
+            cSet("respondCentroid1", sound[4])
             # test partikkel generator
-            cs.SetChannel("partikkel1_amp", sound[0])
-            cs.SetChannel("partikkel1_grainrate", sound[2])
-            cs.SetChannel("partikkel1_wavfreq", sound[4])
+            cSet("partikkel1_amp", sound[0])
+            cSet("partikkel1_grainrate", sound[2])
+            cSet("partikkel1_wavfreq", sound[4])
+            cSet("partikkel1_graindur", sound[6]+0.1)
             
             '''
             # partikkel parameters ready to be set
             partikkelparmOffset = 5
-            cs.SetChannel("partikkel1_amp",sound[partikkelparmOffset+0])
-            cs.SetChannel("partikkel1_grainrate",sound[partikkelparmOffset+1])
-            cs.SetChannel("partikkel1_graindur",sound[partikkelparmOffset+2])
-            cs.SetChannel("partikkel1_sustain",sound[partikkelparmOffset+3])
-            cs.SetChannel("partikkel1_adratio",sound[partikkelparmOffset+4])
-            cs.SetChannel("partikkel1_wavfreq",sound[partikkelparmOffset+5])
-            cs.SetChannel("partikkel1_octaviation",sound[partikkelparmOffset+6])
-            cs.SetChannel("partikkel1_async_amount",sound[partikkelparmOffset+7])
-            cs.SetChannel("partikkel1_distribution",sound[partikkelparmOffset+8])
-            cs.SetChannel("partikkel1_randomask",sound[partikkelparmOffset+9])
-            cs.SetChannel("partikkel1_grFmFreq",sound[partikkelparmOffset+10])
-            cs.SetChannel("partikkel1_grFmIndex",sound[partikkelparmOffset+11])
-            cs.SetChannel("partikkel1_wavekey1",sound[partikkelparmOffset+12])
-            cs.SetChannel("partikkel1_wavekey2",sound[partikkelparmOffset+13])
-            cs.SetChannel("partikkel1_wavekey3",sound[partikkelparmOffset+14])
-            cs.SetChannel("partikkel1_wavekey4",sound[partikkelparmOffset+15])
-            cs.SetChannel("partikkel1_pitchFmFreq",sound[partikkelparmOffset+16])
-            cs.SetChannel("partikkel1_pitchFmIndex",sound[partikkelparmOffset+17])
-            cs.SetChannel("partikkel1_trainPartials",sound[partikkelparmOffset+18])
-            cs.SetChannel("partikkel1_trainChroma",sound[partikkelparmOffset+19])
-            cs.SetChannel("partikkel1_wavemorf",sound[partikkelparmOffset+20])
+            cSet("partikkel1_amp",sound[partikkelparmOffset+0])
+            cSet("partikkel1_grainrate",sound[partikkelparmOffset+1])
+            cSet("partikkel1_graindur",sound[partikkelparmOffset+2])
+            cSet("partikkel1_sustain",sound[partikkelparmOffset+3])
+            cSet("partikkel1_adratio",sound[partikkelparmOffset+4])
+            cSet("partikkel1_wavfreq",sound[partikkelparmOffset+5])
+            cSet("partikkel1_octaviation",sound[partikkelparmOffset+6])
+            cSet("partikkel1_async_amount",sound[partikkelparmOffset+7])
+            cSet("partikkel1_distribution",sound[partikkelparmOffset+8])
+            cSet("partikkel1_randomask",sound[partikkelparmOffset+9])
+            cSet("partikkel1_grFmFreq",sound[partikkelparmOffset+10])
+            cSet("partikkel1_grFmIndex",sound[partikkelparmOffset+11])
+            cSet("partikkel1_wavekey1",sound[partikkelparmOffset+12])
+            cSet("partikkel1_wavekey2",sound[partikkelparmOffset+13])
+            cSet("partikkel1_wavekey3",sound[partikkelparmOffset+14])
+            cSet("partikkel1_wavekey4",sound[partikkelparmOffset+15])
+            cSet("partikkel1_pitchFmFreq",sound[partikkelparmOffset+16])
+            cSet("partikkel1_pitchFmIndex",sound[partikkelparmOffset+17])
+            cSet("partikkel1_trainPartials",sound[partikkelparmOffset+18])
+            cSet("partikkel1_trainChroma",sound[partikkelparmOffset+19])
+            cSet("partikkel1_wavemorf",sound[partikkelparmOffset+20])
             '''
             '''
             # spectral parameters ready to be set
             spectralparmOffset = 25
-            for i in range(fft_size):
+            for i in range(fftsize):
                 cs.TableSet(fftresyn_amptab, i, sound[spectralparmOffset+(i*2)])
                 cs.TableSet(fftresyn_freqtab, i, sound[spectralparmOffset+(i*2)+1])
             '''                            
         except:
-            cs.SetChannel("respondLevel1", 0)
-            cs.SetChannel("respondEnvelope1", 0)
-            cs.SetChannel("respondPitch1ptrack", 0)
-            cs.SetChannel("respondPitch1pll", 0)
-            cs.SetChannel("respondCentroid1", 0)
+            cSet("respondLevel1", 0)
+            cSet("respondEnvelope1", 0)
+            cSet("respondPitch1ptrack", 0)
+            cSet("respondPitch1pll", 0)
+            cSet("respondCentroid1", 0)
             # partikkel test
-            cs.SetChannel("partikkel1_amp", 0)
+            cSet("partikkel1_amp", 0)
+            cSet("partikkel1_grainrate", 0)
+            cSet("partikkel1_wavfreq", 0)

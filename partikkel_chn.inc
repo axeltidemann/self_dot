@@ -88,9 +88,9 @@
 	if kGrainDur == 0 then
 			chnset 1, "partikkel1_graindur"
 	endif
-	if kwavfreq == 0 then
-			chnset 1, "partikkel1_wavfreq"
-	endif
+	;if kwavfreq == 0 then
+	;		chnset 1, "partikkel1_wavfreq"
+	;endif
 	if kwavekey1 == 0 then 	
 			chnset 1, "partikkel1_wavekey1"
 	endif

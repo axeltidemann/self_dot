@@ -1,5 +1,5 @@
 	krms		rms a1
-	kgate		= (krms < ampdbfs(-30) ? 0 : 1)	; don't bother analyzing very quiet sections
+	kgate		= (krms < ampdbfs(-40) ? 0 : 1)	; don't bother analyzing very quiet sections
 	kgate		tonek kgate, 10
 	a1		= a1 * kgate
 
@@ -195,5 +195,6 @@ endif
 
 	acps1p, alock1p	plltrack a1, 0.2 
 	kcps1p		downsamp acps1p
+	kcps1p		limit kcps1p, 20, 2000
 	imedianSize	= 200
 	kcps1p		mediank	kcps1p, imedianSize, imedianSize
