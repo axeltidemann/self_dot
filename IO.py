@@ -70,6 +70,9 @@ def audio(state, mic, speaker):
     fftresyn_freqtabs = []
     for i in range(fftsize): fftresyn_freqtabs.append(fftresyn_freqtab)
 
+    # Must be initialized before main loop
+    fftin_amplist = fftin_amptabs
+    fftin_freqlist = fftin_freqtabs
 
     while not stopflag:
         stopflag = perfKsmps()
@@ -93,7 +96,7 @@ def audio(state, mic, speaker):
             print '{}'.format(state['playfile'])
             cs.InputMessage('i3 0 5 "%s"'%'{}'.format(state['playfile']))
             state['playfile'] = False
-        
+
         if state['record']:
             mic.append([cGet("level1"), 
                         cGet("envelope1"), 
@@ -109,7 +112,7 @@ def audio(state, mic, speaker):
                         cGet("flux1"), 
                         cGet("epochSig1"), 
                         cGet("epochRms1"), 
-                        cGet("epochZCcps1")])
+                        cGet("epochZCcps1")] + fftin_amplist + fftin_freqlist)
             # can we do like this ?
             '''
             mic.append(fftin_amplist)
