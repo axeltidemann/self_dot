@@ -110,12 +110,10 @@ def audio(state, mic, speaker):
                         cGet("epochSig1"), 
                         cGet("epochRms1"), 
                         cGet("epochZCcps1")])
-            # Her: jeg aner hvorfor det ikke funker, men ser ikke akkurat naa hvordan jeg skal faa appendet til lista som lages like ovenfor her.
-            #for i in range(fft_size):
-            #    mic.append(fftin_amps[i])
-            #    mic.append(fftin_freqs[i])
+            # can we do like this ?
             '''
-            To analyze self's own output and compare to it's input, do comparision of fftin (_amps, _freqs) with fftout (_amps, _freqs)
+            mic.append(fftin_amplist)
+            mic.append(fftin_freqlist)
             '''
 
         try:
