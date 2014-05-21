@@ -111,7 +111,7 @@
 			chnset kepochRms, "epochRms1"
 			chnset kepochZCcps, "epochZCcps1"
 
-  		outs a1*0.1,a1*0.1
+;  		outs a1*0.1,a1*0.1
 	endin
 
 
@@ -160,10 +160,15 @@
 ; ******************************
 ; spectral resynthesis instr 
 	instr 13
-	fsrc		pvsinit gifftsize, gifftsize/4, gifftsize, 1
-			pvsftr	fsrc,gifnaResyn,gifnfResyn		;read modified data back to fsrc
-	aout		pvsynth	fsrc				;and resynth
-			chnset aout, "MasterOut1"
+	kinit		init 1
+	if kinit > 0 then
+	a1		= 0
+	fsin 		pvsanal	a1, gifftsize, gifftsize/4, gifftsize, 1
+	endif
+	;fsin		pvsinit gifftsize, gifftsize/4, gifftsize, 1
+			pvsftr	fsin,gifnaResyn,gifnfResyn		;read modified data back to fsrc
+	aout		pvsynth	fsin				;and resynth
+;			chnset aout, "MasterOut1"
 			chnset aout, "MasterOut2"
 	endin
 
@@ -222,8 +227,8 @@
 i4 0 86400	; audio input
 i5 0 86400	; analysis
 i11 0 86400	; subtractive harmonic resynthesis
-i12 0 86400	; partikkel resynthesis
-;i13 0 86400	; fft resynthesis
+;i12 0 86400	; partikkel resynthesis
+i13 0 86400	; fft resynthesis
 ;i98 0 86400	; analysis of own output
 i99 0 86400	; master out
 

@@ -57,22 +57,15 @@ def audio(state, mic, speaker):
     cSet = cs.SetChannel
     perfKsmps = cs.PerformKsmps
     fftbinindices = range(fftsize)
-    fftin_amptabs = []
-    for i in range(fftsize): fftin_amptabs.append(fftin_amptab)
-    fftin_freqtabs = []
-    for i in range(fftsize): fftin_freqtabs.append(fftin_freqtab)
-    fftout_amptabs = []
-    for i in range(fftsize): fftout_amptabs.append(fftout_amptab)
-    fftout_freqtabs = []
-    for i in range(fftsize): fftout_freqtabs.append(fftout_freqtab)
-    fftresyn_amptabs = []
-    for i in range(fftsize): fftresyn_amptabs.append(fftresyn_amptab)
-    fftresyn_freqtabs = []
-    for i in range(fftsize): fftresyn_freqtabs.append(fftresyn_freqtab)
-
-    # Must be initialized before main loop
-    fftin_amplist = fftin_amptabs
-    fftin_freqlist = fftin_freqtabs
+    fftin_amptabs = [fftin_amptab]*fftsize
+    fftin_freqtabs = [fftin_freqtab]*fftsize
+    fftout_amptabs = [fftout_amptab]*fftsize
+    fftout_freqtabs = [fftout_freqtab]*fftsize
+    fftresyn_amptabs = [fftresyn_amptab]*fftsize
+    fftresyn_freqtabs = [fftresyn_freqtab]*fftsize
+    fftzeros = [0]*fftsize
+    fftin_amplist = [0]*fftsize
+    fftin_freqlist = [0]*fftsize
 
     while not stopflag:
         stopflag = perfKsmps()
@@ -113,11 +106,6 @@ def audio(state, mic, speaker):
                         cGet("epochSig1"), 
                         cGet("epochRms1"), 
                         cGet("epochZCcps1")] + fftin_amplist + fftin_freqlist)
-            # can we do like this ?
-            '''
-            mic.append(fftin_amplist)
-            mic.append(fftin_freqlist)
-            '''
 
         try:
             sound = speaker.popleft()
@@ -128,9 +116,12 @@ def audio(state, mic, speaker):
             cSet("respondCentroid1", sound[4])
             # test partikkel generator
             cSet("partikkel1_amp", sound[0])
-            cSet("partikkel1_grainrate", sound[2])
+            cSet("partikkel1_grainrate", sound[3])
             cSet("partikkel1_wavfreq", sound[4])
             cSet("partikkel1_graindur", sound[6]+0.1)
+            # transfer fft frame
+            bogusamp = map(tSet,fftresyn_amptabs,fftbinindices,sound[15:fftsize+15])
+            bogusfreq = map(tSet,fftresyn_freqtabs,fftbinindices,sound[fftsize+15:fftsize+15+fftsize])
             
             '''
             # partikkel parameters ready to be set
@@ -157,13 +148,6 @@ def audio(state, mic, speaker):
             cSet("partikkel1_trainChroma",sound[partikkelparmOffset+19])
             cSet("partikkel1_wavemorf",sound[partikkelparmOffset+20])
             '''
-            '''
-            # spectral parameters ready to be set
-            spectralparmOffset = 25
-            for i in range(fftsize):
-                cs.TableSet(fftresyn_amptab, i, sound[spectralparmOffset+(i*2)])
-                cs.TableSet(fftresyn_freqtab, i, sound[spectralparmOffset+(i*2)+1])
-            '''                            
         except:
             cSet("respondLevel1", 0)
             cSet("respondEnvelope1", 0)
@@ -174,3 +158,5 @@ def audio(state, mic, speaker):
             cSet("partikkel1_amp", 0)
             cSet("partikkel1_grainrate", 0)
             cSet("partikkel1_wavfreq", 0)
+            # zero fft frame 
+            bogusamp = map(tSet,fftresyn_amptabs,fftbinindices,fftzeros)
