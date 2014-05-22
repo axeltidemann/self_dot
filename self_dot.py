@@ -10,6 +10,7 @@
 
 import os
 import multiprocessing as mp
+from uuid import uuid4
 
 from AI import learn, respond
 from IO import audio, video
@@ -37,7 +38,13 @@ class Controller:
 
         if 'playfile' in message:
             self.state['playfile'] = message[9:]
+
+        if 'save' in message:
+            self.state['save'] = 'brain' + str(uuid4()) if len(message) == 4 else message[5:]
                         
+        if 'load' in message:
+            self.state['load'] = message[5:]
+
 if __name__ == '__main__':
     print 'MAIN PID', os.getpid()
     
@@ -55,7 +62,9 @@ if __name__ == '__main__':
     state = manager.dict({'record': False,
                           'learn': False,
                           'respond': False,
-                          'playfile': False}) 
+                          'playfile': False, 
+                          'save': False, 
+                          'load': False}) 
 
     controller = Controller(state)
 

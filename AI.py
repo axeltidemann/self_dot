@@ -1,10 +1,11 @@
 import os
 import time
+import cPickle as pickle
 
 from sklearn import preprocessing as pp
 import numpy as np
 
-from utils import net_rmse
+from utils import net_rmse, filesize
 
 def learn(state, mic, camera, brain):
     print 'LEARN PID', os.getpid()
@@ -53,6 +54,18 @@ def learn(state, mic, camera, brain):
             print 'Finished learning audio-video association'
 
             state['learn'] = False
+
+        elif state['save']:
+            pickle.dump(brain[:], file(state['save'], 'w'))
+            print 'Brain saved as file {} ({})'.format(state['save'], filesize(state['save']))
+            state['save'] = False
+
+        elif state['load']:
+            for element in pickle.load(file(state['load'], 'r')):
+                brain.append(element)
+            print 'Brain loaded from file {} ({})'.format(state['load'], filesize(state['load']))
+            state['load'] = False
+
         else:
             time.sleep(.1)
 
@@ -76,15 +89,17 @@ def respond(state, mic, speaker, camera, projector, brain):
             scaled_data = scaler.transform(audio_data)
             sound = audio_net(scaled_data)
 
-            for row in scaler.inverse_transform(sound):
-                speaker.append(row)
-
             stride = audio_data.shape[0]/video_data.shape[0]
             projection = video_net(scaled_data[scaled_data.shape[0] - stride*video_data.shape[0]::stride]) 
 
+            # Ordering to try to align video/sound 
             for row in projection:
                 projector.append(row)
 
+            for row in scaler.inverse_transform(sound):
+                speaker.append(row)
+
             state['respond'] = False
+
         else:
             time.sleep(.1)
