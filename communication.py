@@ -42,8 +42,7 @@ def send(message, host='localhost', port=7777):
 
 if __name__ == '__main__':
     if len(sys.argv) > 1:
-        for message in sys.argv[1:]:
-            send(message)
+        send(' '.join(sys.argv[1:]))
     else:
         receive(print)
 

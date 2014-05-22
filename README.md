@@ -31,7 +31,7 @@ Download the tarball, run
 > python setup.py install
 
 Note: when you install OpenCV following software, it is advised that you
-install it into $VIRTUAL_ENV/local, so it will be contained within
+install it into $VIRTUAL_ENV, so it will be contained within
 the virtualenv, and more robust. This is shown as an example under
 "Mac stuff".
 
@@ -65,7 +65,7 @@ in the future. So after downloading and unpacking the opencv tarball:
 cd opencv*
 mkdir build 
 cd build 
-cmake -D CMAKE_INSTALL_PREFIX=$VIRTUAL_ENV/local/ -D PYTHON_EXECUTABLE=$VIRTUAL_ENV/bin/python -D PYTHON_PACKAGES_PATH=$VIRTUAL_ENV/lib/python2.7/site-packages/ -D PYTHON_LIBRARY=/Library/Frameworks/Python.framework/Versions/2.7/lib/libpython2.7.dylib -G "Unix Makefiles" ..
+cmake -D CMAKE_INSTALL_PREFIX=$VIRTUAL_ENV -D PYTHON_EXECUTABLE=$VIRTUAL_ENV/bin/python -D PYTHON_PACKAGES_PATH=$VIRTUAL_ENV/lib/python2.7/site-packages/ -D PYTHON_LIBRARY=/Library/Frameworks/Python.framework/Versions/2.7/lib/libpython2.7.dylib -G "Unix Makefiles" ..
 make -j8
 make install 
 ```
@@ -85,12 +85,12 @@ so this worked.
 
 In order to use the new shared libraries, you must specify where they are.
 
-> export DYLD_LIBRARY_PATH=$VIRTUAL_ENV/local/lib 
+> export DYLD_LIBRARY_PATH=$VIRTUAL_ENV/lib 
 
 *Note:* This can actually be done in the virtualenv, so you will have everything completely self-contained (yes, this is good). Do it the following way: 
 
 ```
-echo 'export DYLD_LIBRARY_PATH=$VIRTUAL_ENV/local/lib' >> $VIRTUAL_ENV/bin/postactivate
+echo 'export DYLD_LIBRARY_PATH=$VIRTUAL_ENV/lib' >> $VIRTUAL_ENV/bin/postactivate
 echo 'unset DYLD_LIBRARY_PATH' >> $VIRTUAL_ENV/bin/predeactivate
 ```
 
@@ -104,7 +104,7 @@ And you should be good to go!
  the idea of simply copying ~/.virtualenvs/self_dot from my 10.7
  machine to my 10.8 machine. Somewhat miraculously, this worked. Now
  it becomes clear what an added bonus it is to install software into
- $VIRTUAL_ENV/local - the programs are also copied, and with the
+ $VIRTUAL_ENV - the programs are also copied, and with the
  DYLD_LIBRARY_PATH set, this is a _very_ smooth transition. Only
  tested for 10.7 -> 10.8 though. It will be interesting to see if this
  is robust across several cats (I'm not betting my savings on it,
