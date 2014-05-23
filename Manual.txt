@@ -1,0 +1,13 @@
+Self users manual
+*****************
+
+python communication.py save <valgfritt navn - hvis ikke noe navn, blir navnet brainUUID>
+python communication.py load <brain_name>
+
+** more available args to communication.py? ...insert here **
+
+python learnrespond.py [time, mode, file]
+optional arguments [time, mode, filename] are:
+- time: set period in seconds for learning or responding, default 5
+- mode: learn, respond, both, (should be self explanatory), ... filelearn, filerespond (use sound file as input)
+- filename: name of sound file for input to learn or respond
