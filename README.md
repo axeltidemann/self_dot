@@ -96,6 +96,14 @@ echo 'unset DYLD_LIBRARY_PATH' >> $VIRTUAL_ENV/bin/predeactivate
 
 Of course, if you already have mangled your DYLD_LIBRARY_PATH, you should take the appropriate steps to keep it that way. 
 
+On Mac, you must also set the $PYTHONPATH to point to where the Csound package files are. For reasons unknown, they wind up in /Library/Python/2.7/site-packages/
+
+```
+export PYTHONPATH=/Library/Python/2.7/site-packages/:$PYTHONPATH
+```
+
+This could also be set in postactivate, of course.
+
 And you should be good to go!
 
 *How then, does this compile under 10.8?* After spending an entire day

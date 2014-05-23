@@ -1,66 +1,49 @@
+import warnings
+
 import Oger
 import mdp
 import numpy as np
 
-class InvertibleLeakyReservoirNode(Oger.nodes.LeakyReservoirNode):
-    """Leaky reservoir node that is invertible."""
+class ACDCESN:
+    '''An Echo State Network that can be used in both directions. It
+    achieves this by having two networks. Upon execution the correct
+    network is selected depending on the input dimensions. If input/output signals
+    are of the same dimension, you must use inverse() to get flow in the
+    opposite direction.'''
 
     def __init__(self, *args, **kwargs):
-        super(InvertibleLeakyReservoirNode, self).__init__(*args, **kwargs)
-        self._inv_is_initialized = False
-        
-    def is_invertible(self):
-        return True
+        self.ac = self._flow(*args, **kwargs)
+        self.dc = self._flow(*args, **kwargs)
 
-    def inv_initialize(self):
-        self.w_in_inv = np.linalg.pinv(self.w_in)
-        self.w_inv = np.linalg.pinv(self.w)
-        self.w_bias_inv = np.linalg.pinv(self.w_bias)
-        self.initial_x = mdp.numx.zeros((1, self.input_dim))
-        self.x = mdp.numx.zeros((1, self.input_dim))
-        self._inv_initialized = True
-        
-    def _inverse(self, y):
-    
-        if not self._inv_is_initialized:
-            self.inv_initialize()
+    def __call__(self, x):
+        try:
+            return self.ac(x)
+        except:
+            return self.dc(x)
 
-        if self.reset_states:
-            self.initial_x = mdp.numx.zeros((1, self.input_dim))
-        else:
-            self.initial_x = mdp.numx.atleast_2d(self.x[-1])
+    def _flow(self, hidden_nodes, leak_rate, bias_scaling, reset_states, use_pinv):
+        reservoir = Oger.nodes.LeakyReservoirNode(output_dim=hidden_nodes, 
+                                                  leak_rate=leak_rate, 
+                                                  bias_scaling=bias_scaling, 
+                                                  reset_states=reset_states)
+        readout = mdp.nodes.LinearRegressionNode(use_pinv=use_pinv)
+        return mdp.hinet.FlowNode(reservoir + readout)
 
-        steps = y.shape[0]
-        
-        x = mdp.numx.concatenate((self.initial_x, mdp.numx.zeros((steps, self.input_dim))))
+    def train(self, x, y):
+        self.ac.train(x,y)
+        self.dc.train(y,x)
 
-        nonlinear_function_pointer = self.nonlin_func
+        if x.shape[1] == y.shape[1]:
+            warnings.warn('Input and output signals are of the same dimension, ' +
+                          'you must explicitly use inverse() to get flow in the ' +
+                          'opposite direction.')
 
-        import ipdb
-        for n in range(steps):
-            #ipdb.set_trace()
-            #x[n + 1] = nonlinear_function_pointer(mdp.numx.dot(self.w_inv, y[n]) +  self.w_bias_inv)mdp.numx.dot(self.w_in_inv, x[n])
-            x[n + 1] = nonlinear_function_pointer(mdp.numx.dot( mdp.numx.dot(self.w_inv, y[n] ) + self.w_bias, self.w_in ))
-            self._post_update_hook(x, y, n)
-
-        self.x = x[1:]
-        return self.x
-
-class InvertibleLinearRegressionNode(mdp.nodes.LinearRegressionNode):
-    """Linear regression node that is invertible."""
-
-    def is_invertible(self):
-        return True
-
-    def _inverse(self, y):
-        return mdp.utils.mult(y, np.linalg.pinv(self.beta))
-
+    def inverse(self, x):
+        return self.dc(x)
 
 if __name__ == '__main__':
-    readout = InvertibleLinearRegressionNode(with_bias=False)
-    reservoir = InvertibleLeakyReservoirNode(output_dim=100, leak_rate=.8, bias_scaling=.2, reset_states=True, nonlin_func=lambda x: x)
-    flow = mdp.hinet.FlowNode(reservoir+readout)
+    myACDC = ACDCESN(hidden_nodes=100, leak_rate=.8, bias_scaling=.2, reset_states=True, use_pinv=True)
     x = np.random.rand(100,5)
-    y = np.random.rand(100,3)
-    flow.train(x,y)
-    print Oger.utils.rmse(y, flow(x)), Oger.utils.rmse(x, flow.inverse(y))
+    y = np.random.rand(100,7)
+    myACDC.train(x,y)
+    print Oger.utils.rmse(y, myACDC(x)), Oger.utils.rmse(x, myACDC(y))
