@@ -85,7 +85,8 @@
 ; ***************
 ; write to chn
 			chnset kflag, "pvsinflag"
-	
+
+/* might try to skip the cleaning up of analysis signals */
 	kcentroidG	= kcentroid*kgate	; limit noise contribution in quiet sections
 	kautocorrG	= kautocorr * kgate	
 	kspreadG	= kspread * kgate
@@ -111,7 +112,14 @@
 			chnset kepochRms, "epochRms1"
 			chnset kepochZCcps, "epochZCcps1"
 
-;  		outs a1*0.1,a1*0.1
+  		outs a1*0.1,a1*0.1
+/*
+	acps		upsamp kcps1p/2000 ; pll
+	acentro		upsamp kcentroidG/2000
+	arms		upsamp krms1
+	aenv		upsamp kFollow1
+			fout "testrec.wav", 14, a1, acps, acentro, arms, aenv
+*/
 	endin
 
 
@@ -127,6 +135,13 @@
 	;kcps1 		chnget "respondPitch1ptrack"
 	kcps1 		chnget "respondPitch1pll"
 	kcentro1 	chnget "respondCentroid1"
+
+	krms1		limit krms1, 0, 1
+	kenv1		limit kenv1, 0, 1
+	krms1		mediank krms1, 100, 100
+	kenv1		mediank kenv1, 100, 100
+	krms1		tonek krms1, 20
+	kenv1		tonek kenv1, 20
 
 	kcps1		limit kcps1, 20, 2000
 	kcps1		tonek kcps1, 20
@@ -146,6 +161,13 @@
 	aout		= aout*kenv1*10
 			chnset aout, "MasterOut1"
 			;chnset aout, "MasterOut2"
+/*
+	acps		upsamp kcps1/2000
+	acentro		upsamp kcentro1/2000
+	arms		upsamp krms1
+	aenv		upsamp kenv1	
+			fout "testplay.wav", 14, aout, acps, acentro, arms, aenv
+*/
 	endin
 
 ; ******************************
@@ -180,6 +202,7 @@
 #include "audio_analyze.inc"
 			chnset kflag, "pvsoutflag"
 ; write to chn
+/* might try to skip the cleaning up of analysis signals */
 	kcentroidG	= kcentroid*kgate	; limit noise contribution in quiet sections
 	kautocorrG	= kautocorr * kgate	
 	kspreadG	= kspread * kgate
@@ -200,7 +223,7 @@
 			chnset kurtosisM, "myKurtosis1"
 			chnset kflatnessG, "myFlatness1"
 			chnset kcrest, "myCrest1"
-			chnset kfluxG, "myFlux1"
+			chnset kflux, "myFlux1"
 			chnset kepochSig, "myEpochSig1"
 			chnset kepochRms, "myEpochRms1"
 			chnset kepochZCcps, "myEpochZCcps1"
