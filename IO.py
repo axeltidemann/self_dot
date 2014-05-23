@@ -84,6 +84,20 @@ def audio(state, mic, speaker):
         # get Csound channel data
         audioStatus = cGet("audioStatus")
 
+        if state['selfvoice']:
+            mode = '{}'.format(state['selfvoice']).lstrip()
+            if mode in ['partikkel', 'spectral', 'noiseband']:
+                print 'self change voice to...', mode
+                cs.InputMessage('i -11 0 .1')
+                cs.InputMessage('i -12 0 .1')
+                cs.InputMessage('i -13 0 .1')
+                if mode == 'noiseband': cs.InputMessage('i 11 0 -1')
+                if mode == 'partikkel': cs.InputMessage('i 12 0 -1')
+                if mode == 'spectral': cs.InputMessage('i 13 0 -1')
+            else:
+                print 'unknown voice mode', mode
+            state['selfvoice'] = False
+            
         if state['playfile']:
             print '[self.] wants to play {}'.format(state['playfile'])
             print '{}'.format(state['playfile'])

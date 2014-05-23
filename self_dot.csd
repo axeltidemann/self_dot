@@ -175,8 +175,8 @@
 	instr 12
 #include "partikkel_chn.inc"
 #include "partikkel_self.inc"
-			;chnset a1, "MasterOut1"
-			chnset a2*2, "MasterOut2"
+			chnset a1, "MasterOut1"
+			chnset a2, "MasterOut2"
 	endin
 
 ; ******************************
@@ -249,9 +249,9 @@
 ;i3 0 86400	; audio file input
 i4 0 86400	; audio input
 i5 0 86400	; analysis
-i11 0 86400	; subtractive harmonic resynthesis
-;i12 0 86400	; partikkel resynthesis
-i13 0 86400	; fft resynthesis
+i11 0 -1	; subtractive harmonic resynthesis
+;i12 0 -1	; partikkel resynthesis
+;i13 3 -1	; fft resynthesis
 ;i98 0 86400	; analysis of own output
 i99 0 86400	; master out
 

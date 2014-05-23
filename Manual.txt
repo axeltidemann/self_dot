@@ -4,6 +4,9 @@ Self users manual
 python communication.py save <valgfritt navn - hvis ikke noe navn, blir navnet brainUUID>
 python communication.py load <brain_name>
 
+python communication.py selfvoice mode
+mode can be ['partikkel', 'spectral', 'noiseband']
+
 ** more available args to communication.py? ...insert here **
 
 python learnrespond.py [time, mode, file]

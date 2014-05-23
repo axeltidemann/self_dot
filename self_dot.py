@@ -39,6 +39,9 @@ class Controller:
         if 'playfile' in message:
             self.state['playfile'] = message[9:]
 
+        if 'selfvoice' in message:
+            self.state['selfvoice'] = message[9:]
+
         if 'save' in message:
             self.state['save'] = 'brain' + str(uuid4()) if len(message) == 4 else message[5:]
                         
@@ -63,6 +66,7 @@ if __name__ == '__main__':
                           'learn': False,
                           'respond': False,
                           'playfile': False, 
+                          'selfvoice':False,
                           'save': False, 
                           'load': False}) 
 
