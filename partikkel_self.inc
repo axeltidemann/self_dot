@@ -157,3 +157,7 @@ a1,a2,a3,a4,a5,a6,a7,a8	partikkel agrainrate, kdistribution, idisttab, async, ke
                	  iwaveamptab, asamplepos1, asamplepos2, asamplepos3, asamplepos4, \
                	  kwavekey1, kwavekey2, kwavekey3, kwavekey4, imax_grains
 
+; boost some, to balance with other audio generators
+a1	= a1*2
+a2	= a2*2
+
