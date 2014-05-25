@@ -7,8 +7,12 @@ python communication.py load <brain_name>
 python communication.py selfvoice mode
 mode can be ['partikkel', 'spectral', 'noiseband']
 
-** more available args to communication.py? ...insert here **
+python communication.py autolearn status
+python communication.py autorespond status
+- status can be 1 or 0, True or False
+These modes use automatic segmentation to trigger learning or responding after a segemtn of audio has been input
 
+** Learnrespond contains timed macros for certain communication events
 python learnrespond.py [time, mode, file]
 optional arguments [time, mode, filename] are:
 - time: set period in seconds for learning or responding, default 5

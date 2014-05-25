@@ -60,6 +60,10 @@
 	kstate_Dly	delayk kstate, iStatusRel
 	kstate_Rel	= ((kstate == 0) && (kstate_Dly == 0)? 0 : 1)
 	kstatus		= kstate_Rel
+	kstatusTrigOn	trigger kstatus, 0.5, 0
+	kstatusTrigOff	trigger kstatus, 0.5, 1
+	kstatusTrig	= kstatusTrigOn-kstatusTrigOff	; pulse 1 at start, pulse -1 at end of segment
+
 
 ; ***************
 ; epoch filtering

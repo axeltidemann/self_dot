@@ -40,15 +40,13 @@ def audio(state, mic, speaker):
     cs.Compile(arguments.argc(), arguments.argv())
     stopflag = 0
     
-    #fft_audio_in1 = csnd6.PVSDATEXT()
-    
     fftsize = int(cs.GetChannel("fftsize"))
     fftin_amptab = 1
     fftin_freqtab = 2
-    fftout_amptab = 3
-    fftout_freqtab = 4
-    fftresyn_amptab = 11
-    fftresyn_freqtab = 12
+    fftout_amptab = 11
+    fftout_freqtab = 12
+    fftout2_amptab = 21
+    fftout2_freqtab = 22
     
     # optimizations to avoid function lookup inside loop
     tGet = cs.TableGet 
@@ -61,8 +59,8 @@ def audio(state, mic, speaker):
     fftin_freqtabs = [fftin_freqtab]*fftsize
     fftout_amptabs = [fftout_amptab]*fftsize
     fftout_freqtabs = [fftout_freqtab]*fftsize
-    fftresyn_amptabs = [fftresyn_amptab]*fftsize
-    fftresyn_freqtabs = [fftresyn_freqtab]*fftsize
+    fftout2_amptabs = [fftout2_amptab]*fftsize
+    fftout2_freqtabs = [fftout2_freqtab]*fftsize
     fftzeros = [0]*fftsize
     fftin_amplist = [0]*fftsize
     fftin_freqlist = [0]*fftsize
@@ -75,14 +73,29 @@ def audio(state, mic, speaker):
         if fftinFlag:
             fftin_amplist = map(tGet,fftin_amptabs,fftbinindices)
             fftin_freqlist = map(tGet,fftin_freqtabs,fftbinindices)
-            #bogusamp = map(tSet,fftresyn_amptabs,fftbinindices,fftin_amplist)
-            #bogusfreq = map(tSet,fftresyn_freqtabs,fftbinindices,fftin_freqlist)
+            #bogusamp = map(tSet,fftout_amptabs,fftbinindices,fftin_amplist)
+            #bogusfreq = map(tSet,fftout_freqtabs,fftbinindices,fftin_freqlist)
         if fftoutFlag:
-            fftout_amplist = map(tGet,fftout_amptabs,fftbinindices)
-            fftout_freqlist = map(tGet,fftout_freqtabs,fftbinindices)
+            fftout_amplist = map(tGet,fftout2_amptabs,fftbinindices)
+            fftout_freqlist = map(tGet,fftout2_freqtabs,fftbinindices)
         
         # get Csound channel data
         audioStatus = cGet("audioStatus")
+        audioStatusTrig = cGet("audioStatusTrig")
+        
+        if state['autolearn']:
+            if audioStatusTrig > 0:
+                state['record'] = True
+            if audioStatusTrig < 0:
+                state['record'] = False
+                state['learn'] = True
+
+        if state['autorespond']:
+            if audioStatusTrig > 0:
+                state['record'] = True
+            if audioStatusTrig < 0:
+                state['record'] = False
+                state['respond'] = True
 
         if state['selfvoice']:
             mode = '{}'.format(state['selfvoice']).lstrip()
@@ -134,8 +147,8 @@ def audio(state, mic, speaker):
             cSet("partikkel1_wavfreq", sound[4])
             cSet("partikkel1_graindur", sound[6]+0.1)
             # transfer fft frame
-            bogusamp = map(tSet,fftresyn_amptabs,fftbinindices,sound[15:fftsize+15])
-            bogusfreq = map(tSet,fftresyn_freqtabs,fftbinindices,sound[fftsize+15:fftsize+15+fftsize])
+            bogusamp = map(tSet,fftout_amptabs,fftbinindices,sound[15:fftsize+15])
+            bogusfreq = map(tSet,fftout_freqtabs,fftbinindices,sound[fftsize+15:fftsize+15+fftsize])
             
             '''
             # partikkel parameters ready to be set
@@ -173,4 +186,4 @@ def audio(state, mic, speaker):
             cSet("partikkel1_grainrate", 0)
             cSet("partikkel1_wavfreq", 0)
             # zero fft frame 
-            bogusamp = map(tSet,fftresyn_amptabs,fftbinindices,fftzeros)
+            bogusamp = map(tSet,fftout_amptabs,fftbinindices,fftzeros)

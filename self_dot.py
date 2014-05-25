@@ -65,6 +65,8 @@ if __name__ == '__main__':
     state = manager.dict({'record': False,
                           'learn': False,
                           'respond': False,
+                          'autolearn': False,
+                          'autorespond': False,
                           'playfile': False, 
                           'selfvoice':False,
                           'save': False, 

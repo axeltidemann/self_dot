@@ -18,10 +18,10 @@
 	giFftTabSize	= (gifftsize / 2)+1
 	gifna     	ftgen   1 ,0 ,giFftTabSize, 7, 0, giFftTabSize, 0   ; make ftable for pvs analysis
 	gifnf     	ftgen   2 ,0 ,giFftTabSize, 7, 0, giFftTabSize, 0   ; make ftable for pvs analysis
-	gifnaSelf     	ftgen   3 ,0 ,giFftTabSize, 7, 0, giFftTabSize, 0   ; make ftable for pvs analysis of my own output
-	gifnfSelf     	ftgen   4 ,0 ,giFftTabSize, 7, 0, giFftTabSize, 0   ; make ftable for pvs analysis of my own output
-	gifnaResyn     	ftgen   11 ,0 ,giFftTabSize, 7, 0, giFftTabSize, 0   ; make ftable for pvs resynthesis
-	gifnfResyn     	ftgen   12 ,0 ,giFftTabSize, 7, 0, giFftTabSize, 0   ; make ftable for pvs resynthesis
+	gifnaSelf     	ftgen   11 ,0 ,giFftTabSize, 7, 0, giFftTabSize, 0   ; make ftable for pvs analysis of my own output
+	gifnfSelf     	ftgen   12 ,0 ,giFftTabSize, 7, 0, giFftTabSize, 0   ; make ftable for pvs analysis of my own output
+	gifnaResyn     	ftgen   21 ,0 ,giFftTabSize, 7, 0, giFftTabSize, 0   ; make ftable for pvs resynthesis
+	gifnfResyn     	ftgen   22 ,0 ,giFftTabSize, 7, 0, giFftTabSize, 0   ; make ftable for pvs resynthesis
 
 ; classic waveforms
 	giSine		ftgen	0, 0, 65536, 10, 1					; sine wave
@@ -96,6 +96,7 @@
 	kfluxG		= kflux * kgate
 
 			chnset kstatus, "audioStatus"
+			chnset kstatusTrig, "audioStatusTrig"
 			chnset krms1, "level1"
 			chnset kFollow1, "envelope1"
 			chnset kcps1, "pitch1ptrack"
@@ -131,6 +132,8 @@
 	instr 11
 
 	krms1 		chnget "respondLevel1"
+;kactive = (krms1 > 0 ? 1 : 0)
+;printk2 kactive  
 	kenv1 		chnget "respondEnvelope1"
 	;kcps1 		chnget "respondPitch1ptrack"
 	kcps1 		chnget "respondPitch1pll"
@@ -160,7 +163,7 @@
 	aout		butterbp asum*5+(anoise*0.01), kcentro1, kcentro1*0.2
 	aout		= aout*kenv1*10
 			chnset aout, "MasterOut1"
-			;chnset aout, "MasterOut2"
+			chnset aout, "MasterOut2"
 /*
 	acps		upsamp kcps1/2000
 	acentro		upsamp kcentro1/2000
@@ -173,6 +176,10 @@
 ; ******************************
 ; partikkel instr 
 	instr 12
+;krms1 		chnget "respondLevel1"
+;kactive = (krms1 > 0 ? 1 : 0)
+;printk2 kactive  
+
 #include "partikkel_chn.inc"
 #include "partikkel_self.inc"
 			chnset a1, "MasterOut1"
@@ -190,8 +197,14 @@
 	;fsin		pvsinit gifftsize, gifftsize/4, gifftsize, 1
 			pvsftr	fsin,gifnaResyn,gifnfResyn		;read modified data back to fsrc
 	aout		pvsynth	fsin				;and resynth
-;			chnset aout, "MasterOut1"
+			chnset aout, "MasterOut1"
 			chnset aout, "MasterOut2"
+	endin
+
+	instr 80
+; test table
+	ksum tabsum gifnaResyn
+	printk2 ksum
 	endin
 
 ; ******************************
@@ -249,10 +262,11 @@
 ;i3 0 86400	; audio file input
 i4 0 86400	; audio input
 i5 0 86400	; analysis
-i11 0 -1	; subtractive harmonic resynthesis
-;i12 0 -1	; partikkel resynthesis
+;i11 0 -1	; subtractive harmonic resynthesis
+i12 0 -1	; partikkel resynthesis
 ;i13 3 -1	; fft resynthesis
 ;i98 0 86400	; analysis of own output
+i80 0 86400	; master out
 i99 0 86400	; master out
 
 </CsScore>
