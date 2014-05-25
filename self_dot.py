@@ -36,11 +36,37 @@ class Controller:
         if message == 'respond':
             self.state['respond'] = True
 
+        if 'autolearn' in message:
+            try: 
+                mess = message[10:]
+                if (mess == 'True') or (mess == '1'):
+                    self.state['autolearn'] = True
+                elif (mess == 'False') or (mess == '0'):
+                    self.state['autolearn'] = False
+                else:
+                    print 'unknown autolearn mode', mess
+            except: 
+                print 'invalid autolearn mode', message
+            print 'autolearn set to:', self.state['autolearn']
+
+        if 'autorespond' in message:
+            try: 
+                mess = message[12:]
+                if (mess == 'True') or (mess == '1'):
+                    self.state['autorespond'] = True
+                elif (mess == 'False') or (mess == '0'):
+                    self.state['autorespond'] = False
+                else:
+                    print 'unknown autorespond mode', mess
+            except: 
+                print 'invalid autorespond mode', message
+            print 'autorespond set to:', self.state['autorespond']
+
         if 'playfile' in message:
             self.state['playfile'] = message[9:]
 
         if 'selfvoice' in message:
-            self.state['selfvoice'] = message[9:]
+            self.state['selfvoice'] = message[10:]
 
         if 'save' in message:
             self.state['save'] = 'brain' + str(uuid4()) if len(message) == 4 else message[5:]

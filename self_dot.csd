@@ -95,6 +95,9 @@
 	kflatnessG	= kflatness * kgate
 	kfluxG		= kflux * kgate
 
+	Stest		sprintfk "input audio status %i, trig status %i", kstatus, kstatusTrig
+			puts Stest, 2+(kstatus + kstatusTrig)
+
 			chnset kstatus, "audioStatus"
 			chnset kstatusTrig, "audioStatusTrig"
 			chnset krms1, "level1"
@@ -266,7 +269,7 @@ i5 0 86400	; analysis
 i12 0 -1	; partikkel resynthesis
 ;i13 3 -1	; fft resynthesis
 ;i98 0 86400	; analysis of own output
-i80 0 86400	; master out
+;i80 0 86400	; test print for contents of fft tables
 i99 0 86400	; master out
 
 </CsScore>

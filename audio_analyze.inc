@@ -12,7 +12,7 @@
 ; amplitude tracking
 	krms1		rms a1				; simple level measure
 	kAttack		= 0.001				; envelope follower attack
-	kRelease	= 0.3 				; envelope follower release
+	kRelease	= 0.7 				; envelope follower release
 	aFollow1	follow2	a1, kAttack, kRelease	; envelope follower
 	kFollow1	downsamp aFollow1	
 
@@ -50,7 +50,7 @@
 ; keep status = 1 until level drops 6dB below the level at which the transient was detected
 ; and keep status = 1 for a release time period after the level has dropped below the threshold
 	iStatusThresh	= 6			; status release threshold, signal must drop this much below transient level before we say that the audio segment is finished
-	iStatusRel	= 0.01			; status release time, hold status=1 for this long after signal has dropped below threshold
+	iStatusRel	= 0.5			; status release time, hold status=1 for this long after signal has dropped below threshold
 	kstate		init 0
 	kstate		= (kTrig1 > 0 ? 1 : kstate)
 	ksegStart	trigger kstate, 0.5, 0
