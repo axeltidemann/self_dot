@@ -50,6 +50,12 @@
 			endop
 
 ;******************************
+; audio input mute
+	instr 2
+	ilevel	= p4
+		chnset ilevel, "inputLevel" 
+	endin
+;******************************
 ; audio file input 
 	instr 3
 
@@ -77,6 +83,9 @@
 	
 	a1		chnget "in1"
 	a2		chnget "in2"
+	kinlevel	chnget "inputLevel"
+	a1		= a1*kinlevel
+	a2		= a2*kinlevel
 	;a1test		chnget "in1"
 	a0		= 0
 			chnset a0, "in1"
@@ -98,7 +107,7 @@
 	kflatnessG	= kflatness * kgate
 	kfluxG		= kflux * kgate
 
-	Stest		sprintfk "input audio status %i, trig status %i", kstatus, kstatusTrig
+	Stest		sprintfk "input audio status %i, trig status %i, dbstart %f", kstatus, kstatusTrig, kdBStart
 			puts Stest, 2+(kstatus + kstatusTrig)
 
 			chnset kstatus, "audioStatus"
@@ -267,6 +276,7 @@
 
 <CsScore>
 ; run for N sec
+i2 0 .1 1	; initialize input level
 ;i3 0 86400	; audio file input
 i4 0 86400	; audio input
 i5 0 86400	; analysis

@@ -62,6 +62,9 @@ class Controller:
                 print 'invalid autorespond mode', message
             print 'autorespond set to:', self.state['autorespond']
 
+        if 'inputLevel' in message:
+            self.state['inputLevel'] = message[11:]
+
         if 'playfile' in message:
             self.state['playfile'] = message[9:]
 
@@ -93,6 +96,7 @@ if __name__ == '__main__':
                           'respond': False,
                           'autolearn': False,
                           'autorespond': False,
+                          'inputLevel': False, 
                           'playfile': False, 
                           'selfvoice':False,
                           'save': False, 

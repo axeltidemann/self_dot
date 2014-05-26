@@ -10,7 +10,12 @@ mode can be ['partikkel', 'spectral', 'noiseband']
 python communication.py autolearn status
 python communication.py autorespond status
 - status can be 1 or 0, True or False
-These modes use automatic segmentation to trigger learning or responding after a segemtn of audio has been input
+These modes use automatic segmentation to trigger learning or responding after a segemnt of audio has been input
+
+python communication.py inputLevel mode
+- mode can be mute, unmute or reset
+The reset mode mutes for 1 second, then unmutes
+
 
 ** Learnrespond contains timed macros for certain communication events
 python learnrespond.py [time, mode, file]

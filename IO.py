@@ -99,7 +99,7 @@ def audio(state, mic, speaker):
                 state['respond'] = True
 
         if state['selfvoice']:
-            mode = '{}'.format(state['selfvoice']).lstrip()
+            mode = '{}'.format(state['selfvoice'])
             if mode in ['partikkel', 'spectral', 'noiseband']:
                 print 'self change voice to...', mode
                 cs.InputMessage('i -11 0 .1')
@@ -112,6 +112,15 @@ def audio(state, mic, speaker):
                 print 'unknown voice mode', mode
             state['selfvoice'] = False
             
+        if state['inputLevel']:
+            mode = '{}'.format(state['inputLevel'])
+            if mode == 'mute': cs.InputMessage('i 2 0 .1 0')
+            if mode == 'unmute': cs.InputMessage('i 2 0 .1 1')
+            if mode == 'reset': 
+                cs.InputMessage('i 2 0 .1 0')
+                cs.InputMessage('i 2 1 .1 1')
+            state['inputLevel'] = False
+
         if state['playfile']:
             print '[self.] wants to play {}'.format(state['playfile'])
             print '{}'.format(state['playfile'])

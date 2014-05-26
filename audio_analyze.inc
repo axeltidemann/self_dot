@@ -1,7 +1,8 @@
 	krms		rms a1
-	kgate		= (krms < ampdbfs(-40) ? 0 : 1)	; don't bother analyzing very quiet sections
-	kgate		tonek kgate, 10
-	a1		= a1 * kgate
+	iMinLevel	= -40					; minimum level in dB for (significant) analysis
+	kgate0		= (krms < ampdbfs(iMinLevel) ? 0 : 1)		; use this to gate analysis signals that is particularly noisy at low signal levels 
+	kgate		tonek kgate0, 4
+	;a1		= a1 * kgate
 
 ; ***************
 ; extract stereo position here, then collapse input signal to mono
@@ -19,16 +20,17 @@
 ; ***************
 ;analyze transients
 	iResponse	= 10 		; response time in milliseconds
-	kAtck_db	= 3		; attack threshold (in dB)
-	iLowThresh	= 0.005		; lower threshold for transient detection (adaptive, relative to recent transient strength)
-	idoubleLimit	= 0.02		; minimum duration between events, (double trig limit)
+	kAtck_db	= 9		; attack threshold (in dB)
+	iLowThresh	= 0.01		; lower threshold for transient detection (adaptive, relative to recent transient strength)
+	idoubleLimit	= 0.1		; minimum duration between events, (double trig limit)
 	
 	kFollowdb1	= dbfsamp(kFollow1)			; convert to dB
 	kFollowDel1	delayk	kFollowdb1, iResponse/1000	; delay with response time for comparision of levels
 	kTrig1		init 0
 	kLowThresh1	init 0
 	kTrig1		= ((kFollowdb1 > kFollowDel1 + kAtck_db) ? 1 : 0) 	; if current rms plus threshold is larger than previous rms, set trig signal to current rms
-	
+	kTrig1		= kTrig1*kgate0
+
 	; avoid transient detection of very soft signals (adaptive level)
 	if kTrig1 > 0 then
 	kLowThresh1	= (kLowThresh1*0.7)+(kFollow1*0.3)		; (the coefficients can be used to adjust adapt rate)
@@ -49,16 +51,22 @@
 ; segmentation, set kstatus = 1 when a transient occurs, 
 ; keep status = 1 until level drops 6dB below the level at which the transient was detected
 ; and keep status = 1 for a release time period after the level has dropped below the threshold
-	iStatusThresh	= 6			; status release threshold, signal must drop this much below transient level before we say that the audio segment is finished
-	iStatusRel	= 0.5			; status release time, hold status=1 for this long after signal has dropped below threshold
+	iStatusThresh	= 9				; status release threshold, signal must drop this much below transient level before we say that the audio segment is finished
+	iStatusRel	= 0.9				; status release time, hold status=1 for this long after signal has dropped below threshold
 	kstate		init 0
 	kstate		= (kTrig1 > 0 ? 1 : kstate)
 	ksegStart	trigger kstate, 0.5, 0
 	kdBStart	init 0
 	kdBStart 	= (ksegStart > 0 ? kFollowdb1 : kdBStart)
 	kstate		= (kFollowdb1 < (kdBStart-iStatusThresh) ? 0 : kstate)
-	kstate_Dly	delayk kstate, iStatusRel
-	kstate_Rel	= ((kstate == 0) && (kstate_Dly == 0)? 0 : 1)
+	kstaTrigRel	trigger kstate, 0.5, 1		; up-down trig
+	if kstaTrigRel > 0 then
+	reinit releaseState
+	endif
+releaseState:
+	kreleaseFlag	line 1, iStatusRel, 0
+rireturn
+	kstate_Rel	= ((kstate == 0) && (kreleaseFlag < 0.01)? 0 : 1)
 	kstatus		= kstate_Rel
 	kstatusTrigOn	trigger kstatus, 0.5, 0
 	kstatusTrigOff	trigger kstatus, 0.5, 1
