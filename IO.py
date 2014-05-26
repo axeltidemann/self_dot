@@ -148,7 +148,7 @@ def audio(state, mic, speaker):
             cSet("partikkel1_graindur", sound[6]+0.1)
             # transfer fft frame
             bogusamp = map(tSet,fftout_amptabs,fftbinindices,sound[15:fftsize+15])
-            #bogusfreq = map(tSet,fftout_freqtabs,fftbinindices,sound[fftsize+15:fftsize+15+fftsize])
+            bogusfreq = map(tSet,fftout_freqtabs,fftbinindices,sound[fftsize+15:fftsize+15+fftsize])
             
             '''
             # partikkel parameters ready to be set
