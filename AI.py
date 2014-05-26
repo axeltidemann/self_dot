@@ -14,12 +14,18 @@ def learn(state, mic, camera, brain):
     
     while True:
         if state['learn']:
+            print '[self.] learns...', 
             audio_data = mic.array()
             video_data = camera.array()
 
             mic.clear()
             camera.clear()
 
+            if np.isnan(np.sum(audio_data)):
+                print 'NaN in audio data. Discarding data and attempt to learn.'
+                state['Learn'] = False
+                break
+                
             scaler = pp.MinMaxScaler() 
             scaled_data = scaler.fit_transform(audio_data)
 
@@ -51,7 +57,7 @@ def learn(state, mic, camera, brain):
 
             brain.append((audio_net, video_net, scaler))
 
-            print 'Finished learning audio-video association'
+            print 'finished learning audio-video association'
 
             state['learn'] = False
 
