@@ -1,5 +1,6 @@
 from multiprocessing.managers import SyncManager
 from collections import deque
+import time
 import os
 
 import numpy as np
@@ -8,8 +9,23 @@ class MyManager(SyncManager):
     pass
 
 class MyDeque(deque):
+    def __init__(self, *args, **kwargs):
+        deque.__init__(self, *args, **kwargs)
+        self.i = 0
+    
     def array(self):
         return np.array(list(self))
+
+    def latest(self):
+        data = self.array()
+        old_i = self.i
+        self.i = len(data)
+        return data[old_i:]
+
+    def clear(self):
+        self.i = 0
+        deque.clear(self)
+        
 
 def net_rmse(brain, signals):
     import Oger
@@ -41,3 +57,7 @@ def bytes2human(n, format="%(value)i%(symbol)s"):
 
 def filesize(filename):
     return bytes2human(os.path.getsize(filename))
+
+def sleep(seconds):
+    time.sleep(seconds)
+    return True

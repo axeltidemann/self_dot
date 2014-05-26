@@ -12,7 +12,7 @@ import os
 import multiprocessing as mp
 from uuid import uuid4
 
-from AI import learn, respond
+from AI import learn, respond, recognize
 from IO import audio, video
 from communication import receive as receive_messages
 from utils import MyManager, MyDeque
@@ -100,7 +100,8 @@ if __name__ == '__main__':
                           'playfile': False, 
                           'selfvoice':False,
                           'save': False, 
-                          'load': False}) 
+                          'load': False, 
+                          'rmse': []}) 
 
     controller = Controller(state)
 
@@ -108,6 +109,7 @@ if __name__ == '__main__':
     mp.Process(target=video, args=(state, camera, projector)).start()
     mp.Process(target=learn, args=(state, mic, camera, brain)).start()
     mp.Process(target=respond, args=(state, mic, speaker, camera, projector, brain)).start()
+    mp.Process(target=recognize, args=(state, mic, camera, brain)).start()
     mp.Process(target=receive_messages, args=(controller.parse,)).start()
     
     try:
