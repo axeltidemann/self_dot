@@ -99,7 +99,7 @@
 ; spectral analysis
 
 	fsin 			pvsanal	a1, gifftsize, gifftsize/4, gifftsize, 1
-	kflag   		pvsftw	fsin,gifna,gifnf          	; export  amps  and freqs to table,
+	kflag   		pvsftw	fsin,ifna,ifnf          	; export  amps  and freqs to table,
 
 	kupdateRate		= 1000	
 	kflatness		init -1

@@ -18,10 +18,12 @@
 	giFftTabSize	= (gifftsize / 2)+1
 	gifna     	ftgen   1 ,0 ,giFftTabSize, 7, 0, giFftTabSize, 0   ; make ftable for pvs analysis
 	gifnf     	ftgen   2 ,0 ,giFftTabSize, 7, 0, giFftTabSize, 0   ; make ftable for pvs analysis
-	gifnaSelf     	ftgen   11 ,0 ,giFftTabSize, 7, 0, giFftTabSize, 0   ; make ftable for pvs analysis of my own output
-	gifnfSelf     	ftgen   12 ,0 ,giFftTabSize, 7, 0, giFftTabSize, 0   ; make ftable for pvs analysis of my own output
-	gifnaResyn     	ftgen   21 ,0 ,giFftTabSize, 7, 0, giFftTabSize, 0   ; make ftable for pvs resynthesis
-	gifnfResyn     	ftgen   22 ,0 ,giFftTabSize, 7, 0, giFftTabSize, 0   ; make ftable for pvs resynthesis
+
+	gifnaSelf     	ftgen   4 ,0 ,giFftTabSize, 7, 0, giFftTabSize, 0   ; make ftable for pvs analysis of my own output
+	gifnfSelf     	ftgen   5 ,0 ,giFftTabSize, 7, 0, giFftTabSize, 0   ; make ftable for pvs analysis of my own output
+
+	gifnaResyn     	ftgen   7 ,0 ,giFftTabSize, 7, 0, giFftTabSize, 0   ; make ftable for pvs resynthesis
+	gifnfResyn     	ftgen   8 ,0 ,giFftTabSize, 7, 0, giFftTabSize, 0   ; make ftable for pvs resynthesis
 
 ; classic waveforms
 	giSine		ftgen	0, 0, 65536, 10, 1					; sine wave
@@ -79,7 +81,8 @@
 	a0		= 0
 			chnset a0, "in1"
 			chnset a0, "in2"
-
+	ifna		= gifna
+	ifnf		= gifnf
 #include "audio_analyze.inc"
 
 ; ***************
@@ -215,6 +218,8 @@
 	instr 98
 	a1	chnget "MasterOut1"
 	a2	= 0
+	ifna	= gifnaSelf
+	ifnf	= gifnfSelf
 #include "audio_analyze.inc"
 			chnset kflag, "pvsoutflag"
 ; write to chn

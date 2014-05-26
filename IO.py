@@ -41,12 +41,13 @@ def audio(state, mic, speaker):
     stopflag = 0
     
     fftsize = int(cs.GetChannel("fftsize"))
+    ffttabsize = fftsize/2
     fftin_amptab = 1
     fftin_freqtab = 2
-    fftout_amptab = 11
-    fftout_freqtab = 12
-    fftout2_amptab = 21
-    fftout2_freqtab = 22
+    fftout_amptab = 4
+    fftout_freqtab = 5
+    fftresyn_amptab = 7
+    fftresyn_freqtab = 8
     
     # optimizations to avoid function lookup inside loop
     tGet = cs.TableGet 
@@ -54,16 +55,16 @@ def audio(state, mic, speaker):
     cGet = cs.GetChannel
     cSet = cs.SetChannel
     perfKsmps = cs.PerformKsmps
-    fftbinindices = range(fftsize)
-    fftin_amptabs = [fftin_amptab]*fftsize
-    fftin_freqtabs = [fftin_freqtab]*fftsize
-    fftout_amptabs = [fftout_amptab]*fftsize
-    fftout_freqtabs = [fftout_freqtab]*fftsize
-    fftout2_amptabs = [fftout2_amptab]*fftsize
-    fftout2_freqtabs = [fftout2_freqtab]*fftsize
-    fftzeros = [0]*fftsize
-    fftin_amplist = [0]*fftsize
-    fftin_freqlist = [0]*fftsize
+    fftbinindices = range(ffttabsize)
+    fftin_amptabs = [fftin_amptab]*ffttabsize
+    fftin_freqtabs = [fftin_freqtab]*ffttabsize
+    fftout_amptabs = [fftout_amptab]*ffttabsize
+    fftout_freqtabs = [fftout_freqtab]*ffttabsize
+    fftresyn_amptabs = [fftresyn_amptab]*ffttabsize
+    fftresyn_freqtabs = [fftresyn_freqtab]*ffttabsize
+    fftzeros = [0]*ffttabsize
+    fftin_amplist = [0]*ffttabsize
+    fftin_freqlist = [0]*ffttabsize
 
     while not stopflag:
         stopflag = perfKsmps()
@@ -73,11 +74,11 @@ def audio(state, mic, speaker):
         if fftinFlag:
             fftin_amplist = map(tGet,fftin_amptabs,fftbinindices)
             fftin_freqlist = map(tGet,fftin_freqtabs,fftbinindices)
-            #bogusamp = map(tSet,fftout_amptabs,fftbinindices,fftin_amplist)
-            #bogusfreq = map(tSet,fftout_freqtabs,fftbinindices,fftin_freqlist)
+            #bogusamp = map(tSet,fftresyn_amptabs,fftbinindices,fftin_amplist)
+            #bogusfreq = map(tSet,fftresyn_freqtabs,fftbinindices,fftin_freqlist)
         if fftoutFlag:
-            fftout_amplist = map(tGet,fftout2_amptabs,fftbinindices)
-            fftout_freqlist = map(tGet,fftout2_freqtabs,fftbinindices)
+            fftout_amplist = map(tGet,fftout_amptabs,fftbinindices)
+            fftout_freqlist = map(tGet,fftout_freqtabs,fftbinindices)
         
         # get Csound channel data
         audioStatus = cGet("audioStatus")
@@ -147,8 +148,8 @@ def audio(state, mic, speaker):
             cSet("partikkel1_wavfreq", sound[4])
             cSet("partikkel1_graindur", sound[6]+0.1)
             # transfer fft frame
-            bogusamp = map(tSet,fftout_amptabs,fftbinindices,sound[15:fftsize+15])
-            #bogusfreq = map(tSet,fftout_freqtabs,fftbinindices,sound[fftsize+15:fftsize+15+fftsize])
+            bogusamp = map(tSet,fftresyn_amptabs,fftbinindices,sound[15:ffttabsize+15])
+            bogusfreq = map(tSet,fftresyn_freqtabs,fftbinindices,sound[ffttabsize+15:ffttabsize+15+ffttabsize])
             
             '''
             # partikkel parameters ready to be set
@@ -186,4 +187,4 @@ def audio(state, mic, speaker):
             cSet("partikkel1_grainrate", 0)
             cSet("partikkel1_wavfreq", 0)
             # zero fft frame 
-            bogusamp = map(tSet,fftout_amptabs,fftbinindices,fftzeros)
+            bogusamp = map(tSet,fftresyn_amptabs,fftbinindices,fftzeros)
