@@ -1,4 +1,4 @@
-import warnings
+from warnings import warn
 
 import Oger
 import mdp
@@ -34,9 +34,9 @@ class ACDCESN:
         self.dc.train(y,x)
 
         if x.shape[1] == y.shape[1]:
-            warnings.warn('Input and output signals are of the same dimension, ' +
-                          'you must explicitly use inverse() to get flow in the ' +
-                          'opposite direction.')
+            warn('Input and output signals are of the same dimension, ' +
+                 'you must explicitly use inverse() to get flow in the ' +
+                 'opposite direction.')
 
     def inverse(self, x):
         return self.dc(x)

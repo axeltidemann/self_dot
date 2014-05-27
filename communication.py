@@ -27,8 +27,8 @@ def receive(callback, host='localhost', port=7777):
         try:
             connection, address = sock.accept()
             data = connection.recv(1024)
-            callback(data)
             connection.close()
+            callback(data)
         except:
             print('Communication channel going down.')
             sock.close()

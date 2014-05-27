@@ -1,7 +1,10 @@
 import os
+import cPickle as pickle
 
 import cv2
 import numpy as np
+
+from utils import sleep, filesize
 import myCsoundAudioOptions
 
 def video(state, camera, projector):
@@ -197,3 +200,20 @@ def audio(state, mic, speaker):
             cSet("partikkel1_wavfreq", 0)
             # zero fft frame 
             bogusamp = map(tSet,fftresyn_amptabs,fftbinindices,fftzeros)
+
+            
+def cns(state, brain):
+    print 'CENTRAL NERVOUS SYSTEM PID', os.getpid()
+    
+    while sleep(.1):
+        if state['save']:
+            pickle.dump(brain[:], file(state['save'], 'w'))
+            print 'Brain saved as file {} ({})'.format(state['save'], filesize(state['save']))
+            state['save'] = False
+
+        elif state['load']:
+            for element in pickle.load(file(state['load'], 'r')):
+                brain.append(element)
+            print 'Brain loaded from file {} ({})'.format(state['load'], filesize(state['load']))
+            state['load'] = False
+
