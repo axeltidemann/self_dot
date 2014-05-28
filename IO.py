@@ -63,6 +63,7 @@ def audio(state, mic, speaker):
     fftresyn_amptabs = [fftresyn_amptab]*ffttabsize
     fftresyn_freqtabs = [fftresyn_freqtab]*ffttabsize
     fftzeros = [0]*ffttabsize
+    fftconst = [0.1]*ffttabsize
     fftin_amplist = [0]*ffttabsize
     fftin_freqlist = [0]*ffttabsize
 
@@ -121,6 +122,11 @@ def audio(state, mic, speaker):
                 cs.InputMessage('i 2 1 .1 1')
             state['inputLevel'] = False
 
+        if state['csinstr']:
+            # generic csound instr message
+            cs.InputMessage('{}'.format(state['csinstr']))
+            state['csinstr'] = False
+            
         if state['playfile']:
             print '[self.] wants to play {}'.format(state['playfile'])
             print '{}'.format(state['playfile'])
@@ -157,7 +163,7 @@ def audio(state, mic, speaker):
             cSet("partikkel1_wavfreq", sound[4])
             cSet("partikkel1_graindur", sound[6]+0.1)
             # transfer fft frame
-            bogusamp = map(tSet,fftresyn_amptabs,fftbinindices,sound[15:ffttabsize+15])
+            bogusamp = map(tSet,fftresyn_amptabs,fftbinindices,fftconst)#sound[15:ffttabsize+15])
             bogusfreq = map(tSet,fftresyn_freqtabs,fftbinindices,sound[ffttabsize+15:ffttabsize+15+ffttabsize])
             
             '''

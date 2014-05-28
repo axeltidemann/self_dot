@@ -223,6 +223,24 @@
 	endin
 
 ; ******************************
+; generate test data, 
+; get spectral profile from sound file, 
+; to use as amp or freq data for selfvoice spectral synth
+	instr 42
+	Ssound	strget p4
+	Spath	="testsounds/"
+	S1	strcat Spath, Ssound
+	a1	soundin S1
+	a2	= 0
+
+	ifna	= gifnaResyn
+	ifnf	= gifnfResyn
+#include "audio_analyze.inc"
+
+		outs a1, a2
+	endin
+
+; ******************************
 ; self analysis of own output 
 	instr 98
 	a1	chnget "MasterOut1"
