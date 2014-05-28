@@ -1,16 +1,16 @@
 import os
 import time
-import cPickle as pickle
 
 from sklearn import preprocessing as pp
 import numpy as np
 
-from utils import net_rmse, filesize, sleep
+from utils import net_rmse, sleep
 
 def learn(state, mic, camera, brain):
     print 'LEARN PID', os.getpid()
     import Oger
     import mdp
+    from esn import ACDCESN
     
     while sleep(.1):
         if state['learn']:
@@ -43,38 +43,26 @@ def learn(state, mic, camera, brain):
 
             audio_net.train(x,y)
 
-            reservoir = Oger.nodes.LeakyReservoirNode(output_dim=500,
-                                                      leak_rate=0.8,
-                                                      bias_scaling=.2,
-                                                      reset_states=True)
-            readout = mdp.nodes.LinearRegressionNode(use_pinv=True)
-            video_net = mdp.hinet.FlowNode(reservoir + readout)
+            audio_video_net = ACDCESN(hidden_nodes=500,
+                                      leak_rate=0.8,
+                                      bias_scaling=.2,
+                                      reset_states=True,
+                                      use_pinv=True)
 
             # Video is sampled at a much lower frequency than audio.
             stride = audio_data.shape[0]/video_data.shape[0]
             x = scaled_data[scaled_data.shape[0] - stride*video_data.shape[0]::stride]
             y = video_data
 
-            video_net.train(x,y)
+            audio_video_net.train(x,y)
 
-            brain.append((audio_net, video_net, scaler))
+            brain.append((audio_net, audio_video_net, scaler))
 
             print 'finished learning audio-video association in {} seconds'.format(time.time() - start_time)
 
             state['learn'] = False
 
-        elif state['save']:
-            pickle.dump(brain[:], file(state['save'], 'w'))
-            print 'Brain saved as file {} ({})'.format(state['save'], filesize(state['save']))
-            state['save'] = False
-
-        elif state['load']:
-            for element in pickle.load(file(state['load'], 'r')):
-                brain.append(element)
-            print 'Brain loaded from file {} ({})'.format(state['load'], filesize(state['load']))
-            state['load'] = False
-
-            
+                        
 def respond(state, mic, speaker, camera, projector, brain):
     print 'RESPOND PID', os.getpid()
 
@@ -112,7 +100,11 @@ def recognize(state, mic, camera, brain):
     
     while sleep(.1):
         if state['record'] and brain:
-            state['rmse'] = net_rmse([ (net, scaler) for net,_,scaler in brain ], mic.latest())
-            print '[self.] recognizes RMSE:', state['rmse']
+            try:
+                state['rmse'] = net_rmse([ (net, scaler) for net,_,scaler in brain ], mic.latest())
+                print '[self.] recognizes RMSE:', state['rmse']
+            except:
+                print 'Audio buffer was emptied before recognize could finish.'
+                    
             
 

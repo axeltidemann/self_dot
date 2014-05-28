@@ -11,9 +11,10 @@
 import os
 import multiprocessing as mp
 from uuid import uuid4
+from warnings import warn
 
 from AI import learn, respond, recognize
-from IO import audio, video
+from IO import audio, video, cns
 from communication import receive as receive_messages
 from utils import MyManager, MyDeque
        
@@ -24,61 +25,41 @@ class Controller:
     def parse(self, message):
         print '[self.] received:', message
 
-        if message == 'startrec':
-            self.state['record'] = True
+        try:
+            if message == 'startrec':
+                self.state['record'] = True
 
-        if message == 'stoprec':
-            self.state['record'] = False
+            if message == 'stoprec':
+                self.state['record'] = False
 
-        if message == 'learn':
-            self.state['learn'] = True
+            if message == 'learn':
+                self.state['learn'] = True
 
-        if message == 'respond':
-            self.state['respond'] = True
+            if message == 'respond':
+                self.state['respond'] = True
 
-        if 'autolearn' in message:
-            try: 
-                mess = message[10:]
-                if (mess == 'True') or (mess == '1'):
-                    self.state['autolearn'] = True
-                elif (mess == 'False') or (mess == '0'):
-                    self.state['autolearn'] = False
-                else:
-                    print 'unknown autolearn mode', mess
-            except: 
-                print 'invalid autolearn mode', message
-            print 'autolearn set to:', self.state['autolearn']
+            if 'autolearn' in message:
+                self.state['autolearn'] = message[10:] in ['True', '1']
 
-        if 'autorespond' in message:
-            try: 
-                mess = message[12:]
-                if (mess == 'True') or (mess == '1'):
-                    self.state['autorespond'] = True
-                elif (mess == 'False') or (mess == '0'):
-                    self.state['autorespond'] = False
-                else:
-                    print 'unknown autorespond mode', mess
-            except: 
-                print 'invalid autorespond mode', message
-            print 'autorespond set to:', self.state['autorespond']
+            if 'autorespond' in message:
+                self.state['autorespond'] = message[12:] in ['True', '1']
 
-        if 'inputLevel' in message:
-            self.state['inputLevel'] = message[11:]
+            if 'inputLevel' in message:
+                self.state['inputLevel'] = message[11:]
 
-        if 'csinstr' in message:
-            self.state['csinstr'] = message[8:]
+            if 'playfile' in message:
+                self.state['playfile'] = message[9:]
 
-        if 'playfile' in message:
-            self.state['playfile'] = message[9:]
+            if 'selfvoice' in message:
+                self.state['selfvoice'] = message[10:]
 
-        if 'selfvoice' in message:
-            self.state['selfvoice'] = message[10:]
+            if 'save' in message:
+                self.state['save'] = 'brain' + str(uuid4()) if len(message) == 4 else message[5:]
 
-        if 'save' in message:
-            self.state['save'] = 'brain' + str(uuid4()) if len(message) == 4 else message[5:]
-                        
-        if 'load' in message:
-            self.state['load'] = message[5:]
+            if 'load' in message:
+                self.state['load'] = message[5:]
+        except:
+            warn('Something went wrong when parsing the message - try again.')
 
 if __name__ == '__main__':
     print 'MAIN PID', os.getpid()
@@ -114,6 +95,7 @@ if __name__ == '__main__':
     mp.Process(target=learn, args=(state, mic, camera, brain)).start()
     mp.Process(target=respond, args=(state, mic, speaker, camera, projector, brain)).start()
     mp.Process(target=recognize, args=(state, mic, camera, brain)).start()
+    mp.Process(target=cns, args=(state, brain)).start()
     mp.Process(target=receive_messages, args=(controller.parse,)).start()
     
     try:
