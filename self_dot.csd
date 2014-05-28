@@ -25,6 +25,8 @@
 	gifnaResyn     	ftgen   7 ,0 ,giFftTabSize, 7, 0, giFftTabSize, 0   ; make ftable for pvs resynthesis
 	gifnfResyn     	ftgen   8 ,0 ,giFftTabSize, 7, 0, giFftTabSize, 0   ; make ftable for pvs resynthesis
 
+	giNoiseFloor	ftgen 0, 0, 8192, 2, 0						; just init, to be used as noise gate 
+
 ; classic waveforms
 	giSine		ftgen	0, 0, 65536, 10, 1					; sine wave
 	giCosine	ftgen	0, 0, 8192, 9, 1, 1, 90					; cosine wave
@@ -73,11 +75,41 @@
 
 ;******************************
 ; NEW, TODO
-; 11 calibrate signal, get background noise level
-; 12 set gate/expander shape
-; 15 get noiseprint
-; 16 background noise reduction
-; 17 reduction of own output in feedback to input (cleaner autorespond)
+; 11 find stereo position
+; 17 get noiseprint
+; 18 background noise reduction
+; 19 reduction of own output in feedback to input (cleaner autorespond)
+
+; TEST:
+; 14 calibrate signal, get background noise level
+; 15 set gate/expander shape
+; 16 apply noise gate
+
+;******************************
+; get audio input noise floor
+	instr 14
+#include "getAudioNoiseFloor.inc"
+	endin
+
+;******************************
+; set audio input noise gate
+	instr 15
+	irms		chnget "inputNoisefloor"
+	isize		= 8192
+	iknee		= isize*0.1
+	giNoiseFloor	ftgen 0, 0, isize, 7, 0, (isize*irms), 0, iknee, 1, (isize*(1-irms))-iknee, 1
+	endin
+
+;******************************
+; apply noise gate
+	instr 16
+	a1		chnget "in1"
+	krms		rms a1
+	krms		= krms * 1.7
+	kgate		table krms, giNoiseFloor, 1
+	a1		= a1 * kgate
+			chnset a1, "in1"
+	endin
 
 ;******************************
 ; audio input mute
@@ -99,11 +131,8 @@
 	instr 31
 	
 	a1		chnget "in1"
-	a2		chnget "in2"
 	kinlevel	chnget "inputLevel"
 	a1		= a1*kinlevel
-	a2		= a2*kinlevel
-	;a1test		chnget "in1"
 	a0		= 0
 			chnset a0, "in1"
 			chnset a0, "in2"
