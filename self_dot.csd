@@ -50,12 +50,6 @@
 			endop
 
 ;******************************
-; audio input mute
-	instr 2
-	ilevel	= p4
-		chnset ilevel, "inputLevel" 
-	endin
-;******************************
 ; audio file input 
 	instr 3
 
@@ -78,8 +72,31 @@
 	endin
 
 ;******************************
+; NEW, TODO
+; 11 calibrate signal, get background noise level
+; 12 set gate/expander shape
+; 15 get noiseprint
+; 16 background noise reduction
+; 17 reduction of own output in feedback to input (cleaner autorespond)
+
+;******************************
+; audio input mute
+	instr 21
+	ilevel	= p4
+		chnset ilevel, "inputLevel" 
+	endin
+
+;******************************
+; generic chn value setter
+	instr 22
+	Schan	strget p4
+	ival	= p5
+		chnset ival, Schan 
+	endin
+
+;******************************
 ; analysis  of audio input 
-	instr 5
+	instr 31
 	
 	a1		chnget "in1"
 	a2		chnget "in2"
@@ -138,13 +155,30 @@
 */
 	endin
 
+; ******************************
+; generate test data, 
+; get spectral profile from sound file, 
+; to use as amp or freq data for selfvoice spectral synth
+	instr 42
+	Ssound	strget p4
+	Spath	="testsounds/"
+	S1	strcat Spath, Ssound
+	a1	soundin S1
+	a2	= 0
+
+	ifna	= gifnaResyn
+	ifnf	= gifnfResyn
+#include "audio_analyze.inc"
+
+		outs a1, a2
+	endin
 
 ; ************************************************************
 ; resynthesis/imitation
 
 ; ******************************
 ; basic subtractive harmonic synth
-	instr 11
+	instr 51			
 
 	krms1 		chnget "respondLevel1"
 ;kactive = (krms1 > 0 ? 1 : 0)
@@ -190,7 +224,7 @@
 
 ; ******************************
 ; partikkel instr 
-	instr 12
+	instr 52			
 ;krms1 		chnget "respondLevel1"
 ;kactive = (krms1 > 0 ? 1 : 0)
 ;printk2 kactive  
@@ -203,7 +237,7 @@
 
 ; ******************************
 ; spectral resynthesis instr 
-	instr 13
+	instr 53			
 	kinit		init 1
 	if kinit > 0 then
 	a1		= 0
@@ -222,23 +256,6 @@
 	printk2 ksum
 	endin
 
-; ******************************
-; generate test data, 
-; get spectral profile from sound file, 
-; to use as amp or freq data for selfvoice spectral synth
-	instr 42
-	Ssound	strget p4
-	Spath	="testsounds/"
-	S1	strcat Spath, Ssound
-	a1	soundin S1
-	a2	= 0
-
-	ifna	= gifnaResyn
-	ifnf	= gifnfResyn
-#include "audio_analyze.inc"
-
-		outs a1, a2
-	endin
 
 ; ******************************
 ; self analysis of own output 
@@ -294,16 +311,16 @@
 
 <CsScore>
 ; run for N sec
-i2 0 .1 1	; initialize input level
-;i3 0 86400	; audio file input
-i4 0 86400	; audio input
-i5 0 86400	; analysis
-;i11 0 -1	; subtractive harmonic resynthesis
-i12 0 -1	; partikkel resynthesis
-;i13 3 -1	; fft resynthesis
-;i98 0 86400	; analysis of own output
-;i80 0 86400	; test print for contents of fft tables
-i99 0 86400	; master out
+;i3 	0 86400	; audio file input
+i4 	0 86400	; audio input
+i21 	0 .1 1	; initialize input level
+i31 	0 86400	; analysis
+;i51 	0 -1	; subtractive harmonic resynthesis
+i52 	0 -1	; partikkel resynthesis
+;i53 	3 -1	; fft resynthesis
+;i98 	0 86400	; analysis of own output
+;i80 	0 86400	; test print for contents of fft tables
+i99 	0 86400	; master out
 
 </CsScore>
 

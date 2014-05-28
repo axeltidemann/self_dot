@@ -106,23 +106,23 @@ def audio(state, mic, speaker):
             mode = '{}'.format(state['selfvoice'])
             if mode in ['partikkel', 'spectral', 'noiseband']:
                 print 'self change voice to...', mode
-                cs.InputMessage('i -11 0 .1')
-                cs.InputMessage('i -12 0 .1')
-                cs.InputMessage('i -13 0 .1')
-                if mode == 'noiseband': cs.InputMessage('i 11 0 -1')
-                if mode == 'partikkel': cs.InputMessage('i 12 0 -1')
-                if mode == 'spectral': cs.InputMessage('i 13 0 -1')
+                cs.InputMessage('i -51 0 .1')
+                cs.InputMessage('i -52 0 .1')
+                cs.InputMessage('i -53 0 .1')
+                if mode == 'noiseband': cs.InputMessage('i 51 0 -1')
+                if mode == 'partikkel': cs.InputMessage('i 52 0 -1')
+                if mode == 'spectral': cs.InputMessage('i 53 0 -1')
             else:
                 print 'unknown voice mode', mode
             state['selfvoice'] = False
             
         if state['inputLevel']:
             mode = '{}'.format(state['inputLevel'])
-            if mode == 'mute': cs.InputMessage('i 2 0 .1 0')
-            if mode == 'unmute': cs.InputMessage('i 2 0 .1 1')
+            if mode == 'mute': cs.InputMessage('i 21 0 .1 0')
+            if mode == 'unmute': cs.InputMessage('i 21 0 .1 1')
             if mode == 'reset': 
-                cs.InputMessage('i 2 0 .1 0')
-                cs.InputMessage('i 2 1 .1 1')
+                cs.InputMessage('i 21 0 .1 0')
+                cs.InputMessage('i 21 1 .1 1')
             state['inputLevel'] = False
 
         if state['csinstr']:

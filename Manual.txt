@@ -16,6 +16,10 @@ python communication.py inputLevel mode
 - mode can be mute, unmute or reset
 The reset mode mutes for 1 second, then unmutes
 
+python communication.py csinstr [string]
+Send generic Csound instrument event
+Can be used to set any chn value, via instrument 22 ('i 22 0 1 \"name\" value')
+
 
 ** Learnrespond contains timed macros for certain communication events
 python learnrespond.py [time, mode, file]
