@@ -5,11 +5,6 @@
 	;a1		= a1 * kgate
 
 ; ***************
-; extract stereo position here, then collapse input signal to mono
-	kpos		= 0.5	; ...as if we already had implemented position tracking
-	a1		= a1+a2
-
-; ***************
 ; amplitude tracking
 	krms1		rms a1				; simple level measure
 	kAttack		= 0.001				; envelope follower attack

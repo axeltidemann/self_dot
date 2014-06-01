@@ -49,6 +49,12 @@ class Controller:
             if 'inputLevel' in message:
                 self.state['inputLevel'] = message[11:]
 
+            if 'calibrateAudio' in message:
+                self.state['calibrateAudio'] = True
+
+            if 'csinstr' in message:
+                self.state['csinstr'] = message[8:]
+             
             if 'playfile' in message:
                 self.state['playfile'] = message[9:]
 
@@ -85,6 +91,7 @@ if __name__ == '__main__':
                           'autolearn': False,
                           'autorespond': False,
                           'inputLevel': False, 
+                          'calibrateAudio': False, 
                           'csinstr': False, 
                           'playfile': False, 
                           'selfvoice':False,

@@ -128,9 +128,18 @@ def audio(state, mic, speaker):
                 cs.InputMessage('i 21 1 .1 1')
             state['inputLevel'] = False
 
+        if state['calibrateAudio']:
+            calibratePeriod = 2
+            cs.InputMessage('i -16 0 1') # turn off old noise gate
+            cs.InputMessage('i 14 0 %f'%calibratePeriod) # get level
+            cs.InputMessage('i 15 %f 0.1'%(calibratePeriod+0.1)) # set noise gate shape
+            cs.InputMessage('i 16 %f -1'%(calibratePeriod+0.2)) # turn on new noise gate
+            state['calibrateAudio'] = False
+
         if state['csinstr']:
             # generic csound instr message
             cs.InputMessage('{}'.format(state['csinstr']))
+            print 'sent {}'.format(state['csinstr'])
             state['csinstr'] = False
             
         if state['playfile']:

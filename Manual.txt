@@ -20,6 +20,14 @@ python communication.py csinstr [string]
 Send generic Csound instrument event
 Can be used to set any chn value, via instrument 22 ('i 22 0 1 \"name\" value')
 
+python communication.py calibrateAudio
+Sense signal level (keep relatively quiet for maximum range), set a soft knee noise gate.
+For comparision the gate can be disabled with 
+communication.py csinstr i -16 0 1
+and re-enabled with 
+communication.py csinstr i 16 0 -1
+Each time calibrateAudio is run, it will set a new noise floor level and enable the gate
+
 
 ** Learnrespond contains timed macros for certain communication events
 python learnrespond.py [time, mode, file]
