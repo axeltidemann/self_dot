@@ -10,17 +10,19 @@
 
 import os
 import multiprocessing as mp
-from uuid import uuid4
-from warnings import warn
 
-from AI import learn, respond, recognize
-from IO import audio, video, cns
+from AI import learn, find_winner
+from IO import audio, video, load_cns
 from communication import receive as receive_messages
 from utils import MyManager, MyDeque
        
 class Controller:
-    def __init__(self, state):
+    def __init__(self, state, mic, speaker, camera, projector):
         self.state = state
+        self.mic = mic
+        self.speaker = speaker
+        self.camera = camera
+        self.projector = projector
         
     def parse(self, message):
         print '[self.] received:', message
@@ -33,10 +35,10 @@ class Controller:
                 self.state['record'] = False
 
             if message == 'learn':
-                self.state['learn'] = True
+                mp.Process(target=learn, args=(self.state, self.mic, self.speaker, self.camera, self.projector)).start()
 
             if message == 'respond':
-                self.state['respond'] = True
+                find_winner(state)
 
             if 'autolearn' in message:
                 self.state['autolearn'] = message[10:] in ['True', '1']
@@ -54,12 +56,15 @@ class Controller:
                 self.state['selfvoice'] = message[10:]
 
             if 'save' in message:
-                self.state['save'] = 'brain' + str(uuid4()) if len(message) == 4 else message[5:]
+                self.state['save'] = 'brain' if len(message) == 4 else message[5:]
 
             if 'load' in message:
                 self.state['load'] = message[5:]
-        except:
-            warn('Something went wrong when parsing the message - try again.')
+                load_cns(self.state, self.mic, self.speaker, self.camera, self.projector)
+
+        except Exception as e:
+            print 'Something went wrong when parsing the message - try again.'
+            print e
 
 if __name__ == '__main__':
     print 'MAIN PID', os.getpid()
@@ -69,7 +74,6 @@ if __name__ == '__main__':
     manager = MyManager()
     manager.start()
 
-    brain = manager.list()
     mic = manager.deque()
     speaker = manager.deque()
     camera = manager.deque()
@@ -86,16 +90,12 @@ if __name__ == '__main__':
                           'selfvoice':False,
                           'save': False, 
                           'load': False, 
-                          'rmse': []}) 
+                      }) 
 
-    controller = Controller(state)
+    controller = Controller(state, mic, speaker, camera, projector)
 
-    mp.Process(target=audio, args=(state, mic, speaker)).start()
+    mp.Process(target=audio, args=(state, mic, speaker,)).start() 
     mp.Process(target=video, args=(state, camera, projector)).start()
-    mp.Process(target=learn, args=(state, mic, camera, brain)).start()
-    mp.Process(target=respond, args=(state, mic, speaker, camera, projector, brain)).start()
-    mp.Process(target=recognize, args=(state, mic, camera, brain)).start()
-    mp.Process(target=cns, args=(state, brain)).start()
     mp.Process(target=receive_messages, args=(controller.parse,)).start()
     
     try:

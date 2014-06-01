@@ -1,8 +1,8 @@
 Self users manual
 *****************
 
-python communication.py save <valgfritt navn - hvis ikke noe navn, blir navnet brainUUID>
-python communication.py load <brain_name>
+python communication.py save <valgfritt navn - hvis ikke noe navn, blir navnet brain, hvor de enkelt nettverkene heter brainUUID>
+python communication.py load <brain_name, altså prefiks uten UUID>
 
 python communication.py selfvoice mode
 mode can be ['partikkel', 'spectral', 'noiseband']

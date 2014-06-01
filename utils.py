@@ -11,19 +11,20 @@ class MyManager(SyncManager):
 class MyDeque(deque):
     def __init__(self, *args, **kwargs):
         deque.__init__(self, *args, **kwargs)
-        self.i = 0
+        self.i = dict()
     
     def array(self):
         return np.array(list(self))
 
-    def latest(self):
+    def latest(self, key):
         data = self.array()
-        old_i = self.i
-        self.i = len(data)
+        old_i = self.i[key] if key in self.i else 0
+        self.i[key] = len(data)
         return data[old_i:]
 
     def clear(self):
-        self.i = 0
+        for key in self.i.keys():
+            self.i[key] = 0
         deque.clear(self)
         
 

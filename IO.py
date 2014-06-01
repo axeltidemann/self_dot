@@ -1,11 +1,14 @@
 import os
 import cPickle as pickle
+import glob
+import multiprocessing as mp
 
 import cv2
 import numpy as np
 
 from utils import sleep, filesize
 import myCsoundAudioOptions
+from AI import live
 
 def video(state, camera, projector):
     print 'VIDEO PID', os.getpid()
@@ -208,18 +211,10 @@ def audio(state, mic, speaker):
             bogusamp = map(tSet,fftresyn_amptabs,fftbinindices,fftzeros)
 
             
-def cns(state, brain):
-    print 'CENTRAL NERVOUS SYSTEM PID', os.getpid()
-    
-    while sleep(.1):
-        if state['save']:
-            pickle.dump(brain[:], file(state['save'], 'w'))
-            print 'Brain saved as file {} ({})'.format(state['save'], filesize(state['save']))
-            state['save'] = False
+def load_cns(state, mic, speaker, camera, projector):
 
-        elif state['load']:
-            for element in pickle.load(file(state['load'], 'r')):
-                brain.append(element)
-            print 'Brain loaded from file {} ({})'.format(state['load'], filesize(state['load']))
-            state['load'] = False
+    for filename in glob.glob(state['load']+'*'):
+        audio_net, audio_video_net, scaler = pickle.load(file(filename, 'r'))
+        mp.Process(target=live, args=(state, mic, speaker, camera, projector, audio_net, audio_video_net, scaler)).start()
+        print 'Brain loaded from file {} ({})'.format(filename, filesize(filename))
 

@@ -1,8 +1,12 @@
+import multiprocessing as mp
+import os
 from warnings import warn
 
+import numpy as np
 import Oger
 import mdp
-import numpy as np
+
+from utils import sleep
 
 class ACDCESN:
     '''An Echo State Network that can be used in both directions. It
