@@ -12,7 +12,7 @@ python communication.py autorespond status
 - status can be 1 or 0, True or False
 These modes use automatic segmentation to trigger learning or responding after a segemnt of audio has been input
 
-python communication.py <time> association
+python learnrespond.py <time> association
 
 python communication.py inputLevel mode
 - mode can be mute, unmute or reset

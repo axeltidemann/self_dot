@@ -8,6 +8,7 @@ import numpy as np
 from utils import sleep, filesize
 import myCsoundAudioOptions
 from AI import live
+from communication import send
 
 def video(state, camera, projector):
     me = mp.current_process()
@@ -101,14 +102,14 @@ def audio(state, mic, speaker):
                 state['record'] = True
             if audioStatusTrig < 0:
                 state['record'] = False
-                state['learn'] = True
+                send('learn')
 
         if state['autorespond']:
             if audioStatusTrig > 0:
                 state['record'] = True
             if audioStatusTrig < 0:
                 state['record'] = False
-                state['respond'] = True
+                send('respond')
 
         if state['selfvoice']:
             mode = '{}'.format(state['selfvoice'])
