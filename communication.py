@@ -12,12 +12,15 @@ Talk to [self.] over sockets.
 
 from __future__ import print_function
 
-import os
+import multiprocessing as mp
 import sys
 import socket
 
 def receive(callback, host='localhost', port=7777):
-    print('RECEIVE PID {}'.format(os.getpid()))
+    me = mp.current_process()
+    me.name = 'RECEIVE'
+    print('{} PID {}'.format(me.name, me.pid))
+
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.bind((host, port))
     sock.listen(1)

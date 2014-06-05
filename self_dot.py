@@ -8,13 +8,12 @@
 @license: GPL
 '''
 
-import os
 import multiprocessing as mp
 
-from AI import learn, find_winner
+from AI import learn
 from IO import audio, video, load_cns
 from communication import receive as receive_messages
-from utils import MyManager, MyDeque
+from utils import MyManager, MyDeque, reset_rmses, find_winner
        
 class Controller:
     def __init__(self, state, mic, speaker, camera, projector):
@@ -29,16 +28,22 @@ class Controller:
 
         try:
             if message == 'startrec':
+                reset_rmses(self.state)
                 self.state['record'] = True
 
             if message == 'stoprec':
                 self.state['record'] = False
 
             if message == 'learn':
-                mp.Process(target=learn, args=(self.state, self.mic, self.speaker, self.camera, self.projector)).start()
+                mp.Process(target=learn,
+                            args=(self.state, self.mic, self.speaker, self.camera, self.projector)).start()
 
             if message == 'respond':
-                find_winner(state)
+                find_winner(self.state)
+
+            if message == 'setmarker':
+                self.mic.set_mark()
+                self.camera.set_mark()
 
             if 'autolearn' in message:
                 self.state['autolearn'] = message[10:] in ['True', '1']
@@ -73,8 +78,9 @@ class Controller:
             print e
 
 if __name__ == '__main__':
-    print 'MAIN PID', os.getpid()
-    
+    me = mp.current_process()
+    print me.name, 'PID', me.pid
+        
     MyManager.register('deque', MyDeque)
 
     manager = MyManager()
@@ -96,7 +102,7 @@ if __name__ == '__main__':
                           'playfile': False, 
                           'selfvoice':False,
                           'save': False, 
-                          'load': False, 
+                          'load': False,
                       }) 
 
     controller = Controller(state, mic, speaker, camera, projector)

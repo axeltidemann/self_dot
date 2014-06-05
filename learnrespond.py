@@ -48,7 +48,15 @@ elif mode == 'respond':
     time.sleep(secs)
     send('stoprec')
     send('respond')
+elif mode == 'association':
+    send('startrec')
+    time.sleep(secs)
+    send('stoprec')
+    send('setmarker')
+    time.sleep(autowait)
+    send('startrec')
+    time.sleep(secs)
+    send('stoprec')
+    send('learn')
 else:
     print 'unknown mode', mode
-    
-#time.sleep(secs)

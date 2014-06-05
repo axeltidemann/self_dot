@@ -1,4 +1,3 @@
-import os
 import cPickle as pickle
 import glob
 import multiprocessing as mp
@@ -11,7 +10,10 @@ import myCsoundAudioOptions
 from AI import live
 
 def video(state, camera, projector):
-    print 'VIDEO PID', os.getpid()
+    me = mp.current_process()
+    me.name = 'VIDEO'
+    print me.name, 'PID', me.pid
+
     cv2.namedWindow('Output', cv2.WINDOW_NORMAL)
     video_feed = cv2.VideoCapture(0)
     frame_size = (160, 90)
@@ -33,7 +35,10 @@ def video(state, camera, projector):
         cv2.waitKey(100)
 
 def audio(state, mic, speaker):
-    print 'AUDIO PID', os.getpid()
+    me = mp.current_process()
+    me.name = 'AUDIO'
+    print me.name, 'PID', me.pid
+
     import csnd6
     cs = csnd6.Csound()
     arguments = csnd6.CsoundArgVList()
