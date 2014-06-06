@@ -40,7 +40,6 @@
 
 ;***************************************************
 ;user defined opcode, asynchronous clock
-;***************************************************
 			opcode		probabilityClock, a, k
 	kdens		xin
 			setksmps 1
@@ -50,6 +49,47 @@
 	atrig		upsamp ktrig
 			xout atrig
 			endop
+
+;***************************************************
+; Transient detection udo
+
+	opcode TransientDetect, kk,kikkki
+	kin, iresponse, ktthresh, klowThresh, kdecThresh, idoubleLimit xin 
+/*
+	iresponse	= 10 		; response time in milliseconds
+	ktthresh	= 6		; transient trig threshold 
+	klowThresh	= -60		; lower threshold for transient detection
+	idoubleLimit	= 0.02		; minimum duration between events, (double trig limit)
+	kdecThresh	= 6		; retrig threshold, how much must the level decay from its local max before allowing new transient trig
+*/	
+	kinDel		delayk	kin, iresponse/1000		; delay with response time for comparision of levels
+	ktrig		= ((kin > kinDel + ktthresh) ? 1 : 0) 	; if current rms plus threshold is larger than previous rms, set trig signal to current rms
+	klowGate	= (kin < klowThresh? 0 : 1)		; gate to remove transient of low level signals
+	ktrig		= ktrig * klowGate			; activate gate on trig signal
+	ktransLev	init 0
+	ktransLev	samphold kin, 1-ktrig			; read amplitude at transient
+	
+	kreGate		init 1					; retrigger gate, to limit transient double trig before signal has decayed (decThresh) from its local max
+	ktrig		= ktrig*kreGate				; activate gate
+	kmaxAmp		init -99999
+	kmaxAmp		max kmaxAmp, kin			; find local max amp
+	kdiff		= kmaxAmp-kin				; how much the signal has decayed since its local max value
+	kreGate		limit kreGate-ktrig, 0, 1		; mute when trig detected
+	kreGate		= (kdiff > kdecThresh ? 1 : kreGate)	; re-enable gate when signal has decayed sufficiently
+	kmaxAmp		= (kreGate == 1 ? -99999 : kmaxAmp)	; reset max amp gauge
+/*
+	; avoid closely spaced transient triggers (first trig priority)
+	kdouble		init 1
+	ktrig		= ktrig*kdouble
+	if ktrig > 0 then
+	reinit double
+	endif
+	double:
+	kdouble		linseg	0, idoubleLimit, 0, 0, 1, 1, 1
+	rireturn
+*/
+	xout ktrig, kdiff
+	endop
 
 ;******************************
 ; audio file input 
@@ -144,44 +184,28 @@
 ; write to chn
 			chnset kflag, "pvsinflag"
 
-/* might try to skip the cleaning up of analysis signals */
-	kcentroidG	= kcentroid*kgate	; limit noise contribution in quiet sections
-	kautocorrG	= kautocorr * kgate	
-	kspreadG	= kspread * kgate
-	kskewnessG	= kskewness * kgate
-	kurtosisM	mediank kurtosis, 6, 6
-	kflatnessG	= kflatness * kgate
-	kfluxG		= kflux * kgate
-
 	Stest		sprintfk "input audio status %i, trig status %i, dbstart %f", kstatus, kstatusTrig, kdBStart
 			puts Stest, 2+(kstatus + kstatusTrig)
 
 			chnset kstatus, "audioStatus"
 			chnset kstatusTrig, "audioStatusTrig"
+			chnset ktrig1, "transient"
 			chnset krms1, "level1"
-			chnset kFollow1, "envelope1"
 			chnset kcps1, "pitch1ptrack"
 			chnset kcps1p, "pitch1pll"
-			chnset kautocorrG, "autocorr1"
-			chnset kcentroidG, "centroid1"
-			chnset kspreadG, "spread1"
-			chnset kskewnessG, "skewness1"
+			chnset kautocorr, "autocorr1"
+			chnset kcentroid, "centroid1"
+			chnset kspread, "spread1"
+			chnset kskewness, "skewness1"
 			chnset kurtosisM, "kurtosis1"
-			chnset kflatnessG, "flatness1"
+			chnset kflatness, "flatness1"
 			chnset kcrest, "crest1"
-			chnset kfluxG, "flux1"
+			chnset kflux, "flux1"
 			chnset kepochSig, "epochSig1"
 			chnset kepochRms, "epochRms1"
 			chnset kepochZCcps, "epochZCcps1"
 
   		outs a1*0.1,a1*0.1
-/*
-	acps		upsamp kcps1p/2000 ; pll
-	acentro		upsamp kcentroidG/2000
-	arms		upsamp krms1
-	aenv		upsamp kFollow1
-			fout "testrec.wav", 14, a1, acps, acentro, arms, aenv
-*/
 	endin
 
 ; ******************************
@@ -296,26 +320,18 @@
 #include "audio_analyze.inc"
 			chnset kflag, "pvsoutflag"
 ; write to chn
-/* might try to skip the cleaning up of analysis signals */
-	kcentroidG	= kcentroid*kgate	; limit noise contribution in quiet sections
-	kautocorrG	= kautocorr * kgate	
-	kspreadG	= kspread * kgate
-	kskewnessG	= kskewness * kgate
-	kurtosisM	mediank kurtosis, 6, 6
-	kflatnessG	= kflatness * kgate
-	kfluxG		= kflux * kgate
-
-			chnset kstatus, "myAudioStatus1"
+			chnset kstatus, "myAudioStatus"
+			chnset kstatusTrig, "myAudioStatusTrig"
+			chnset ktrig1, "myTransient"
 			chnset krms1, "myLevel1"
-			chnset kFollow1, "myEnvelope1"
 			chnset kcps1, "myPitch1ptrack"
 			chnset kcps1p, "myPitch1pll"
-			chnset kautocorrG, "myAutocorr1"
-			chnset kcentroidG, "myCentroid1"
-			chnset kspreadG, "mySpread1"
-			chnset kskewnessG, "mySkewness1"
+			chnset kautocorr, "myAutocorr1"
+			chnset kcentroid, "myCentroid1"
+			chnset kspread, "mySpread1"
+			chnset kskewness, "mySkewness1"
 			chnset kurtosisM, "myKurtosis1"
-			chnset kflatnessG, "myFlatness1"
+			chnset kflatness, "myFlatness1"
 			chnset kcrest, "myCrest1"
 			chnset kflux, "myFlux1"
 			chnset kepochSig, "myEpochSig1"
