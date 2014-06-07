@@ -96,6 +96,7 @@ def audio(state, mic, speaker):
         # get Csound channel data
         audioStatus = cGet("audioStatus")
         audioStatusTrig = cGet("audioStatusTrig")
+        transient = cGet("transient")
         
         if state['autolearn']:
             if audioStatusTrig > 0:
@@ -136,10 +137,10 @@ def audio(state, mic, speaker):
 
         if state['calibrateAudio']:
             calibratePeriod = 2
-            cs.InputMessage('i -16 0 1') # turn off old noise gate
+            cs.InputMessage('i -17 0 1') # turn off old noise gate
             cs.InputMessage('i 14 0 %f'%calibratePeriod) # get level
             cs.InputMessage('i 15 %f 0.1'%(calibratePeriod+0.1)) # set noise gate shape
-            cs.InputMessage('i 16 %f -1'%(calibratePeriod+0.2)) # turn on new noise gate
+            cs.InputMessage('i 17 %f -1'%(calibratePeriod+0.2)) # turn on new noise gate
             state['calibrateAudio'] = False
 
         if state['csinstr']:
@@ -156,11 +157,10 @@ def audio(state, mic, speaker):
 
         if state['record']:
             mic.append([cGet("level1"), 
-                        cGet("envelope1"), 
                         cGet("pitch1ptrack"), 
                         cGet("pitch1pll"), 
-                        cGet("centroid1"),
                         cGet("autocorr1"), 
+                        cGet("centroid1"),
                         cGet("spread1"), 
                         cGet("skewness1"), 
                         cGet("kurtosis1"), 
@@ -174,17 +174,16 @@ def audio(state, mic, speaker):
         try:
             sound = speaker.popleft()
             cSet("respondLevel1", sound[0])
-            cSet("respondEnvelope1", sound[1])
-            #cSet("respondPitch1ptrack", sound[2])
-            cSet("respondPitch1pll", sound[3])
+            cSet("respondPitch1ptrack", sound[1])
+            cSet("respondPitch1pll", sound[2])
             cSet("respondCentroid1", sound[4])
             # test partikkel generator
             cSet("partikkel1_amp", sound[0])
-            cSet("partikkel1_grainrate", sound[3])
+            cSet("partikkel1_grainrate", sound[1])
             cSet("partikkel1_wavfreq", sound[4])
-            cSet("partikkel1_graindur", sound[6]+0.1)
+            cSet("partikkel1_graindur", sound[3]+0.1)
             # transfer fft frame
-            bogusamp = map(tSet,fftresyn_amptabs,fftbinindices,fftconst)#sound[15:ffttabsize+15])
+            bogusamp = map(tSet,fftresyn_amptabs,fftbinindices,sound[15:ffttabsize+15])
             bogusfreq = map(tSet,fftresyn_freqtabs,fftbinindices,sound[ffttabsize+15:ffttabsize+15+ffttabsize])
             
             '''
@@ -214,7 +213,6 @@ def audio(state, mic, speaker):
             '''
         except:
             cSet("respondLevel1", 0)
-            cSet("respondEnvelope1", 0)
             cSet("respondPitch1ptrack", 0)
             cSet("respondPitch1pll", 0)
             cSet("respondCentroid1", 0)

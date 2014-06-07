@@ -116,8 +116,8 @@
 ;******************************
 ; NEW, TODO
 ; 11 find stereo position
-; 17 get noiseprint
-; 18 background noise reduction
+; in 14, get noiseprint
+; 16 background noise reduction
 ; 19 reduction of own output in feedback to input (cleaner autorespond)
 
 ; TEST:
@@ -129,6 +129,7 @@
 ; get audio input noise floor
 	instr 14
 #include "getAudioNoiseFloor.inc"
+; TODO get noise print
 	endin
 
 ;******************************
@@ -142,7 +143,7 @@
 
 ;******************************
 ; apply noise gate
-	instr 16
+	instr 17
 	a1		chnget "in1"
 	krms		rms a1
 	krms		= krms * 1.7
@@ -234,19 +235,13 @@
 	instr 51			
 
 	krms1 		chnget "respondLevel1"
-;kactive = (krms1 > 0 ? 1 : 0)
-;printk2 kactive  
-	kenv1 		chnget "respondEnvelope1"
 	;kcps1 		chnget "respondPitch1ptrack"
 	kcps1 		chnget "respondPitch1pll"
 	kcentro1 	chnget "respondCentroid1"
 
 	krms1		limit krms1, 0, 1
-	kenv1		limit kenv1, 0, 1
 	krms1		mediank krms1, 100, 100
-	kenv1		mediank kenv1, 100, 100
 	krms1		tonek krms1, 20
-	kenv1		tonek kenv1, 20
 
 	kcps1		limit kcps1, 20, 2000
 	kcps1		tonek kcps1, 20
@@ -263,14 +258,13 @@
 	afilt1e		butterbp anoise, kcps1*5, kcps1*0.05
 	asum		sum afilt1a, afilt1b, afilt1c, afilt1d, afilt1e
 	aout		butterbp asum*5+(anoise*0.01), kcentro1, kcentro1*0.2
-	aout		= aout*kenv1*10
+	aout		= aout*krms1*10
 			chnset aout, "MasterOut1"
 			chnset aout, "MasterOut2"
 /*
 	acps		upsamp kcps1/2000
 	acentro		upsamp kcentro1/2000
 	arms		upsamp krms1
-	aenv		upsamp kenv1	
 			fout "testplay.wav", 14, aout, acps, acentro, arms, aenv
 */
 	endin
