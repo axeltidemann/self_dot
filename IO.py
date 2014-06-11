@@ -192,7 +192,7 @@ def audio(state, mic, speaker):
             # try: 
             #     bogusfreq = map(tSet,fftresyn_freqtabs,fftbinindices,sound[ffttabsize+15:ffttabsize+15+ffttabsize])
             # except:
-            #     print [ len(x) for x in [fftresyn_freqtabs,fftbinindices,sound[ffttabsize+15:ffttabsize+15+ffttabsize]] ] # Should be of same length...
+            #     print map(len, [fftresyn_freqtabs,fftbinindices,sound[ffttabsize+15:ffttabsize+15+ffttabsize]])  # Should be of same length...
             
             # New version, using 14 instead of 15
             
