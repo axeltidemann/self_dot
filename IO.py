@@ -185,9 +185,22 @@ def audio(state, mic, speaker):
             cSet("partikkel1_wavfreq", sound[4])
             cSet("partikkel1_graindur", sound[3]+0.1)
             # transfer fft frame
-            bogusamp = map(tSet,fftresyn_amptabs,fftbinindices,sound[15:ffttabsize+15])
-            bogusfreq = map(tSet,fftresyn_freqtabs,fftbinindices,sound[ffttabsize+15:ffttabsize+15+ffttabsize])
+
+            # THIS IS HOW IT WAS - UNCOMMENT TO SEE THE EFFECT, AND TO MAKE SURE I HAVE NOT MISUNDERSTOOD THE INDEXING...
+
+            # bogusamp = map(tSet,fftresyn_amptabs,fftbinindices,sound[15:ffttabsize+15])
+            # try: 
+            #     bogusfreq = map(tSet,fftresyn_freqtabs,fftbinindices,sound[ffttabsize+15:ffttabsize+15+ffttabsize])
+            # except:
+            #     print [ len(x) for x in [fftresyn_freqtabs,fftbinindices,sound[ffttabsize+15:ffttabsize+15+ffttabsize]] ] # Should be of same length...
             
+            # New version, using 14 instead of 15
+            
+            fft_index = 14
+
+            bogusamp = map(tSet,fftresyn_amptabs,fftbinindices,sound[fft_index:ffttabsize+fft_index])
+            bogusfreq = map(tSet,fftresyn_freqtabs,fftbinindices,sound[ffttabsize+fft_index:ffttabsize+fft_index+ffttabsize])
+
             '''
             # partikkel parameters ready to be set
             partikkelparmOffset = 5
