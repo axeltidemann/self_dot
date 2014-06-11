@@ -16,16 +16,21 @@
 	gifftsize 	= 512
 			chnset gifftsize, "fftsize"
 	giFftTabSize	= (gifftsize / 2)+1
-	gifna     	ftgen   1 ,0 ,giFftTabSize, 7, 0, giFftTabSize, 0   ; make ftable for pvs analysis
-	gifnf     	ftgen   2 ,0 ,giFftTabSize, 7, 0, giFftTabSize, 0   ; make ftable for pvs analysis
+	gifna     	ftgen   1 ,0 ,giFftTabSize, 7, 0, giFftTabSize, 0   	; for pvs analysis
+	gifnf     	ftgen   2 ,0 ,giFftTabSize, 7, 0, giFftTabSize, 0   	; for pvs analysis
 
-	gifnaSelf     	ftgen   4 ,0 ,giFftTabSize, 7, 0, giFftTabSize, 0   ; make ftable for pvs analysis of my own output
-	gifnfSelf     	ftgen   5 ,0 ,giFftTabSize, 7, 0, giFftTabSize, 0   ; make ftable for pvs analysis of my own output
+	gifnaSelf     	ftgen   4 ,0 ,giFftTabSize, 7, 0, giFftTabSize, 0   	; for pvs analysis of my own output
+	gifnfSelf     	ftgen   5 ,0 ,giFftTabSize, 7, 0, giFftTabSize, 0   	; for pvs analysis of my own output
 
-	gifnaResyn     	ftgen   7 ,0 ,giFftTabSize, 7, 0, giFftTabSize, 0   ; make ftable for pvs resynthesis
-	gifnfResyn     	ftgen   8 ,0 ,giFftTabSize, 7, 0, giFftTabSize, 0   ; make ftable for pvs resynthesis
+	gifnaResyn     	ftgen   7 ,0 ,giFftTabSize, 7, 0, giFftTabSize, 0   	; for pvs resynthesis
+	gifnfResyn     	ftgen   8 ,0 ,giFftTabSize, 7, 0, giFftTabSize, 0   	; for pvs resynthesis
 
-	giNoiseFloor	ftgen 0, 0, 8192, 2, 0						; just init, to be used as noise gate 
+	gifnaIn     	ftgen   0 ,0 ,giFftTabSize, 7, 0, giFftTabSize, 0   	; for pvs analysis of input (self output suppression)
+	gifnaOut     	ftgen   0 ,0 ,giFftTabSize, 7, 0, giFftTabSize, 0   	; for pvs analysis of output (self output suppression)
+
+	giNoiseFloor	ftgen 0, 0, 8192, 2, 0					; just init, to be used as noise gate 
+	gifnaNoiseIn   	ftgen   0 ,0 ,giFftTabSize, 7, 0, giFftTabSize, 0   	; for pvs analysis of bacground noise
+	gifnaNoise     	ftgen   0 ,0 ,giFftTabSize, 7, 0, giFftTabSize, 0   	; for pvs analysis of bacground noise
 
 ; classic waveforms
 	giSine		ftgen	0, 0, 65536, 10, 1					; sine wave
@@ -38,58 +43,7 @@
 	giExpFall	ftgen	0, 0, 8193, 5, 1, 8193, 0.00001				; exponential decay
 	giTriangleWin 	ftgen	0, 0, 8193, 7, 0, 4096, 1, 4096, 0			; triangular window 
 
-;***************************************************
-;user defined opcode, asynchronous clock
-			opcode		probabilityClock, a, k
-	kdens		xin
-			setksmps 1
-	krand		rnd31	1, 1
-	krand		= (krand*0.5)+0.5
-	ktrig		= (krand < kdens/kr ? 1 : 0)
-	atrig		upsamp ktrig
-			xout atrig
-			endop
-
-;***************************************************
-; Transient detection udo
-
-	opcode TransientDetect, kk,kikkki
-	kin, iresponse, ktthresh, klowThresh, kdecThresh, idoubleLimit xin 
-/*
-	iresponse	= 10 		; response time in milliseconds
-	ktthresh	= 6		; transient trig threshold 
-	klowThresh	= -60		; lower threshold for transient detection
-	idoubleLimit	= 0.02		; minimum duration between events, (double trig limit)
-	kdecThresh	= 6		; retrig threshold, how much must the level decay from its local max before allowing new transient trig
-*/	
-	kinDel		delayk	kin, iresponse/1000		; delay with response time for comparision of levels
-	ktrig		= ((kin > kinDel + ktthresh) ? 1 : 0) 	; if current rms plus threshold is larger than previous rms, set trig signal to current rms
-	klowGate	= (kin < klowThresh? 0 : 1)		; gate to remove transient of low level signals
-	ktrig		= ktrig * klowGate			; activate gate on trig signal
-	ktransLev	init 0
-	ktransLev	samphold kin, 1-ktrig			; read amplitude at transient
-	
-	kreGate		init 1					; retrigger gate, to limit transient double trig before signal has decayed (decThresh) from its local max
-	ktrig		= ktrig*kreGate				; activate gate
-	kmaxAmp		init -99999
-	kmaxAmp		max kmaxAmp, kin			; find local max amp
-	kdiff		= kmaxAmp-kin				; how much the signal has decayed since its local max value
-	kreGate		limit kreGate-ktrig, 0, 1		; mute when trig detected
-	kreGate		= (kdiff > kdecThresh ? 1 : kreGate)	; re-enable gate when signal has decayed sufficiently
-	kmaxAmp		= (kreGate == 1 ? -99999 : kmaxAmp)	; reset max amp gauge
-/*
-	; avoid closely spaced transient triggers (first trig priority)
-	kdouble		init 1
-	ktrig		= ktrig*kdouble
-	if ktrig > 0 then
-	reinit double
-	endif
-	double:
-	kdouble		linseg	0, idoubleLimit, 0, 0, 1, 1, 1
-	rireturn
-*/
-	xout ktrig, kdiff
-	endop
+#include "udos.inc"
 
 ;******************************
 ; audio file input 
@@ -114,27 +68,42 @@
 	endin
 
 ;******************************
-; NEW, TODO
-; 11 find stereo position
-; in 14, get noiseprint
-; 16 background noise reduction
-; 19 reduction of own output in feedback to input (cleaner autorespond)
-
-; TEST:
-; 14 calibrate signal, get background noise level
-; 15 set gate/expander shape
-; 16 apply noise gate
+; TODO
+; 11 find stereo position and merge mic 1 and 2
+	instr 11
+	a1	chnget "in1"
+	a2	chnget "in2"
+		chnset a1+a2, "in1"
+	endin
 
 ;******************************
-; get audio input noise floor
+; measure roundtrip latency
+	instr 12
+#include "getLatency.inc"
+	endin
+
+;******************************
+; get audio input noise print
+	instr 13
+#include "getAudioNoiseprint.inc"
+	endin
+
+;******************************
+; suppress my own output by subtracting the output spectrum from the input
+; and use noise print to remove static background noise
 	instr 14
+#include "suppressSelfnoise.inc"
+	endin
+
+;******************************
+; get audio input noise floor (after noiseprint suppression if it is enabled)
+	instr 15
 #include "getAudioNoiseFloor.inc"
-; TODO get noise print
 	endin
 
 ;******************************
 ; set audio input noise gate
-	instr 15
+	instr 16
 	irms		chnget "inputNoisefloor"
 	isize		= 8192
 	iknee		= isize*0.1
@@ -206,7 +175,10 @@
 			chnset kepochRms, "epochRms1"
 			chnset kepochZCcps, "epochZCcps1"
 
-  		outs a1*0.1,a1*0.1
+	kinputMonitor	chnget "inputMonitor"
+			chnmix a1*kinputMonitor, "MasterOut1"
+			chnmix a1*kinputMonitor, "MasterOut2"
+
 	endin
 
 ; ******************************
@@ -259,8 +231,8 @@
 	asum		sum afilt1a, afilt1b, afilt1c, afilt1d, afilt1e
 	aout		butterbp asum*5+(anoise*0.01), kcentro1, kcentro1*0.2
 	aout		= aout*krms1*10
-			chnset aout, "MasterOut1"
-			chnset aout, "MasterOut2"
+			chnmix aout, "MasterOut1"
+			chnmix aout, "MasterOut2"
 /*
 	acps		upsamp kcps1/2000
 	acentro		upsamp kcentro1/2000
@@ -278,8 +250,8 @@
 
 #include "partikkel_chn.inc"
 #include "partikkel_self.inc"
-			chnset a1, "MasterOut1"
-			chnset a2, "MasterOut2"
+			chnmix a1, "MasterOut1"
+			chnmix a2, "MasterOut2"
 	endin
 
 ; ******************************
@@ -293,8 +265,8 @@
 	;fsin		pvsinit gifftsize, gifftsize/4, gifftsize, 1
 			pvsftr	fsin,gifnaResyn,gifnfResyn		;read modified data back to fsrc
 	aout		pvsynth	fsin				;and resynth
-			chnset aout, "MasterOut1"
-			chnset aout, "MasterOut2"
+			chnmix aout, "MasterOut1"
+			chnmix aout, "MasterOut2"
 	endin
 
 	instr 80
@@ -342,6 +314,7 @@
 	a2	chnget "MasterOut2"
 	a0	= 0
 		outs a1, a2
+		chnset (a1+a2)*0.5, "MyOutput"
 		chnset a0, "MasterOut1"
 		chnset a0, "MasterOut2"
 
@@ -352,7 +325,9 @@
 ; run for N sec
 ;i3 	0 86400	; audio file input
 i4 	0 86400	; audio input
+i11 	0 86400	; merge left and right input
 i21 	0 .1 1	; initialize input level
+i22 	0 .1 -30; initialize noise flor
 i31 	0 86400	; analysis
 ;i51 	0 -1	; subtractive harmonic resynthesis
 i52 	0 -1	; partikkel resynthesis

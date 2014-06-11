@@ -135,12 +135,14 @@ def audio(state, mic, speaker):
                 cs.InputMessage('i 21 1 .1 1')
             state['inputLevel'] = False
 
-        if state['calibrateAudio']:
-            calibratePeriod = 2
+        if state['calibrateAudio']:            
             cs.InputMessage('i -17 0 1') # turn off old noise gate
-            cs.InputMessage('i 14 0 %f'%calibratePeriod) # get level
-            cs.InputMessage('i 15 %f 0.1'%(calibratePeriod+0.1)) # set noise gate shape
-            cs.InputMessage('i 17 %f -1'%(calibratePeriod+0.2)) # turn on new noise gate
+            cs.InputMessage('i 12 0 4') # measure roundtrip latency
+            cs.InputMessage('i 13 4 2') # get audio input noise print
+            cs.InputMessage('i 14 6 -1 5') # enable noiseprint and self-output suppression
+            cs.InputMessage('i 15 6.2 2') # get noise floor level 
+            cs.InputMessage('i 16 8.3 0.1') # set noise gate shape
+            cs.InputMessage('i 17 8.5 -1') # turn on new noise gate
             state['calibrateAudio'] = False
 
         if state['csinstr']:

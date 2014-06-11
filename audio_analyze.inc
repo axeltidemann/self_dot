@@ -2,8 +2,8 @@
 	krms		rms a1
 	knoiseFloor	chnget "inputNoisefloor"
 	knoiseFloor_dB	= dbfsamp(knoiseFloor)	
-	kgate		= (krms < ampdbfs(knoiseFloor_dB) ? 0 : 1)	; don't bother analyzing very quiet sections
-
+	kgate		= (krms < knoiseFloor ? 0 : 1)	; don't bother analyzing very quiet sections
+	;printk2 kgate
 ; ***************
 ; amplitude tracking
 	krms1		rms a1				; simple level measure
@@ -15,14 +15,14 @@
 
 ; ***************
 ;analyze transients
-	iresponse	= 10 		; response time in milliseconds
-	ktthresh	= 6		; transient trig threshold 
-	klowThresh	= -60		; lower threshold for transient detection
-	idoubleLimit	= 0.02		; minimum duration between events, (double trig limit)
-	kdecThresh	= 6		; retrig threshold, how much must the level decay from its local max before allowing new transient trig
+	iresponse	= 10 			; response time in milliseconds
+	ktthresh	= 6			; transient trig threshold 
+	klowThresh	= knoiseFloor_dB	; lower threshold for transient detection
+	idoubleLimit	= 0.02			; minimum duration between events, (double trig limit)
+	kdecThresh	= 6			; retrig threshold, how much must the level decay from its local max before allowing new transient trig
 
 	ktrig1, kdiff	TransientDetect kFollowdb1, iresponse, ktthresh, klowThresh, kdecThresh, idoubleLimit
-		
+
 ; ***************
 ; segmentation, set kstatus = 1 when a transient occurs, 
 ; keep status = 1 until level drops 6dB below the level at which the transient was detected
