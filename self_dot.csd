@@ -323,18 +323,18 @@
 
 <CsScore>
 ; run for N sec
-;i3 	0 86400	; audio file input
-i4 	0 86400	; audio input
-i11 	0 86400	; merge left and right input
-i21 	0 .1 1	; initialize input level
-i22 	0 .1 -30; initialize noise flor
-i31 	0 86400	; analysis
-;i51 	0 -1	; subtractive harmonic resynthesis
-i52 	0 -1	; partikkel resynthesis
-;i53 	3 -1	; fft resynthesis
-;i98 	0 86400	; analysis of own output
-;i80 	0 86400	; test print for contents of fft tables
-i99 	0 86400	; master out
+;i3 	0 86400				; audio file input
+i4 	0 86400				; audio input
+i11 	0 86400				; merge left and right input
+i21 	0 .1 1				; initialize input level
+i22 	0 .1 "inputNoisefloor" -30	; initialize noise floor
+i31 	0 86400				; analysis
+;i51 	0 -1				; subtractive harmonic resynthesis
+i52 	0 -1				; partikkel resynthesis
+;i53 	3 -1				; fft resynthesis
+;i98 	0 86400				; analysis of own output
+;i80 	0 86400				; test print for contents of fft tables
+i99 	0 86400				; master out
 
 </CsScore>
 

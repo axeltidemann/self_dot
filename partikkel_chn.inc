@@ -28,7 +28,6 @@
 
 ; read values
 	kamp		chnget "partikkel1_amp"
-printk2 kamp
 	kGrainRate	chnget "partikkel1_grainrate"	
 	kGrainDur	chnget "partikkel1_graindur"
 	ksustain_amount	chnget "partikkel1_sustain"
