@@ -24,6 +24,7 @@ easy_install readline
 Unfortunately, there are a few packages that must be installed manually. 
 
 > hg clone https://bitbucket.org/benjamin_schrauwen/organic-reservoir-computing-engine Oger
+
 > cd Oger/src
 > python setup.py install
 
