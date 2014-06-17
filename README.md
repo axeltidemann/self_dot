@@ -19,18 +19,17 @@ pip install scikit-learn
 pip install ipdb
 pip install MDP
 easy_install readline
-pip install ipython
 ```
 
 Unfortunately, there are a few packages that must be installed manually. 
 
-Oger: http://organic.elis.ugent.be/installing_oger
+#Oger: http://organic.elis.ugent.be/installing_oger
 
-Download the tarball, run 
-
+> hg clone https://bitbucket.org/benjamin_schrauwen/organic-reservoir-computing-engine Oger
+> cd Oger/src
 > python setup.py install
 
-Note: when you install OpenCV following software, it is advised that you
+Note: when you install the following software, it is advised that you
 install it into $VIRTUAL_ENV, so it will be contained within
 the virtualenv, and more robust. This is shown as an example under
 "Mac stuff".
@@ -38,6 +37,16 @@ the virtualenv, and more robust. This is shown as an example under
 OpenCV: http://opencv.org
 
 Csound: http://www.csounds.com
+
+OpenMPI: http://www.open-mpi.org/
+
+Now you can install mpi4py, so you can use MPI with python. This is not done automatically, so you must download the mpi4py source and configure it accordingly. In the source folder, edit mpi.cfg so it reads like this:
+
+mpicc                = mpicc
+mpicxx               = mpicxx
+include_dirs         = $VIRTUAL_ENV/include/openmpi
+library_dirs         = $VIRTUAL_ENV/lib/openmpi
+runtime_library_dirs = $VIRTUAL_ENV/lib/openmpi
 
 ## Specific Mac OS X stuff:
 
@@ -83,7 +92,7 @@ missing something important here). However, in this particular case,
 the VIRTUALENVWRAPPER_PYTHON was the same as the system wide python,
 so this worked.
 
-In order to use the new shared libraries, you must specify where they are.
+In order to use the new shared libraries, you must specify where they are. NB: REVISE TO SEE IF THIS REALLY IS NECESSARY. Try it without setting DYLD_LIBRARY_PATH first.
 
 > export DYLD_LIBRARY_PATH=$VIRTUAL_ENV/lib 
 
