@@ -4,7 +4,7 @@ from utils import MyManager, sleep
 
 if __name__ == '__main__':
     MyManager.register('get_deque')
-    manager = MyManager(address=('localhost', 7777), authkey='tullball')
+    manager = MyManager(address=('tanzenmusik.idi.ntnu.no', 7777), authkey='tullball')
     manager.connect()
 
     local_deque = manager.get_deque()
