@@ -43,6 +43,30 @@ This can be done with
 communication.py csinstr i 22 0 1 \"inputMonitor\" 0.2
 The last value (here 0.2) represent the desired monitor level.
 
+Map audio analysis directly to synthesis
+This can be done with the mapping instruments 44 and 45. Instr 45 contains macros to map a set of parameters, while instr 44 provides mapping of single parameters ffor a more explorative approach. 
+Instr 45 is called with a keyword to select the macro appplied, e.g.:
+python communication.py csinstr i 45 0 1 1 \"partikkel\"
+The available macros can be found in the cound code for instr 45 (may be updated and changed frequently)
+To turn off a macro mapping, use the corresponding command with negative p4, eg.:
+python communication.py csinstr i 45 0 1 - \"partikkel\"
+Instr 44 can be called like this: 
+python communication.py csinstr i 44.1 0 -1 \"centroid1\" \"partikkel1_wavfreq\" 1 0
+Where p3 sets the duration that the mapping will be active (infinitely in the example above).
+Do note that a fractional instr number (e.g. 44.1) is needed to allow several mappings to coexist simultaneously. 
+This also allows separate mappings to be turned on and off individually.
+* Note: When experimenting with direct mapping of input analysis parameters like this, it is practical (needed) to turn off the resetting of channel values done on empty brain states in IO.py. This automatic zeroing can be enabled or disabled by using 
+python communication.py zerochannels 0
+(0 = disable, 1 = enable)
+
+Test signals for learning
+A selection of test sounds for speech (radio programs) can be found at http://oeyvind.teks.no/ftp/speech_samples/
+To enable playback of these, modify "testscore.inc" to reflect the path to the sound files on your system, and uncomment the line 
+;#include "testscore.inc" 
+in the file "self_dot.csd
+(semicolon is comment in Csound)
+
+
 ** Learnrespond contains timed macros for certain communication events
 python learnrespond.py [time, mode, file]
 optional arguments [time, mode, filename] are:

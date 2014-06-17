@@ -7,7 +7,7 @@
 	fsin 		pvsanal	ain, gifftsize, gifftsize/4, gifftsize, iwtype
 	ireduce		= p4
 	fsout 		pvsanal	aout*ireduce, gifftsize, gifftsize/4, gifftsize, iwtype
-	;fsouts 		pvsmooth fsout, 1, 1		
+	fsouts 		pvsmooth fsout, 1, 1		
 	kflag   	pvsftw	fsin,gifnaIn  	        	; export  amps  and freqs to table
 	kflag1   	pvsftw	fsout,gifnaOut	        	; export  amps  and freqs to table
 	iNPscale	= p5
@@ -18,7 +18,7 @@
 			vlimit gifnaIn, 0, 1,  giFftTabSize-1		; limit
 
 			kindex = 0
-/*
+
 	spectralAverage:
 			k1	table kindex-2, gifnaIn
 			k2	table kindex-1, gifnaIn
@@ -29,7 +29,7 @@
 				tablew ksum, kindex, gifnaIn
 			kindex = kindex +1
 			if kindex < gifnaIn-2 kgoto spectralAverage
-*/
+
 			pvsftr fsin, gifnaIn
 contin:
 

@@ -35,7 +35,7 @@ if kflag == 0 goto end
 	krmsavg	= ksum / lenarray(kRMS)
 end:
 	kdB	= dbfsamp(krmsavg)
-	knfloor	= ampdbfs(kdB+8)
-	Slevel	sprintfk "Noise floor set to %f dB, over measured %f dB, compare filtered %f", dbfsamp(knfloor), kdB, dbfsamp(krmsF)
-		puts Slevel, krmsavg
-		chnset krmsavg, "inputNoisefloor"
+	knfloor	= kdB+6
+	Slevel	sprintfk "Noise floor set to %f dB, over measured %f dB, compare filtered %f", knfloor, kdB, dbfsamp(krmsF)
+		puts Slevel, knfloor
+		chnset knfloor, "inputNoisefloor"
