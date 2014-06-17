@@ -1,28 +1,47 @@
-
 	krms		rms a1
-	knoiseFloor	chnget "inputNoisefloor"
-	knoiseFloor_dB	= dbfsamp(knoiseFloor)	
-	kgate		= (krms < knoiseFloor ? 0 : 1)	; don't bother analyzing very quiet sections
-	;printk2 kgate
+	iMinLevel	= -40					; minimum level in dB for (significant) analysis
+	kgate0		= (krms < ampdbfs(iMinLevel) ? 0 : 1)		; use this to gate analysis signals that is particularly noisy at low signal levels 
+	kgate		tonek kgate0, 4
+	;a1		= a1 * kgate
+
 ; ***************
 ; amplitude tracking
 	krms1		rms a1				; simple level measure
 	kAttack		= 0.001				; envelope follower attack
-	kRelease	= 0.3 				; envelope follower release
+	kRelease	= 0.7 				; envelope follower release
 	aFollow1	follow2	a1, kAttack, kRelease	; envelope follower
 	kFollow1	downsamp aFollow1	
-	kFollowdb1	= dbfsamp(kFollow1)		; convert to dB
 
 ; ***************
 ;analyze transients
-	iresponse	= 10 			; response time in milliseconds
-	ktthresh	= 6			; transient trig threshold 
-	klowThresh	= knoiseFloor_dB	; lower threshold for transient detection
-	idoubleLimit	= 0.02			; minimum duration between events, (double trig limit)
-	kdecThresh	= 6			; retrig threshold, how much must the level decay from its local max before allowing new transient trig
+	iResponse	= 10 		; response time in milliseconds
+	kAtck_db	= 9		; attack threshold (in dB)
+	iLowThresh	= 0.01		; lower threshold for transient detection (adaptive, relative to recent transient strength)
+	idoubleLimit	= 0.1		; minimum duration between events, (double trig limit)
+	
+	kFollowdb1	= dbfsamp(kFollow1)			; convert to dB
+	kFollowDel1	delayk	kFollowdb1, iResponse/1000	; delay with response time for comparision of levels
+	kTrig1		init 0
+	kLowThresh1	init 0
+	kTrig1		= ((kFollowdb1 > kFollowDel1 + kAtck_db) ? 1 : 0) 	; if current rms plus threshold is larger than previous rms, set trig signal to current rms
+	kTrig1		= kTrig1*kgate0
 
-	ktrig1, kdiff	TransientDetect kFollowdb1, iresponse, ktthresh, klowThresh, kdecThresh, idoubleLimit
-
+	; avoid transient detection of very soft signals (adaptive level)
+	if kTrig1 > 0 then
+	kLowThresh1	= (kLowThresh1*0.7)+(kFollow1*0.3)		; (the coefficients can be used to adjust adapt rate)
+	endif
+	kTrig1		= (kLowThresh1 > iLowThresh ? kTrig1 : 0)
+	
+	; avoid closely spaced transient triggers (first trig priority)
+	kDouble1	init 1
+	kTrig1		= kTrig1*kDouble1
+	if kTrig1 > 0 then
+	reinit double1
+	endif
+	double1:
+	kDouble1	linseg	0, idoubleLimit, 0, 0, 1, 1, 1
+	rireturn
+		
 ; ***************
 ; segmentation, set kstatus = 1 when a transient occurs, 
 ; keep status = 1 until level drops 6dB below the level at which the transient was detected
@@ -30,7 +49,7 @@
 	iStatusThresh	= 9				; status release threshold, signal must drop this much below transient level before we say that the audio segment is finished
 	iStatusRel	= 0.9				; status release time, hold status=1 for this long after signal has dropped below threshold
 	kstate		init 0
-	kstate		= (ktrig1 > 0 ? 1 : kstate)
+	kstate		= (kTrig1 > 0 ? 1 : kstate)
 	ksegStart	trigger kstate, 0.5, 0
 	kdBStart	init 0
 	kdBStart 	= (ksegStart > 0 ? kFollowdb1 : kdBStart)
@@ -47,6 +66,7 @@ rireturn
 	kstatusTrigOn	trigger kstatus, 0.5, 0
 	kstatusTrigOff	trigger kstatus, 0.5, 1
 	kstatusTrig	= kstatusTrigOn-kstatusTrigOff	; pulse 1 at start, pulse -1 at end of segment
+
 
 ; ***************
 ; epoch filtering
@@ -81,15 +101,14 @@ rireturn
 ; ***************
 ; spectral analysis
 
-	iwtype 			= 1
-	fsin 			pvsanal	a1, gifftsize, gifftsize/4, gifftsize, iwtype
+	fsin 			pvsanal	a1, gifftsize, gifftsize/4, gifftsize, 1
 	kflag   		pvsftw	fsin,ifna,ifnf          	; export  amps  and freqs to table,
 
 	kupdateRate		= 1000	
 	kflatness		init -1
 	kmetro			metro kupdateRate
 	kdoflag			init 0
-	kdoflag			= (kdoflag + kmetro);*kgate
+	kdoflag			= kdoflag + kmetro
 
 	; copy pvs data from table to array
 	; analyze spectral features
@@ -125,7 +144,6 @@ if (kdoflag > 0) && (kflag > 0) then
   if kindx < giFftTabSize-2 then
   kgoto process
   endif
-	kcentroid		samphold kcentroid, kgate
 
 ; separate loop for spread, skewness, kurtosis (as they depend on centroid being previously calculated) 
 	kindx 			= 0
@@ -159,28 +177,8 @@ endif
 	kautocorr		divz kautocorr*2, (krmsA*krmsAprev) , 0
 
 ; ***************
-/*
-;analyze centroid transients
-	kcentroid	limit kcentroid, 20, sr/2
-	kcentrolog	= log2(kcentroid)
-	acentro		upsamp kcentrolog
-	ac		upsamp kcentroid
-	kcAttack	= 0.001
-	kcRelease	= 0.1
-	aFolCentro	follow2	acentro, kcAttack, kcRelease	; envelope follower
-	kFolCentro	downsamp aFolCentro	
-
-	icresponse	= 10 		; response time in milliseconds
-	kctthresh	= 0.5		; transient trig threshold (in octaves)
-	kclowThresh	= 12		; lower threshold for transient detection (in octaves)
-	icdoubleLimit	= 0.02		; minimum duration between events, (double trig limit)
-	kcdecThresh	= .5		; retrig threshold, how much must the level decay from its local max before allowing new transient trig
-
-	kctrig1, kcdiff	TransientDetect kFolCentro, icresponse, kctthresh, kclowThresh, kcdecThresh, icdoubleLimit
-*/
-; ***************
 ; dump fft to python
-         	;pvsout  fftin1, 0 			; write signal to pvs out bus channel 0
+;         			pvsout  fsin, 0 			; write signal to pvs out bus channel 0
 
 ; ***************
 ; pitch tracking
@@ -190,34 +188,20 @@ endif
 
 
 	kcps1 		init 0	
-	ihopsize	= 1024
+	ihopsize	= 512
 
-	kcps1, kamp1 	ptrack a1, ihopsize
+	kcps1a, kamp1 	ptrack a1, ihopsize
 
-;	kcps1		samphold kcps1, kgate
-	kpgate		= (kcentroid > 7000 ? 0 : 1)
-	kcps1		samphold kcps1, kpgate
-	imedianSize	= 512
+	kcps1b		init 100
+	kcps1b		= (kcps1a > 800 ? kcps1b : kcps1a) ; avoid high intermittencies
+	kcps1		init 100
+	kcps1		= (krms1 < 0.03 ? kcps1 : kcps1b)  ; don't track (keep last value) at low amplitude
+
+	imedianSize	= ihopsize
 	kcps1		mediank	kcps1, imedianSize, imedianSize
 
-	kd 		= 0.27
-	kloopf		= 40
-	kloopq		= 0.3
-	klf		= 50
-	khf		= 1500
-	kthresh		= ampdbfs(-40)
-	acps1p, alock1p	plltrack a1, kd, kloopf, kloopq, klf, khf, kthresh 
+	acps1p, alock1p	plltrack a1, 0.2 
 	kcps1p		downsamp acps1p
+	kcps1p		limit kcps1p, 20, 2000
 	imedianSize	= 200
 	kcps1p		mediank	kcps1p, imedianSize, imedianSize
-
-; ***************
-; post filtering
-	kautocorr	samphold kautocorr, kgate	
-	kspread		samphold kspread, kgate
-	kurtosisM	mediank kurtosis, 6, 6
-
-	kcpsBoth	= kepochZCcps+kcps1p
-	kpzgate		= (kcentroid > 6000 ? 0 : 1)
-	kepochZCcps	samphold kepochZCcps, kpzgate
-

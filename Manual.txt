@@ -23,13 +23,25 @@ Send generic Csound instrument event
 Can be used to set any chn value, via instrument 22 ('i 22 0 1 \"name\" value')
 
 python communication.py calibrateAudio
-Sense signal level (keep relatively quiet for maximum range), set a soft knee noise gate.
+Sense signal level (keep relatively quiet for maximum range), set a soft knee noise gate. Also analyze background noise print.
 For comparision the gate can be disabled with 
-communication.py csinstr i -16 0 1
+communication.py csinstr i -17 0 1
 and re-enabled with 
-communication.py csinstr i 16 0 -1
-Each time calibrateAudio is run, it will set a new noise floor level and enable the gate
+communication.py csinstr i 17 0 -1
+Each time calibrateAudio is run, it will set a new noise floor level and enable the gate. 
+The noise print is used in instr 14, removing the spectral profile of the bacground noise from the input before any other processing.
+Instr 14 also has a method for suppressing self's own audio input (reduce feedback and general clutter), the level of selv suppression can be set with an argument (p4) to instr 14.
+The noise reduction and sel suppression of instr 14 is enabled automatically when running calibrateAudio. 
+For comparision the noise reduction can be disabled with 
+communication.py csinstr i -14 0 1
+and re-enabled with 
+communication.py csinstr i 14 0 -1
 
+Input monitoring
+For diagnostic use, one could monitor the input signal directly. This can be enabled by setting the desired volume in the "inputMonitor" chn channel.
+This can be done with 
+communication.py csinstr i 22 0 1 \"inputMonitor\" 0.2
+The last value (here 0.2) represent the desired monitor level.
 
 ** Learnrespond contains timed macros for certain communication events
 python learnrespond.py [time, mode, file]

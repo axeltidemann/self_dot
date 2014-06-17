@@ -16,16 +16,21 @@
 	gifftsize 	= 512
 			chnset gifftsize, "fftsize"
 	giFftTabSize	= (gifftsize / 2)+1
-	gifna     	ftgen   1 ,0 ,giFftTabSize, 7, 0, giFftTabSize, 0   ; make ftable for pvs analysis
-	gifnf     	ftgen   2 ,0 ,giFftTabSize, 7, 0, giFftTabSize, 0   ; make ftable for pvs analysis
+	gifna     	ftgen   1 ,0 ,giFftTabSize, 7, 0, giFftTabSize, 0   	; for pvs analysis
+	gifnf     	ftgen   2 ,0 ,giFftTabSize, 7, 0, giFftTabSize, 0   	; for pvs analysis
 
-	gifnaSelf     	ftgen   4 ,0 ,giFftTabSize, 7, 0, giFftTabSize, 0   ; make ftable for pvs analysis of my own output
-	gifnfSelf     	ftgen   5 ,0 ,giFftTabSize, 7, 0, giFftTabSize, 0   ; make ftable for pvs analysis of my own output
+	gifnaSelf     	ftgen   4 ,0 ,giFftTabSize, 7, 0, giFftTabSize, 0   	; for pvs analysis of my own output
+	gifnfSelf     	ftgen   5 ,0 ,giFftTabSize, 7, 0, giFftTabSize, 0   	; for pvs analysis of my own output
 
-	gifnaResyn     	ftgen   7 ,0 ,giFftTabSize, 7, 0, giFftTabSize, 0   ; make ftable for pvs resynthesis
-	gifnfResyn     	ftgen   8 ,0 ,giFftTabSize, 7, 0, giFftTabSize, 0   ; make ftable for pvs resynthesis
+	gifnaResyn     	ftgen   7 ,0 ,giFftTabSize, 7, 0, giFftTabSize, 0   	; for pvs resynthesis
+	gifnfResyn     	ftgen   8 ,0 ,giFftTabSize, 7, 0, giFftTabSize, 0   	; for pvs resynthesis
 
-	giNoiseFloor	ftgen 0, 0, 8192, 2, 0						; just init, to be used as noise gate 
+	gifnaIn     	ftgen   0 ,0 ,giFftTabSize, 7, 0, giFftTabSize, 0   	; for pvs analysis of input (self output suppression)
+	gifnaOut     	ftgen   0 ,0 ,giFftTabSize, 7, 0, giFftTabSize, 0   	; for pvs analysis of output (self output suppression)
+
+	giNoiseFloor	ftgen 0, 0, 8192, 2, 0					; just init, to be used as noise gate 
+	gifnaNoiseIn   	ftgen   0 ,0 ,giFftTabSize, 7, 0, giFftTabSize, 0   	; for pvs analysis of bacground noise
+	gifnaNoise     	ftgen   0 ,0 ,giFftTabSize, 7, 0, giFftTabSize, 0   	; for pvs analysis of bacground noise
 
 ; classic waveforms
 	giSine		ftgen	0, 0, 65536, 10, 1					; sine wave
@@ -38,18 +43,7 @@
 	giExpFall	ftgen	0, 0, 8193, 5, 1, 8193, 0.00001				; exponential decay
 	giTriangleWin 	ftgen	0, 0, 8193, 7, 0, 4096, 1, 4096, 0			; triangular window 
 
-;***************************************************
-;user defined opcode, asynchronous clock
-;***************************************************
-			opcode		probabilityClock, a, k
-	kdens		xin
-			setksmps 1
-	krand		rnd31	1, 1
-	krand		= (krand*0.5)+0.5
-	ktrig		= (krand < kdens/kr ? 1 : 0)
-	atrig		upsamp ktrig
-			xout atrig
-			endop
+#include "udos.inc"
 
 ;******************************
 ; audio file input 
@@ -74,26 +68,42 @@
 	endin
 
 ;******************************
-; NEW, TODO
-; 11 find stereo position
-; 17 get noiseprint
-; 18 background noise reduction
-; 19 reduction of own output in feedback to input (cleaner autorespond)
-
-; TEST:
-; 14 calibrate signal, get background noise level
-; 15 set gate/expander shape
-; 16 apply noise gate
+; TODO
+; 11 find stereo position and merge mic 1 and 2
+	instr 11
+	a1	chnget "in1"
+	a2	chnget "in2"
+		chnset a1+a2, "in1"
+	endin
 
 ;******************************
-; get audio input noise floor
+; measure roundtrip latency
+	instr 12
+#include "getLatency.inc"
+	endin
+
+;******************************
+; get audio input noise print
+	instr 13
+#include "getAudioNoiseprint.inc"
+	endin
+
+;******************************
+; suppress my own output by subtracting the output spectrum from the input
+; and use noise print to remove static background noise
 	instr 14
+#include "suppressSelfnoise.inc"
+	endin
+
+;******************************
+; get audio input noise floor (after noiseprint suppression if it is enabled)
+	instr 15
 #include "getAudioNoiseFloor.inc"
 	endin
 
 ;******************************
 ; set audio input noise gate
-	instr 15
+	instr 16
 	irms		chnget "inputNoisefloor"
 	isize		= 8192
 	iknee		= isize*0.1
@@ -102,7 +112,7 @@
 
 ;******************************
 ; apply noise gate
-	instr 16
+	instr 17
 	a1		chnget "in1"
 	krms		rms a1
 	krms		= krms * 1.7
@@ -144,44 +154,31 @@
 ; write to chn
 			chnset kflag, "pvsinflag"
 
-/* might try to skip the cleaning up of analysis signals */
-	kcentroidG	= kcentroid*kgate	; limit noise contribution in quiet sections
-	kautocorrG	= kautocorr * kgate	
-	kspreadG	= kspread * kgate
-	kskewnessG	= kskewness * kgate
-	kurtosisM	mediank kurtosis, 6, 6
-	kflatnessG	= kflatness * kgate
-	kfluxG		= kflux * kgate
-
 	Stest		sprintfk "input audio status %i, trig status %i, dbstart %f", kstatus, kstatusTrig, kdBStart
 			puts Stest, 2+(kstatus + kstatusTrig)
 
 			chnset kstatus, "audioStatus"
 			chnset kstatusTrig, "audioStatusTrig"
+			chnset ktrig1, "transient"
 			chnset krms1, "level1"
-			chnset kFollow1, "envelope1"
 			chnset kcps1, "pitch1ptrack"
 			chnset kcps1p, "pitch1pll"
-			chnset kautocorrG, "autocorr1"
-			chnset kcentroidG, "centroid1"
-			chnset kspreadG, "spread1"
-			chnset kskewnessG, "skewness1"
+			chnset kautocorr, "autocorr1"
+			chnset kcentroid, "centroid1"
+			chnset kspread, "spread1"
+			chnset kskewness, "skewness1"
 			chnset kurtosisM, "kurtosis1"
-			chnset kflatnessG, "flatness1"
+			chnset kflatness, "flatness1"
 			chnset kcrest, "crest1"
-			chnset kfluxG, "flux1"
+			chnset kflux, "flux1"
 			chnset kepochSig, "epochSig1"
 			chnset kepochRms, "epochRms1"
 			chnset kepochZCcps, "epochZCcps1"
 
-  		outs a1*0.1,a1*0.1
-/*
-	acps		upsamp kcps1p/2000 ; pll
-	acentro		upsamp kcentroidG/2000
-	arms		upsamp krms1
-	aenv		upsamp kFollow1
-			fout "testrec.wav", 14, a1, acps, acentro, arms, aenv
-*/
+	kinputMonitor	chnget "inputMonitor"
+			chnmix a1*kinputMonitor, "MasterOut1"
+			chnmix a1*kinputMonitor, "MasterOut2"
+
 	endin
 
 ; ******************************
@@ -210,19 +207,13 @@
 	instr 51			
 
 	krms1 		chnget "respondLevel1"
-;kactive = (krms1 > 0 ? 1 : 0)
-;printk2 kactive  
-	kenv1 		chnget "respondEnvelope1"
 	;kcps1 		chnget "respondPitch1ptrack"
 	kcps1 		chnget "respondPitch1pll"
 	kcentro1 	chnget "respondCentroid1"
 
 	krms1		limit krms1, 0, 1
-	kenv1		limit kenv1, 0, 1
 	krms1		mediank krms1, 100, 100
-	kenv1		mediank kenv1, 100, 100
 	krms1		tonek krms1, 20
-	kenv1		tonek kenv1, 20
 
 	kcps1		limit kcps1, 20, 2000
 	kcps1		tonek kcps1, 20
@@ -239,14 +230,13 @@
 	afilt1e		butterbp anoise, kcps1*5, kcps1*0.05
 	asum		sum afilt1a, afilt1b, afilt1c, afilt1d, afilt1e
 	aout		butterbp asum*5+(anoise*0.01), kcentro1, kcentro1*0.2
-	aout		= aout*kenv1*10
-			chnset aout, "MasterOut1"
-			chnset aout, "MasterOut2"
+	aout		= aout*krms1*10
+			chnmix aout, "MasterOut1"
+			chnmix aout, "MasterOut2"
 /*
 	acps		upsamp kcps1/2000
 	acentro		upsamp kcentro1/2000
 	arms		upsamp krms1
-	aenv		upsamp kenv1	
 			fout "testplay.wav", 14, aout, acps, acentro, arms, aenv
 */
 	endin
@@ -260,8 +250,8 @@
 
 #include "partikkel_chn.inc"
 #include "partikkel_self.inc"
-			chnset a1, "MasterOut1"
-			chnset a2, "MasterOut2"
+			chnmix a1, "MasterOut1"
+			chnmix a2, "MasterOut2"
 	endin
 
 ; ******************************
@@ -275,8 +265,8 @@
 	;fsin		pvsinit gifftsize, gifftsize/4, gifftsize, 1
 			pvsftr	fsin,gifnaResyn,gifnfResyn		;read modified data back to fsrc
 	aout		pvsynth	fsin				;and resynth
-			chnset aout, "MasterOut1"
-			chnset aout, "MasterOut2"
+			chnmix aout, "MasterOut1"
+			chnmix aout, "MasterOut2"
 	endin
 
 	instr 80
@@ -296,26 +286,18 @@
 #include "audio_analyze.inc"
 			chnset kflag, "pvsoutflag"
 ; write to chn
-/* might try to skip the cleaning up of analysis signals */
-	kcentroidG	= kcentroid*kgate	; limit noise contribution in quiet sections
-	kautocorrG	= kautocorr * kgate	
-	kspreadG	= kspread * kgate
-	kskewnessG	= kskewness * kgate
-	kurtosisM	mediank kurtosis, 6, 6
-	kflatnessG	= kflatness * kgate
-	kfluxG		= kflux * kgate
-
-			chnset kstatus, "myAudioStatus1"
+			chnset kstatus, "myAudioStatus"
+			chnset kstatusTrig, "myAudioStatusTrig"
+			chnset ktrig1, "myTransient"
 			chnset krms1, "myLevel1"
-			chnset kFollow1, "myEnvelope1"
 			chnset kcps1, "myPitch1ptrack"
 			chnset kcps1p, "myPitch1pll"
-			chnset kautocorrG, "myAutocorr1"
-			chnset kcentroidG, "myCentroid1"
-			chnset kspreadG, "mySpread1"
-			chnset kskewnessG, "mySkewness1"
+			chnset kautocorr, "myAutocorr1"
+			chnset kcentroid, "myCentroid1"
+			chnset kspread, "mySpread1"
+			chnset kskewness, "mySkewness1"
 			chnset kurtosisM, "myKurtosis1"
-			chnset kflatnessG, "myFlatness1"
+			chnset kflatness, "myFlatness1"
 			chnset kcrest, "myCrest1"
 			chnset kflux, "myFlux1"
 			chnset kepochSig, "myEpochSig1"
@@ -332,6 +314,7 @@
 	a2	chnget "MasterOut2"
 	a0	= 0
 		outs a1, a2
+		chnset (a1+a2)*0.5, "MyOutput"
 		chnset a0, "MasterOut1"
 		chnset a0, "MasterOut2"
 
@@ -340,16 +323,18 @@
 
 <CsScore>
 ; run for N sec
-;i3 	0 86400	; audio file input
-i4 	0 86400	; audio input
-i21 	0 .1 1	; initialize input level
-i31 	0 86400	; analysis
-;i51 	0 -1	; subtractive harmonic resynthesis
-i52 	0 -1	; partikkel resynthesis
-;i53 	3 -1	; fft resynthesis
-;i98 	0 86400	; analysis of own output
-;i80 	0 86400	; test print for contents of fft tables
-i99 	0 86400	; master out
+;i3 	0 86400				; audio file input
+i4 	0 86400				; audio input
+i11 	0 86400				; merge left and right input
+i21 	0 .1 1				; initialize input level
+i22 	0 .1 "inputNoisefloor" -30	; initialize noise floor
+i31 	0 86400				; analysis
+;i51 	0 -1				; subtractive harmonic resynthesis
+i52 	0 -1				; partikkel resynthesis
+;i53 	3 -1				; fft resynthesis
+;i98 	0 86400				; analysis of own output
+;i80 	0 86400				; test print for contents of fft tables
+i99 	0 86400				; master out
 
 </CsScore>
 

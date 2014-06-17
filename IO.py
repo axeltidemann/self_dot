@@ -96,6 +96,7 @@ def audio(state, mic, speaker):
         # get Csound channel data
         audioStatus = cGet("audioStatus")
         audioStatusTrig = cGet("audioStatusTrig")
+        transient = cGet("transient")
         
         if state['autolearn']:
             if audioStatusTrig > 0:
@@ -134,12 +135,14 @@ def audio(state, mic, speaker):
                 cs.InputMessage('i 21 1 .1 1')
             state['inputLevel'] = False
 
-        if state['calibrateAudio']:
-            calibratePeriod = 2
-            cs.InputMessage('i -16 0 1') # turn off old noise gate
-            cs.InputMessage('i 14 0 %f'%calibratePeriod) # get level
-            cs.InputMessage('i 15 %f 0.1'%(calibratePeriod+0.1)) # set noise gate shape
-            cs.InputMessage('i 16 %f -1'%(calibratePeriod+0.2)) # turn on new noise gate
+        if state['calibrateAudio']:            
+            cs.InputMessage('i -17 0 1') # turn off old noise gate
+            cs.InputMessage('i 12 0 4') # measure roundtrip latency
+            cs.InputMessage('i 13 4 2') # get audio input noise print
+            cs.InputMessage('i 14 6 -1 5') # enable noiseprint and self-output suppression
+            cs.InputMessage('i 15 6.2 2') # get noise floor level 
+            cs.InputMessage('i 16 8.3 0.1') # set noise gate shape
+            cs.InputMessage('i 17 8.5 -1') # turn on new noise gate
             state['calibrateAudio'] = False
 
         if state['csinstr']:
@@ -156,11 +159,10 @@ def audio(state, mic, speaker):
 
         if state['record']:
             mic.append([cGet("level1"), 
-                        cGet("envelope1"), 
                         cGet("pitch1ptrack"), 
                         cGet("pitch1pll"), 
-                        cGet("centroid1"),
                         cGet("autocorr1"), 
+                        cGet("centroid1"),
                         cGet("spread1"), 
                         cGet("skewness1"), 
                         cGet("kurtosis1"), 
@@ -174,19 +176,31 @@ def audio(state, mic, speaker):
         try:
             sound = speaker.popleft()
             cSet("respondLevel1", sound[0])
-            cSet("respondEnvelope1", sound[1])
-            #cSet("respondPitch1ptrack", sound[2])
-            cSet("respondPitch1pll", sound[3])
+            cSet("respondPitch1ptrack", sound[1])
+            cSet("respondPitch1pll", sound[2])
             cSet("respondCentroid1", sound[4])
             # test partikkel generator
             cSet("partikkel1_amp", sound[0])
-            cSet("partikkel1_grainrate", sound[3])
+            cSet("partikkel1_grainrate", sound[1])
             cSet("partikkel1_wavfreq", sound[4])
-            cSet("partikkel1_graindur", sound[6]+0.1)
+            cSet("partikkel1_graindur", sound[3]+0.1)
             # transfer fft frame
-            bogusamp = map(tSet,fftresyn_amptabs,fftbinindices,fftconst)#sound[15:ffttabsize+15])
-            bogusfreq = map(tSet,fftresyn_freqtabs,fftbinindices,sound[ffttabsize+15:ffttabsize+15+ffttabsize])
+
+            # THIS IS HOW IT WAS - UNCOMMENT TO SEE THE EFFECT, AND TO MAKE SURE I HAVE NOT MISUNDERSTOOD THE INDEXING...
+
+            # bogusamp = map(tSet,fftresyn_amptabs,fftbinindices,sound[15:ffttabsize+15])
+            # try: 
+            #     bogusfreq = map(tSet,fftresyn_freqtabs,fftbinindices,sound[ffttabsize+15:ffttabsize+15+ffttabsize])
+            # except:
+            #     print map(len, [fftresyn_freqtabs,fftbinindices,sound[ffttabsize+15:ffttabsize+15+ffttabsize]])  # Should be of same length...
             
+            # New version, using 14 instead of 15
+            
+            fft_index = 14
+
+            bogusamp = map(tSet,fftresyn_amptabs,fftbinindices,sound[fft_index:ffttabsize+fft_index])
+            bogusfreq = map(tSet,fftresyn_freqtabs,fftbinindices,sound[ffttabsize+fft_index:ffttabsize+fft_index+ffttabsize])
+
             '''
             # partikkel parameters ready to be set
             partikkelparmOffset = 5
@@ -214,7 +228,6 @@ def audio(state, mic, speaker):
             '''
         except:
             cSet("respondLevel1", 0)
-            cSet("respondEnvelope1", 0)
             cSet("respondPitch1ptrack", 0)
             cSet("respondPitch1pll", 0)
             cSet("respondCentroid1", 0)
