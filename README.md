@@ -50,6 +50,10 @@ library_dirs         = $VIRTUAL_ENV/lib/openmpi
 runtime_library_dirs = $VIRTUAL_ENV/lib/openmpi
 ```
 
+Proceed with 
+
+> ARCHFLAGS="-arch x86_64" python setup.py install
+
 ## Specific Mac OS X stuff:
 
 These are some experiences found when installing the software under 10.7.5 and 10.8.5.
