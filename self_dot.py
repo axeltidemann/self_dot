@@ -13,7 +13,7 @@ import multiprocessing as mp
 from AI import learn
 from IO import audio, video, load_cns
 from communication import receive as receive_messages
-from utils import MyManager, MyDeque, reset_rmses, find_winner
+from utils import MyDeque, reset_rmses, find_winner
        
 class Controller:
     def __init__(self, state, mic, speaker, camera, projector):
@@ -83,10 +83,13 @@ class Controller:
 if __name__ == '__main__':
     me = mp.current_process()
     print me.name, 'PID', me.pid
-        
-    MyManager.register('deque', MyDeque)
 
-    manager = MyManager()
+    class LocalManager(SyncManager):
+        pass
+        
+    LocalManager.register('deque', MyDeque)
+
+    manager = LocalManager()
     manager.start()
 
     mic = manager.deque()
@@ -115,6 +118,13 @@ if __name__ == '__main__':
     mp.Process(target=video, args=(state, camera, projector)).start()
     mp.Process(target=receive_messages, args=(controller.parse,)).start()
     
+    class ServerManager(SyncManager):
+        pass
+    
+    ServerManager.register('get_state', state)
+    server_manager = ServerManager(address=('', 7777), authkey='tullball')
+    server_manager.start()
+
     try:
         raw_input('')
     except KeyboardInterrupt:

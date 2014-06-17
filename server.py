@@ -16,7 +16,7 @@ if __name__ == '__main__':
 
     dq = manager.deque()
     
-    ServerManager.register('get_deque', callable=lambda: dq)
+    ServerManager.register('get_deque', dq)
     server_manager = ServerManager(address=('', 7777), authkey='tullball')
     server_manager.start()
 

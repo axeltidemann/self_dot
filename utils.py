@@ -5,9 +5,6 @@ import os
 
 import numpy as np
 
-class MyManager(SyncManager):
-    pass
-
 class MyDeque(deque):
     def __init__(self, *args, **kwargs):
         deque.__init__(self, *args, **kwargs)
