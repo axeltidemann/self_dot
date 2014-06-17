@@ -122,7 +122,7 @@ if __name__ == '__main__':
     class ServerManager(SyncManager):
         pass
     
-    ServerManager.register('get_state', state)
+    ServerManager.register('get_state', callable=lambda: state)
     server_manager = ServerManager(address=('', 8888), authkey='tullball')
     server_manager.start()
 
