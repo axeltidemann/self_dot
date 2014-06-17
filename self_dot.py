@@ -90,7 +90,7 @@ if __name__ == '__main__':
         
     LocalManager.register('deque', MyDeque)
 
-    manager = LocalManager()
+    manager = LocalManager(address=('', 8888), authkey='tullball')
     manager.start()
 
     mic = manager.deque()
@@ -123,6 +123,7 @@ if __name__ == '__main__':
         pass
     
     ServerManager.register('get_state', callable=lambda: state)
+    ServerManager.register('get_projector', callable=lambda: projector)
     server_manager = ServerManager(address=('', 8888), authkey='tullball')
     server_manager.start()
 
