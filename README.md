@@ -23,8 +23,6 @@ easy_install readline
 
 Unfortunately, there are a few packages that must be installed manually. 
 
-#Oger: http://organic.elis.ugent.be/installing_oger
-
 > hg clone https://bitbucket.org/benjamin_schrauwen/organic-reservoir-computing-engine Oger
 > cd Oger/src
 > python setup.py install
@@ -40,13 +38,13 @@ Csound: http://www.csounds.com
 
 OpenMPI: http://www.open-mpi.org/
 
-Now you can install mpi4py, so you can use MPI with python. This is not done automatically, so you must download the mpi4py source and configure it accordingly. In the source folder, edit mpi.cfg so it reads like this:
+Now you can install mpi4py, so you can use MPI with python. This cannot be done with pip (although it is supported), so you must download the mpi4py source and configure it accordingly. In the source folder, edit mpi.cfg so it reads like this:
 
-mpicc                = mpicc
-mpicxx               = mpicxx
-include_dirs         = $VIRTUAL_ENV/include/openmpi
-library_dirs         = $VIRTUAL_ENV/lib/openmpi
-runtime_library_dirs = $VIRTUAL_ENV/lib/openmpi
+> mpicc                = mpicc
+> mpicxx               = mpicxx
+> include_dirs         = $VIRTUAL_ENV/include/openmpi
+> library_dirs         = $VIRTUAL_ENV/lib/openmpi
+> runtime_library_dirs = $VIRTUAL_ENV/lib/openmpi
 
 ## Specific Mac OS X stuff:
 
