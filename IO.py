@@ -51,6 +51,7 @@ def audio(state, mic, speaker):
         arguments.Append("%s"%item)
     cs.Compile(arguments.argc(), arguments.argv())
     stopflag = 0
+    zeroChannelsOnNoBrain = 1
     
     fftsize = int(cs.GetChannel("fftsize"))
     ffttabsize = fftsize/2
@@ -150,6 +151,10 @@ def audio(state, mic, speaker):
             cs.InputMessage('{}'.format(state['csinstr']))
             print 'sent {}'.format(state['csinstr'])
             state['csinstr'] = False
+
+        if state['zerochannels']:
+            zeroChannelsOnNoBrain = int('{}'.format(state['zerochannels']))
+            state['zerochannels'] = False
             
         if state['playfile']:
             print '[self.] wants to play {}'.format(state['playfile'])
@@ -185,19 +190,7 @@ def audio(state, mic, speaker):
             cSet("partikkel1_wavfreq", sound[4])
             cSet("partikkel1_graindur", sound[3]+0.1)
             # transfer fft frame
-
-            # THIS IS HOW IT WAS - UNCOMMENT TO SEE THE EFFECT, AND TO MAKE SURE I HAVE NOT MISUNDERSTOOD THE INDEXING...
-
-            # bogusamp = map(tSet,fftresyn_amptabs,fftbinindices,sound[15:ffttabsize+15])
-            # try: 
-            #     bogusfreq = map(tSet,fftresyn_freqtabs,fftbinindices,sound[ffttabsize+15:ffttabsize+15+ffttabsize])
-            # except:
-            #     print map(len, [fftresyn_freqtabs,fftbinindices,sound[ffttabsize+15:ffttabsize+15+ffttabsize]])  # Should be of same length...
-            
-            # New version, using 14 instead of 15
-            
             fft_index = 14
-
             bogusamp = map(tSet,fftresyn_amptabs,fftbinindices,sound[fft_index:ffttabsize+fft_index])
             bogusfreq = map(tSet,fftresyn_freqtabs,fftbinindices,sound[ffttabsize+fft_index:ffttabsize+fft_index+ffttabsize])
 
@@ -227,16 +220,17 @@ def audio(state, mic, speaker):
             cSet("partikkel1_wavemorf",sound[partikkelparmOffset+20])
             '''
         except:
-            cSet("respondLevel1", 0)
-            cSet("respondPitch1ptrack", 0)
-            cSet("respondPitch1pll", 0)
-            cSet("respondCentroid1", 0)
-            # partikkel test
-            cSet("partikkel1_amp", 0)
-            cSet("partikkel1_grainrate", 0)
-            cSet("partikkel1_wavfreq", 0)
-            # zero fft frame 
-            bogusamp = map(tSet,fftresyn_amptabs,fftbinindices,fftzeros)
+            if zeroChannelsOnNoBrain:  
+                cSet("respondLevel1", 0)
+                cSet("respondPitch1ptrack", 0)
+                cSet("respondPitch1pll", 0)
+                cSet("respondCentroid1", 0)
+                # partikkel test
+                cSet("partikkel1_amp", 0)
+                cSet("partikkel1_grainrate", 0)
+                cSet("partikkel1_wavfreq", 0)
+                # zero fft frame 
+                bogusamp = map(tSet,fftresyn_amptabs,fftbinindices,fftzeros)
 
             
 def load_cns(state, mic, speaker, camera, projector):

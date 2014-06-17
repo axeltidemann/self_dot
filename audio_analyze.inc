@@ -1,9 +1,4 @@
 
-	krms		rms a1
-	knoiseFloor	chnget "inputNoisefloor"
-	knoiseFloor_dB	= dbfsamp(knoiseFloor)	
-	kgate		= (krms < knoiseFloor ? 0 : 1)	; don't bother analyzing very quiet sections
-	;printk2 kgate
 ; ***************
 ; amplitude tracking
 	krms1		rms a1				; simple level measure
@@ -12,6 +7,11 @@
 	aFollow1	follow2	a1, kAttack, kRelease	; envelope follower
 	kFollow1	downsamp aFollow1	
 	kFollowdb1	= dbfsamp(kFollow1)		; convert to dB
+
+	knoiseFloor_dB	chnget "inputNoisefloor"
+	kgate		= (dbfsamp(krms1) < knoiseFloor_dB ? 0 : 1)	; don't bother analyzing very quiet sections
+	kgatesoft	tonek kgate, 4
+	krms1gated	= krms1*kgatesoft
 
 ; ***************
 ;analyze transients
@@ -27,8 +27,14 @@
 ; segmentation, set kstatus = 1 when a transient occurs, 
 ; keep status = 1 until level drops 6dB below the level at which the transient was detected
 ; and keep status = 1 for a release time period after the level has dropped below the threshold
-	iStatusThresh	= 9				; status release threshold, signal must drop this much below transient level before we say that the audio segment is finished
-	iStatusRel	= 0.9				; status release time, hold status=1 for this long after signal has dropped below threshold
+	iStatusThresh	= 9					; status release threshold, signal must drop this much below transient level before we say that the audio segment is finished
+	iStatusRel	= 0.2					; status release time, hold status=1 for this long after signal has dropped below threshold
+;	iDecResponse	= 100					; decay rate analysis response time
+;	krms1F		tonek krms1, 5
+;	krms1F_dB	= ampdbfs(krms1F)
+;	krms1F_dBdel	delayk	krms1F_dB, iDecResponse/1000	; delay with response time for comparision of levels
+;	kDecayRate_dB	limit krms1F_dBdel-krms1F_dB, 0, 1		; decay rate  ...
+;	kStatusRel2	= (kDecayRate_dB < .01 ? (.01-kDecayRate_dB)*5 : 1/kr) ; prolong status release when decay rate is very slow
 	kstate		init 0
 	kstate		= (ktrig1 > 0 ? 1 : kstate)
 	ksegStart	trigger kstate, 0.5, 0
@@ -40,8 +46,15 @@
 	reinit releaseState
 	endif
 releaseState:
-	kreleaseFlag	line 1, iStatusRel, 0
+	kreleaseFlag	linseg 1, iStatusRel, 0, .1, 0
+	kreleaseFlagT	trigger kreleaseFlag, 0.02, 1		; trig when release ends
 rireturn
+;	if kreleaseFlagT > 0 then 
+;	reinit release2
+;	endif
+;release2:
+;	kreleaseFlag2	linseg 1, i(kStatusRel2), 0, .1, 0
+;rireturn
 	kstate_Rel	= ((kstate == 0) && (kreleaseFlag < 0.01)? 0 : 1)
 	kstatus		= kstate_Rel
 	kstatusTrigOn	trigger kstatus, 0.5, 0
@@ -194,7 +207,9 @@ endif
 
 	kcps1, kamp1 	ptrack a1, ihopsize
 
-;	kcps1		samphold kcps1, kgate
+	kcps1		samphold kcps1, kgate
+	kcpsRangeGate	= (kcps1 > 600? 0 : 1)
+	kcps1		samphold kcps1, kcpsRangeGate
 	kpgate		= (kcentroid > 7000 ? 0 : 1)
 	kcps1		samphold kcps1, kpgate
 	imedianSize	= 512
@@ -205,10 +220,11 @@ endif
 	kloopq		= 0.3
 	klf		= 50
 	khf		= 1500
-	kthresh		= ampdbfs(-40)
+	kthresh		= ampdbfs(knoiseFloor_dB-8)
 	acps1p, alock1p	plltrack a1, kd, kloopf, kloopq, klf, khf, kthresh 
 	kcps1p		downsamp acps1p
-	imedianSize	= 200
+	;kcps1p		samphold kcps1p, kgate
+	imedianSize	= 20
 	kcps1p		mediank	kcps1p, imedianSize, imedianSize
 
 ; ***************

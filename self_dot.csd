@@ -1,7 +1,7 @@
 <CsoundSynthesizer>
 <CsOptions>
 ;-odac1 -iadc0 
--odac18 -iadc20
+;-odac18 -iadc20
 ; -iadc -d
 </CsOptions>
 
@@ -50,9 +50,9 @@
 	instr 3
 
 	Ssound	strget p4
-	Spath	="testsounds/"
-	S1	strcat Spath, Ssound
-	a1	soundin S1
+;	Spath	="testsounds/"
+;	S1	strcat Spath, Ssound
+	a1	soundin Ssound
 	a2	= 0
 		outs a1, a2
 		chnmix a1, "in1"
@@ -104,7 +104,8 @@
 ;******************************
 ; set audio input noise gate
 	instr 16
-	irms		chnget "inputNoisefloor"
+	irms_dB		chnget "inputNoisefloor"
+	irms		= ampdbfs(irms_dB)
 	isize		= 8192
 	iknee		= isize*0.1
 	giNoiseFloor	ftgen 0, 0, isize, 7, 0, (isize*irms), 0, iknee, 1, (isize*(1-irms))-iknee, 1
@@ -175,9 +176,53 @@
 			chnset kepochRms, "epochRms1"
 			chnset kepochZCcps, "epochZCcps1"
 
+			chnset krms1gated, "level1gated"
+
 	kinputMonitor	chnget "inputMonitor"
 			chnmix a1*kinputMonitor, "MasterOut1"
 			chnmix a1*kinputMonitor, "MasterOut2"
+
+; *** test write analysis output
+iwritetest	= 0
+if iwritetest > 0 then
+	astatus		upsamp	kstatus
+	astatusTrig	upsamp	kstatusTrig
+	atrig1		upsamp	ktrig1
+	arms1gated	upsamp	krms1gated*2.5
+	arms1		upsamp	krms1*2.5
+	acps1		upsamp	kcps1/500
+	acps1p		upsamp	kcps1p/500
+	aautocorr	upsamp	kautocorr
+	acentroid	upsamp	kcentroid/15000
+	aspread		upsamp	kspread/1200
+	askewness	upsamp	kskewness/2000
+	aurtosisM	upsamp	kurtosisM/1000000
+	aflatness	upsamp	kflatness/500
+	acrest		upsamp	kcrest/100
+	aflux		upsamp	kflux
+	aepochSig	upsamp	kepochSig*2
+	aepochRms	upsamp	kepochRms*3.5
+	aepochZCcps	upsamp	kepochZCcps/500
+
+	fout "../analysis_test.wav", 14, a1, atrig1, \
+					astatus,\
+					astatusTrig,\
+					arms1gated,\
+					arms1,\
+					acps1,\
+					acps1p,\
+					aautocorr,\
+					acentroid,\
+					aspread,\
+					askewness,\
+					aurtosisM,\
+					aflatness,\
+					acrest,\
+					aflux,\
+					aepochSig,\
+					aepochRms,\
+					aepochZCcps
+endif
 
 	endin
 
@@ -186,18 +231,95 @@
 ; get spectral profile from sound file, 
 ; to use as amp or freq data for selfvoice spectral synth
 	instr 42
-	Ssound	strget p4
-	Spath	="testsounds/"
-	S1	strcat Spath, Ssound
-	a1	soundin S1
-	a2	= 0
+	Ssound		strget p4
+	Spath		= "testsounds/"
+	S1		strcat Spath, Ssound
+	a1		soundin S1
+	a2		= 0
 
-	ifna	= gifnaResyn
-	ifnf	= gifnfResyn
+	ifna		= gifnaResyn
+	ifnf		= gifnfResyn
 #include "audio_analyze.inc"
 
-		outs a1, a2
+			outs a1, a2
 	endin
+
+; ******************************
+; map channels to channels, with scaling
+; use for testing how the different input parameters affect the sound directly (not going through the NN)
+
+; ADD: mapping types (log2, powoftwo, sqrt), and then postScale and postOffset
+
+	instr 44
+	Sin		strget p4
+	Sout		strget p5
+	iscale		= p6
+	ioffset		= p7
+	kval		chnget Sin
+	kval		= (kval*iscale)+ioffset
+			chnset kval, Sout
+	endin 
+
+; ******************************
+; mapping macro
+	instr 45
+	imapInstr 	= 44
+	ionoff		= p4
+	Smap		strget p5
+	inoiseband	strcmp Smap, "noiseband" 
+	ipartikkel	strcmp Smap, "partikkel" 
+	ispectral	strcmp Smap, "spectral" 
+	print inoiseband, ipartikkel, ispectral	
+
+	ktrig		init 1
+
+	if inoiseband == 0 then
+	Sline sprintfk {{
+	i %f 0 %i "level1"    "respondLevel1"     1   0
+	i %f 0 %i "pitch1pll" "respondPitch1pll"  1   0
+	i %f 0 %i "centroid1" "respondCentroid1"  1   0
+	}}, (imapInstr+0.1)*ionoff, -1*ionoff, (imapInstr+0.2)*ionoff, -1*ionoff, (imapInstr+0.3)*ionoff, -1*ionoff
+	puts Sline, ktrig
+	scoreline Sline, ktrig
+	ktrig 		= 0
+	endif
+
+	if ipartikkel == 0 then
+	Sline sprintfk {{
+	i %f 0 %i "level1"       "partikkel1_amp"   	1   0
+	i %f 0 %i "pitch1ptrack" "partikkel1_grainrate" 1   0
+	i %f 0 %i "centroid1"    "partikkel1_wavfreq"  	1   0
+	i %f 0 %i "autocorr1"    "partikkel1_graindur" 	1   0.1
+	}}, (imapInstr+0.1)*ionoff, -1*ionoff, (imapInstr+0.2)*ionoff, -1*ionoff, (imapInstr+0.3)*ionoff, -1*ionoff, (imapInstr+0.4)*ionoff, -1*ionoff
+	puts Sline, ktrig
+	scoreline Sline, ktrig
+	ktrig 		= 0
+	endif
+
+	if ispectral == 0 then
+	kflag chnget "pvsinflag"
+	tablecopy gifnaResyn,gifna
+	tablecopy gifnfResyn,gifnf
+	endif
+
+/*          cSet("respondLevel1", sound[0])
+            cSet("respondPitch1ptrack", sound[1])
+            cSet("respondPitch1pll", sound[2])
+            cSet("respondCentroid1", sound[4])
+            # test partikkel generator
+            cSet("partikkel1_amp", sound[0])
+            cSet("partikkel1_grainrate", sound[1])
+            cSet("partikkel1_wavfreq", sound[4])
+            cSet("partikkel1_graindur", sound[3]+0.1)
+
+            mic.append([cGet("level1"), 
+                        cGet("pitch1ptrack"), 
+                        cGet("pitch1pll"), 
+                        cGet("autocorr1"), 
+                        cGet("centroid1"),
+*/
+	endin
+	
 
 ; ************************************************************
 ; resynthesis/imitation
@@ -323,18 +445,21 @@
 
 <CsScore>
 ; run for N sec
-;i3 	0 86400				; audio file input
-i4 	0 86400				; audio input
-i11 	0 86400				; merge left and right input
+#define SCORELEN # 86400 #
+
+;#include "testscore.inc"
+
+i4 	0 $SCORELEN			; audio input
+i11 	0 $SCORELEN			; merge left and right input
 i21 	0 .1 1				; initialize input level
-i22 	0 .1 "inputNoisefloor" -30	; initialize noise floor
-i31 	0 86400				; analysis
+i22 	0 .1 "inputNoisefloor" -20	; initialize noise floor
+i31 	0 $SCORELEN			; analysis
 ;i51 	0 -1				; subtractive harmonic resynthesis
 i52 	0 -1				; partikkel resynthesis
 ;i53 	3 -1				; fft resynthesis
-;i98 	0 86400				; analysis of own output
-;i80 	0 86400				; test print for contents of fft tables
-i99 	0 86400				; master out
+;i98 	0 $SCORELEN			; analysis of own output
+;i80 	0 $SCORELEN			; test print for contents of fft tables
+i99 	0 $SCORELEN			; master out
 
 </CsScore>
 

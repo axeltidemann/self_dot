@@ -60,6 +60,9 @@ class Controller:
             if 'csinstr' in message:
                 self.state['csinstr'] = message[8:]
              
+            if 'zerochannels' in message:
+                self.state['zerochannels'] = message[13:]
+
             if 'playfile' in message:
                 self.state['playfile'] = message[9:]
 
@@ -99,6 +102,7 @@ if __name__ == '__main__':
                           'inputLevel': False, 
                           'calibrateAudio': False, 
                           'csinstr': False, 
+                          'zerochannels': False, 
                           'playfile': False, 
                           'selfvoice':False,
                           'save': False, 
