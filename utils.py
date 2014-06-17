@@ -1,4 +1,3 @@
-from multiprocessing.managers import SyncManager
 from collections import deque
 import time
 import os

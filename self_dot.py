@@ -9,6 +9,7 @@
 '''
 
 import multiprocessing as mp
+from multiprocessing.managers import SyncManager
 
 from AI import learn
 from IO import audio, video, load_cns
@@ -122,7 +123,7 @@ if __name__ == '__main__':
         pass
     
     ServerManager.register('get_state', state)
-    server_manager = ServerManager(address=('', 7777), authkey='tullball')
+    server_manager = ServerManager(address=('', 8888), authkey='tullball')
     server_manager.start()
 
     try:
