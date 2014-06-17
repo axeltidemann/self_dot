@@ -183,7 +183,7 @@
 			chnmix a1*kinputMonitor, "MasterOut2"
 
 ; *** test write analysis output
-iwritetest	= 1
+iwritetest	= 0
 if iwritetest > 0 then
 	astatus		upsamp	kstatus
 	astatusTrig	upsamp	kstatusTrig
@@ -452,7 +452,7 @@ endif
 i4 	0 $SCORELEN			; audio input
 i11 	0 $SCORELEN			; merge left and right input
 i21 	0 .1 1				; initialize input level
-i22 	0 .1 "inputNoisefloor" -30	; initialize noise floor
+i22 	0 .1 "inputNoisefloor" -20	; initialize noise floor
 i31 	0 $SCORELEN			; analysis
 ;i51 	0 -1				; subtractive harmonic resynthesis
 i52 	0 -1				; partikkel resynthesis
