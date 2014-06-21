@@ -90,13 +90,13 @@ if __name__ == '__main__':
         
     LocalManager.register('deque', MyDeque)
 
-    manager = LocalManager(address=('', 8888), authkey='tullball')
+    manager = LocalManager()
     manager.start()
 
-    mic = manager.deque()
-    speaker = manager.deque()
-    camera = manager.deque()
-    projector = manager.deque()
+    mic = manager.deque(maxlen=3400) # 10 seconds ~ 80MB
+    speaker = manager.deque(maxlen=3400)
+    camera = manager.deque(maxlen=80)
+    projector = manager.deque(maxlen=80)
 
     state = manager.dict({'record': False,
                           'learn': False,
@@ -123,8 +123,12 @@ if __name__ == '__main__':
         pass
     
     ServerManager.register('get_state', callable=lambda: state)
+    ServerManager.register('get_mic', callable=lambda: mic)
+    ServerManager.register('get_speaker', callable=lambda: speaker)
+    ServerManager.register('get_camera', callable=lambda: camera)
     ServerManager.register('get_projector', callable=lambda: projector)
-    server_manager = ServerManager(address=('', 8888), authkey='tullball')
+
+    server_manager = ServerManager(address=('', 8888), authkey='messi')
     server_manager.start()
 
     try:

@@ -1,5 +1,6 @@
 import sys
 from multiprocessing.managers import SyncManager
+import uuid
 
 import numpy as np
 
@@ -10,21 +11,26 @@ if __name__ == '__main__':
         pass
 
     RemoteManager.register('get_state')
+    RemoteManager.register('get_mic')
+    RemoteManager.register('get_speaker')
+    RemoteManager.register('get_camera')
     RemoteManager.register('get_projector')
     manager = RemoteManager(address=(sys.argv[1], int(sys.argv[2])), authkey=sys.argv[3])
     manager.connect()
 
-    remote_state = manager.get_state()
-    remote_projector = manager.get_projector()
+    state = manager.get_state()
+    mic = manager.get_mic()
+    speaker = manager.get_speaker()
+    camera = manager.get_camera()
+    projector = manager.get_projector()
 
-    print 'Client started'
+    name = str(uuid.uuid1())
 
-    i = 0
+    print 'Client {} started'.format(name)
+
     while sleep(.1):
-        i+=1
-        Z = np.zeros(160*90)
-        Z[i] = 1
-        remote_projector.append(Z)
-        if i == 160*90:
-            i = 0
-        
+        audio = mic.latest(name)
+        video = camera.latest(name)
+        print audio.shape if len(audio) else audio, video.shape if len(video) else video
+        for frame in video:
+            projector.append(frame)
