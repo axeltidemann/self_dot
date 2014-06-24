@@ -1,8 +1,16 @@
+from multiprocessing.managers import SyncManager
+
 from collections import deque
 import time
 import os
 
 import numpy as np
+
+class LocalManager(SyncManager):
+    pass
+        
+class ServerManager(SyncManager):
+    pass
 
 class MyDeque(deque):
     def __init__(self, *args, **kwargs):

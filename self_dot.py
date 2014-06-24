@@ -9,12 +9,11 @@
 '''
 
 import multiprocessing as mp
-from multiprocessing.managers import SyncManager
 
 from AI import learn
 from IO import audio, video, load_cns
 from communication import receive as receive_messages
-from utils import MyDeque, reset_rmses, find_winner
+from utils import MyDeque, reset_rmses, find_winner, LocalManager, ServerManager
        
 class Controller:
     def __init__(self, state, mic, speaker, camera, projector):
@@ -85,9 +84,6 @@ if __name__ == '__main__':
     me = mp.current_process()
     print me.name, 'PID', me.pid
 
-    class LocalManager(SyncManager):
-        pass
-        
     LocalManager.register('deque', MyDeque)
 
     manager = LocalManager()
@@ -118,9 +114,6 @@ if __name__ == '__main__':
     mp.Process(target=audio, args=(state, mic, speaker,)).start() 
     mp.Process(target=video, args=(state, camera, projector)).start()
     mp.Process(target=receive_messages, args=(controller.parse,)).start()
-    
-    class ServerManager(SyncManager):
-        pass
     
     ServerManager.register('get_state', callable=lambda: state)
     ServerManager.register('get_mic', callable=lambda: mic)
