@@ -16,14 +16,8 @@
 #include "udos.inc"
 
 ;******************************
-; init chn values 
-	instr 1
-#include "chn_init.inc"
-        endin
-
-;******************************
 ; audio input and housekeeping
-; instruments 3-29 
+; instruments 1-29 
 #include "input_housekeep.inc"
 
 ; ******************************

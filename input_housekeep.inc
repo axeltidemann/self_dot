@@ -1,4 +1,10 @@
 ;******************************
+; init chn values 
+	instr 1
+#include "chn_init.inc"
+        endin
+
+;******************************
 ; audio file input 
 	instr 3
 
@@ -21,12 +27,10 @@
 	endin
 
 ;******************************
-; TODO
-; 11 find stereo position and merge mic 1 and 2
+; find stereo position and merge mic 1 and 2
 	instr 11
-	a1	chnget "in1"
-	a2	chnget "in2"
-		chnset a1+a2, "in1"
+#include "panalyzer.inc"
+		chnset aLeft+aRight, "in1"
 	endin
 
 ;******************************

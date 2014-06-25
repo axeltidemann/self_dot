@@ -29,3 +29,18 @@
 	giExpFall	ftgen	0, 0, 8193, 5, 1, 8193, 0.00001				; exponential decay
 	giTriangleWin 	ftgen	0, 0, 8193, 7, 0, 4096, 1, 4096, 0			; triangular window 
 
+; panalyzer tables
+	giPanalyzeTemp0		ftgen	0, 0, 1024, 2, 0	; empty buffer
+	giPanalyzeTemp1		ftgen	0, 0, 1024, 2, 0	; empty buffer
+	giPanalyzeTemp2		ftgen	0, 0, 1024, 2, 0	; empty buffer
+	giPanalyzeTemp3		ftgen	0, 0, 1024, 2, 0	; empty buffer
+	giPanalyzeTemp4		ftgen	0, 0, 1024, 2, 0	; empty buffer
+	giPanalyzeTemp5		ftgen	0, 0, 1024, 2, 0	; empty buffer
+	giPanalyzeTemp6		ftgen	0, 0, 1024, 2, 0	; empty buffer
+	giPanalyzeTemp7		ftgen	0, 0, 1024, 2, 0	; empty buffer
+	giPanalyzeTemp8		ftgen	0, 0, 1024, 2, 0	; empty buffer
+	giPanalyzeTemp9		ftgen	0, 0, 1024, 2, 0	; empty buffer
+	giPanalyzeTemp10	ftgen	0, 0, 1024, 2, 0	; empty buffer
+	giPanalyzeTempRef	ftgen	0, 0, 1024, 2, 0	; empty buffer
+
+	gkPanalyzeArr[]		init 11

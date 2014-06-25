@@ -1,6 +1,12 @@
-; partikkel instr 
-	instr 71
+; ******************************
+; straight playback of audio segments
+        instr 71
+; FIXME
+        endin
 
+; ******************************
+; partikkel instr 
+	instr 72
 #include "partikkel2_chn.inc"
 #include "partikkel2_self.inc"
 			chnmix aDry, "SecondaryDry"
@@ -8,6 +14,13 @@
 			chnmix aReverbSend, "SecondaryReverbSend"
 	endin
 
+; ******************************
+; spectral synth playback of audio segments
+        instr 73
+; FIXME
+        endin
+
+; ******************************
 ; delay for secondary assoc 
 	instr 77
 	a1              chnget "SecondaryDelaySend"
@@ -26,6 +39,7 @@
 			chnmix aout, "SecondaryDry"
 	endin
 
+; ******************************
 ; reverb for secondary assoc 
 	instr 78
 	a1              chnget "SecondaryReverbSend"
@@ -37,6 +51,7 @@
 			chnmix aout, "SecondaryDry"
 	endin
 
+; ******************************
 ; mixer for secondary assoc 
 	instr 79
 	klevel          chnget "SecondaryMasterLevel"
