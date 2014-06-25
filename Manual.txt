@@ -43,6 +43,9 @@ This can be done with
 communication.py csinstr i 22 0 1 \"inputMonitor\" 0.2
 The last value (here 0.2) represent the desired monitor level.
 
+Pan positiion analysis of audio input
+The stereo position if input sound is analyzed. It requires a stereo microphone setup of 2 omni microphones with a Jecklin disk or other kind of acoustical separation. Distance between the microphones is assumed to be 20 cm. Pan position output is written to two chn channels: "inputPosition_idt" and "inputPosition_rms", each representing the output of two different methods of analysis (Inter aural time delay, and RMS level difference).
+
 Map audio analysis directly to synthesis
 This can be done with the mapping instruments 44 and 45. Instr 45 contains macros to map a set of parameters, while instr 44 provides mapping of single parameters ffor a more explorative approach. 
 Instr 45 is called with a keyword to select the macro appplied, e.g.:
