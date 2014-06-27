@@ -24,8 +24,7 @@ def video(state, camera, projector):
         frame = cv2.resize(frame, frame_size)
         gray_image = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
-        if state['record']:
-            camera.append(np.ndarray.flatten(gray_image)/255.)
+        camera.append(np.ndarray.flatten(gray_image)/255.)
 
         try:
             cv2.imshow('Output', cv2.resize(np.reshape(projector.popleft(),
@@ -162,21 +161,20 @@ def audio(state, mic, speaker):
             cs.InputMessage('i3 0 5 "%s"'%'{}'.format(state['playfile']))
             state['playfile'] = False
 
-        if state['record']:
-            mic.append([cGet("level1"), 
-                        cGet("pitch1ptrack"), 
-                        cGet("pitch1pll"), 
-                        cGet("autocorr1"), 
-                        cGet("centroid1"),
-                        cGet("spread1"), 
-                        cGet("skewness1"), 
-                        cGet("kurtosis1"), 
-                        cGet("flatness1"), 
-                        cGet("crest1"), 
-                        cGet("flux1"), 
-                        cGet("epochSig1"), 
-                        cGet("epochRms1"), 
-                        cGet("epochZCcps1")] + fftin_amplist + fftin_freqlist)
+        mic.append([cGet("level1"), 
+                    cGet("pitch1ptrack"), 
+                    cGet("pitch1pll"), 
+                    cGet("autocorr1"), 
+                    cGet("centroid1"),
+                    cGet("spread1"), 
+                    cGet("skewness1"), 
+                    cGet("kurtosis1"), 
+                    cGet("flatness1"), 
+                    cGet("crest1"), 
+                    cGet("flux1"), 
+                    cGet("epochSig1"), 
+                    cGet("epochRms1"), 
+                    cGet("epochZCcps1")] + fftin_amplist + fftin_freqlist)
 
         try:
             sound = speaker.popleft()
