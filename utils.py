@@ -1,46 +1,38 @@
+from multiprocessing.managers import SyncManager
 from collections import deque
 import time
 import os
 
 import numpy as np
 
+class MyManager(SyncManager):
+    pass
+
 class MyDeque(deque):
     def __init__(self, *args, **kwargs):
         deque.__init__(self, *args, **kwargs)
-        self.i = np.zeros(0, dtype=np.int)
-        self.markers = dict()
+        self.i = dict()
+        self.i['mark'] = 0
     
     def array(self):
         return np.array(list(self))
 
     def latest(self, key):
-        if key not in self.markers:
-            self.set_mark(key)
-            return np.zeros(0)
-        elif self.i[self.markers[key]] < -1:
-            data = self.array()
-            data = data[self.i[self.markers[key]]:]
-            self.i[self.markers[key]] = 0        
-            return data
-        return np.zeros(0)
-
-    def append(self, x):
-        self.i -= 1
-        deque.append(self, x)
+        data = self.array()
+        old_i = self.i[key] if key in self.i else 0
+        self.i[key] = len(data)
+        return data[old_i:]
 
     def clear(self):
-        self.i *= 0
+        for key in self.i.keys():
+            self.i[key] = 0
+        deque.clear(self)
+        
+    def set_mark(self):
+        self.i['mark'] = len(self)
 
-    def set_mark(self, key):
-        if key not in self.markers:
-            self.markers[key] = len(self.i)
-            self.i = np.concatenate((self.i, np.zeros(1, dtype=np.int)))
-        else:
-            self.i[self.markers[key]] = 0
-
-    def get_marked_segment(self, start, stop):
-        data = self.array()
-        return data[self.i[self.markers[start]]:self.i[self.markers[stop]]]
+    def get_mark(self):
+        return self.i['mark']
 
     
 def signal_rmse(net, scaler, signals):
