@@ -1,7 +1,80 @@
 ; ******************************
 ; read audio segments from memoryRecording
         instr 70
-; use pyexec and ._CSOUND_
+        ; use python and ._CSOUND_ to get the file names and initiate events of instr 71
+        pyruni {{
+import os
+import csnd6
+import random
+
+csInstance = csnd6.csoundGetInstance(_CSOUND_)
+memoryPath = '../memoryRecording/'
+files = os.listdir(memoryPath)
+
+def getBasenames():
+    wavfiles = []
+    txtfiles = []
+    basenames = []
+    # find wav and txt files
+    for f in files:
+        if (f.find('.wav') > -1):
+            wavfiles.append(f)
+        if (f.find('.txt') > -1):
+            txtfiles.append(f)        
+    # find base names for files that exist both with wav and txt extension
+    for f in wavfiles:
+        basename = f.split(".wav")[0]
+        for t in txtfiles:
+            if basename in t:
+                basenames.append(basename)
+    return basenames
+
+def parseMarkerfile(basename):
+    f = file(basename+".txt", 'r')
+    markers = ''
+    for line in f:
+        try:
+            num = float(line)
+            markers += str(num)+' '
+        except:
+            pass    
+        if "Total duration" in line:
+            totaldur = float(line[15:])
+    return markers, totaldur
+
+def loadAudioAndMarkers(basename):
+    markers, totaldur = parseMarkerfile(memoryPath+basename)
+    csnd6.csoundInputMessage(csInstance, 'i 71 0 .1 \"%s.wav\" \"%s\" %f'%(memoryPath+basename, markers, totaldur))
+    print 'cs event sent:', 'i 71 0 .1 \"%s.wav\" \"%s\" %f'%(basename, markers, totaldur)
+
+def loadRandomFromMemory():
+    loadAudioAndMarkers(random.choice(getBasenames()))
+
+loadRandomFromMemory()
+}}
+        endin
+
+        instr 71
+; load sound file and corresonding transient markers
+        Swavname        strget p4
+        iSound          ftgen 0, 0, 0, 1, Swavname, 0, 0, 0
+
+        Smarkers        strget p5
+        iTotdur         = p6
+        iMarkers        ftgen 0, 0, 1024, 7, -1, 1024, -1 ; we can use -1 as eof, the first address not explicitly set will now contain -1
+                        tableiw  iTotdur, 0, iMarkers
+        index           = 1
+        parseMarkers:
+        ipos            strindex Smarkers, " "
+        Snum            strsub Smarkers, 0, ipos
+        Smarkers        strsub  Smarkers, ipos+1, -1        
+        inum            strtod Snum
+                        tableiw  inum, index, iMarkers
+        index           += 1
+        ilen            strlen Smarkers
+        if ilen > 1 then
+        igoto parseMarkers
+        endif
 
         endin
 
