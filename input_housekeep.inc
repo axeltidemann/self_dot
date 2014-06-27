@@ -1,9 +1,15 @@
 ;******************************
+; exit from Csound
+        instr 9999
+        exitnow
+        endin
+
+;******************************
 ; init chn values 
 	instr 1
 #include "chn_init.inc"
         endin
-
+        
 ;******************************
 ; audio file input 
 	instr 3

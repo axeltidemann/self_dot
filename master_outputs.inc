@@ -33,10 +33,13 @@
 
 	a1	chnget "MasterOut1"
 	a2	chnget "MasterOut2"
-	a0	= 0
 		outs a1, a2
 		chnset (a1+a2)*0.5, "MyOutput"
+
+	a0	= 0
 		chnset a0, "MasterOut1"
 		chnset a0, "MasterOut2"
+		chnset a0, "in1"
+		chnset a0, "in2"
 
 	endin

@@ -28,7 +28,7 @@
 ; keep status = 1 until level drops 6dB below the level at which the transient was detected
 ; and keep status = 1 for a release time period after the level has dropped below the threshold
 	iStatusThresh	= 9					; status release threshold, signal must drop this much below transient level before we say that the audio segment is finished
-	iStatusRel	= 0.2					; status release time, hold status=1 for this long after signal has dropped below threshold
+	iStatusRel	= 0.8;0.2					; status release time, hold status=1 for this long after signal has dropped below threshold
 ;	iDecResponse	= 100					; decay rate analysis response time
 ;	krms1F		tonek krms1, 5
 ;	krms1F_dB	= ampdbfs(krms1F)

@@ -12,6 +12,8 @@
 	nchnls = 2	
 	0dbfs = 1
 
+        pyinit          ; we will call Python from Csound
+
 #include "ftables.inc"
 #include "udos.inc"
 
@@ -21,9 +23,10 @@
 #include "input_housekeep.inc"
 
 ; ******************************
-; instr 31 -
-; input analysis
+; instr 31 - 35
+; input analysis and recording
 #include "input_analyze.inc"
+#include "input_recording.inc"
 
 ; ******************************
 ; instr 41-49
@@ -36,7 +39,7 @@
 #include "synth_primary.inc"
 
 ; ******************************
-; instr 71-79
+; instr 70-79
 ; Playback of secondary associations / memory images of heard sounds
 #include "synth_secondary.inc"
 
@@ -58,12 +61,16 @@ i4 	0 $SCORELEN			; audio input
 i11 	0 $SCORELEN			; merge left and right input
 i21 	0 .1 1				; initialize input level
 i22 	0 .1 "inputNoisefloor" -20	; initialize noise floor
+i22 	0 .1 "memoryRecording" 1	; enable/disable recording of audio memory
 i31 	0 $SCORELEN			; analysis
 ;i51 	0 -1				; subtractive harmonic resynthesis
 i52 	0 -1				; partikkel resynthesis
 ;i53 	3 -1				; fft resynthesis
 ;i98 	0 $SCORELEN			; analysis of own output
 i99 	0 $SCORELEN			; master out
+
+; test
+;i2      4 1                             ; exit Csound
 
 </CsScore>
 

@@ -1,12 +1,19 @@
 ; ******************************
+; read audio segments from memoryRecording
+        instr 70
+; use pyexec and ._CSOUND_
+
+        endin
+
+; ******************************
 ; straight playback of audio segments
-        instr 71
+        instr 73
 ; FIXME
         endin
 
 ; ******************************
 ; partikkel instr 
-	instr 72
+	instr 74
 #include "partikkel2_chn.inc"
 #include "partikkel2_self.inc"
 			chnmix aDry, "SecondaryDry"
@@ -16,7 +23,7 @@
 
 ; ******************************
 ; spectral synth playback of audio segments
-        instr 73
+        instr 75
 ; FIXME
         endin
 

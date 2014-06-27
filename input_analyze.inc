@@ -5,9 +5,6 @@
 	a1		chnget "in1"
 	kinlevel	chnget "inputLevel"
 	a1		= a1*kinlevel
-	a0		= 0
-			chnset a0, "in1"
-			chnset a0, "in2"
 	ifna		= gifna
 	ifnf		= gifnf
 #include "audio_analyze.inc"
@@ -37,8 +34,15 @@
 			chnset kepochRms, "epochRms1"
 			chnset kepochZCcps, "epochZCcps1"
 
+
+        ; for internal use
 			chnset krms1gated, "level1gated"
 
+        ; send audio to memory recording
+	arec            delay a1, 0.02  ; delay to sync with transient detection (and then add some to capture a bit of potential soft starts like 'h')
+                        chnset arec, "rec_in1"
+                        
+        ; enable by setting kinputMonitor if we want to monitor the input signal
 	kinputMonitor	chnget "inputMonitor"
 			chnmix a1*kinputMonitor, "MasterOut1"
 			chnmix a1*kinputMonitor, "MasterOut2"
