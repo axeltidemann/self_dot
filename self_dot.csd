@@ -55,7 +55,7 @@
 #define SCORELEN # 86400 #
 
 ;#include "testscore.inc"
-/*
+
 i1 	0 .1			        ; init chn values
 i4 	0 $SCORELEN			; audio input
 i11 	0 $SCORELEN			; merge left and right input
@@ -71,8 +71,7 @@ i99 	0 $SCORELEN			; master out
 
 ; test
 ;i2      4 1                             ; exit Csound
-*/
-i 70 1 1
+;i 70    1 1                             ; test read random segment from memoryRecording       
 </CsScore>
 
 </CsoundSynthesizer>
