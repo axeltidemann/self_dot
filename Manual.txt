@@ -43,6 +43,13 @@ This can be done with
 communication.py csinstr i 22 0 1 \"inputMonitor\" 0.2
 The last value (here 0.2) represent the desired monitor level.
 
+Pan position analysis of audio input
+The stereo position if input sound is analyzed. It requires a stereo microphone setup of 2 omni microphones with a Jecklin disk or other kind of acoustical separation. Distance between the microphones is assumed to be 20 cm. Pan position output is written to two chn channels: "inputPosition_idt" and "inputPosition_rms", each representing the output of two different methods of analysis (Inter aural time delay, and RMS level difference).
+
+Exit from Csound
+We are using Python from within Csound, this may cause problems with termination via Ctrl+C on some platforms since the Python interpreter in Csound does not receiv e the exit signal. To alleviate this, we use an instrument containing the exitnow opcode, terminating Csound when the instrument is called. This resides in instrument 9999. This can be called from communication.py like this:
+communication.py csinstr i 9999 0 1
+
 Map audio analysis directly to synthesis
 This can be done with the mapping instruments 44 and 45. Instr 45 contains macros to map a set of parameters, while instr 44 provides mapping of single parameters ffor a more explorative approach. 
 Instr 45 is called with a keyword to select the macro appplied, e.g.:
@@ -66,6 +73,12 @@ To enable playback of these, modify "testscore.inc" to reflect the path to the s
 in the file "self_dot.csd
 (semicolon is comment in Csound)
 
+Recording of learned audio input
+Recording should be active at all times under normal running conditions. Still it is not enabled by default during the development process.
+Two commands are needed to enable recording:
+python communication.py csinstr i 22 0 1 \"memoryRecording\" 1
+python communication.py csinstr i 33 0 -1
+The setup may be refined later. Probably, instr 33 could be always on.
 
 ** Learnrespond contains timed macros for certain communication events
 python learnrespond.py [time, mode, file]

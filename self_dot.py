@@ -9,7 +9,6 @@
 '''
 
 import multiprocessing as mp
-
 import zmq
 from zmq.utils.jsonapi import dumps
 
@@ -91,9 +90,7 @@ class Controller:
                 self.event.send_json({ 'learn': winner })
 
             if message == 'respond':
-                # Find the one with lowest RMSE
                 self.event.send_json({ 'rmse': True })
-                #self.event.send_json({ 'respond': True })
 
             if message == 'setmarker':
                 print 'EVALUATE USAGE OF THESE'
@@ -136,35 +133,17 @@ class Controller:
             print e
 
 if __name__ == '__main__':
-    # 10 seconds: 3400 sound, 80 audio
 
-    # init_state = {'record': False,
-    #               'learn': False,
-    #               'respond': False,
-    #               'autolearn': False,
-    #               'autorespond': False,
-    #               'inputLevel': False, 
-    #               'calibrateAudio': False, 
-    #               'csinstr': False, 
-    #               'zerochannels': False, 
-    #               'playfile': False, 
-    #               'selfvoice':False,
-    #               'save': False, 
-    #               'load': False,
-    #               'brains': {},
-    #               'reset': False, }
-
-    init_state = {'autolearn': False,
-                  'autorespond': False,
-                  'brains': {},
-                  'nets': [],
-                  'RMSEs': {},
-                  'record': False,
-                  }
+    persistent_states = {'autolearn': False,
+                         'autorespond': False,
+                         'brains': {},
+                         'nets': [],
+                         'RMSEs': {},
+                         'record': False,}
 
     mp.Process(target=audio, name='AUDIO').start() 
     mp.Process(target=video, name='VIDEO').start()
-    mp.Process(target=Controller, args=(init_state,), name='CONTROLLER').start()
+    mp.Process(target=Controller, args=(persistent_states,), name='CONTROLLER').start()
 
     try:
         raw_input('')
