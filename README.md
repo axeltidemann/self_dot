@@ -40,7 +40,11 @@ Csound: http://www.csounds.com
 
 OpenMPI: http://www.open-mpi.org/
 
-Now you can install mpi4py, so you can use MPI with python. This cannot be done with pip (although it is supported), so you must download the mpi4py source and configure it accordingly. In the source folder, edit mpi.cfg so it reads like this:
+Now you can install mpi4py, so you can use MPI with python. It should be enough to put mpicc on your path, then do 
+
+> pip install mpi4py
+
+If this does not work, download mpi4py, edit mpi.cfg so it reads like this:
 
 ```
 mpicc                = mpicc

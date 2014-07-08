@@ -12,7 +12,9 @@ from utils import signal_rmse, sleep, filesize, send_array, recv_array
 from IO import MIC, SPEAKER, CAMERA, PROJECTOR, STATE, SNAPSHOT, EVENT, EXTERNAL
 
 
-def learn(audio_data, video_data):
+def learn(audio_data, video_data, host):
+
+    # Create recognizer and producer of audio and video, so the logic of this mix can be done in brain.py
     from esn import ACDCESN
     import Oger
     import mdp
@@ -52,10 +54,10 @@ def learn(audio_data, video_data):
     audio_video_net.train(x,y)
 
     print 'in {} seconds'.format(time.time() - start_time)
-    live(audio_net, audio_video_net, scaler)
+    live(audio_net, audio_video_net, scaler, host)
 
     
-def live(audio_net, audio_video_net, scaler):
+def live(audio_net, audio_video_net, scaler, host):
     import Oger
 
     me = mp.current_process()
@@ -63,34 +65,34 @@ def live(audio_net, audio_video_net, scaler):
 
     context = zmq.Context()
     mic = context.socket(zmq.SUB)
-    mic.connect('tcp://localhost:{}'.format(MIC))
+    mic.connect('tcp://{}:{}'.format(host, MIC))
     mic.setsockopt(zmq.SUBSCRIBE, b'')
 
     speaker = context.socket(zmq.PUSH)
-    speaker.connect('tcp://localhost:{}'.format(SPEAKER)) 
+    speaker.connect('tcp://{}:{}'.format(host, SPEAKER)) 
 
     camera = context.socket(zmq.SUB)
-    camera.connect('tcp://localhost:{}'.format(CAMERA))
+    camera.connect('tcp://{}:{}'.format(host, CAMERA))
     camera.setsockopt(zmq.SUBSCRIBE, b'')
 
     projector = context.socket(zmq.PUSH)
-    projector.connect('tcp://localhost:{}'.format(PROJECTOR)) 
+    projector.connect('tcp://{}:{}'.format(host, PROJECTOR)) 
 
     stateQ = context.socket(zmq.SUB)
-    stateQ.connect('tcp://localhost:{}'.format(STATE))
+    stateQ.connect('tcp://{}:{}'.format(host, STATE))
     stateQ.setsockopt(zmq.SUBSCRIBE, b'') 
 
     eventQ = context.socket(zmq.SUB)
-    eventQ.connect('tcp://localhost:{}'.format(EVENT))
+    eventQ.connect('tcp://{}:{}'.format(host, EVENT))
     eventQ.setsockopt(zmq.SUBSCRIBE, b'') 
 
     snapshot = context.socket(zmq.REQ)
-    snapshot.connect('tcp://localhost:{}'.format(SNAPSHOT))
+    snapshot.connect('tcp://{}:{}'.format(host, SNAPSHOT))
     snapshot.send(b'Send me the state, please')
     state = snapshot.recv_json()
 
     sender = context.socket(zmq.PUSH)
-    sender.connect('tcp://localhost:{}'.format(EXTERNAL))
+    sender.connect('tcp://{}:{}'.format(host, EXTERNAL))
     sender.send_json('register {}'.format(me.name))
 
     poller = zmq.Poller()
@@ -100,7 +102,6 @@ def live(audio_net, audio_video_net, scaler):
     poller.register(eventQ, zmq.POLLIN)
 
     error = deque()
-
     previous_prediction = []
     # Approximately 10 seconds of audio/video
     audio = deque(maxlen=3400)
@@ -156,53 +157,6 @@ def live(audio_net, audio_video_net, scaler):
 
                 for row in scaler.inverse_transform(sound):
                     send_array(speaker, row)
-
-        # if state['record']:
-        #     try:
-        #         rmse.append(signal_rmse(audio_net, scaler, mic.latest(me.name)))
-        #         state[me.name] = np.mean(rmse)
-        #         print me.name, 'RMSE', state[me.name]
-        #     except:
-        #         print me.name, 'HICKUP!'
-
-        # if state['respond'] == me.name:
-        #     print me.name, 'chosen to respond'
-        #     audio_data = mic.array()
-        #     video_data = camera.array()
-
-        #     mic.clear()
-        #     camera.clear()
-
-        #     scaled_data = scaler.transform(audio_data)
-        #     sound = audio_net(scaled_data)
-
-        #     stride = audio_data.shape[0]/video_data.shape[0]
-        #     projection = audio_video_net(scaled_data[scaled_data.shape[0] - stride*video_data.shape[0]::stride]) 
-
-        #     # DREAM MODE: You can train a network with zero audio input -> video output, and use this
-        #     # to recreate the original training sequence with scary accuracy...
-
-        #     # Ordering to try to align video/sound 
-        #     for row in projection:
-        #         projector.append(row)
-
-        #     for row in scaler.inverse_transform(sound):
-        #         speaker.append(row)
-
-        #     state['respond'] = False
-            
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

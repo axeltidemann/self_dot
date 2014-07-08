@@ -76,7 +76,7 @@ if __name__ == '__main__':
             pushbutton = eventQ.recv_json()
             if 'learn' in pushbutton and pushbutton['learn'] == name:
                 mp.Process(target=learn, 
-                           args=(np.array(list(audio)), np.array(list(video))),
+                           args=(np.array(list(audio)), np.array(list(video)), host),
                            name='NEURALNETWORK'+str(uuid1())).start()
                 audio.clear()
                 video.clear()
