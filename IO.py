@@ -1,43 +1,87 @@
+#!/usr/bin/python
+# -*- coding: latin-1 -*-
+
 import cPickle as pickle
 import glob
 import multiprocessing as mp
 
 import cv2
 import numpy as np
+import zmq
 
-from utils import sleep, filesize
+from utils import filesize, send_array, recv_array
 import myCsoundAudioOptions
-from AI import live
-from communication import send
 
-def video(state, camera, projector):
+# ØMQ ports
+CAMERA = 5561
+PROJECTOR = 5562
+MIC = 5563
+SPEAKER = 5564
+STATE = 5665
+EXTERNAL = 5666
+SNAPSHOT = 5667
+EVENT = 5668
+
+def video():
     me = mp.current_process()
-    me.name = 'VIDEO'
     print me.name, 'PID', me.pid
 
     cv2.namedWindow('Output', cv2.WINDOW_NORMAL)
     video_feed = cv2.VideoCapture(0)
     frame_size = (160, 90)
+
+    context = zmq.Context()
+    publisher = context.socket(zmq.PUB)
+    publisher.bind('tcp://*:{}'.format(CAMERA))
+
+    subscriber = context.socket(zmq.PULL)
+    subscriber.bind('tcp://*:{}'.format(PROJECTOR))
     
     while True:
         _, frame = video_feed.read()
         frame = cv2.resize(frame, frame_size)
-        gray_image = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        gray_image = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY) / 255.
 
-        camera.append(np.ndarray.flatten(gray_image)/255.)
-
-        try:
-            cv2.imshow('Output', cv2.resize(np.reshape(projector.popleft(),
-                                                       frame_size[::-1]), (640,360)))
+        send_array(publisher, np.ndarray.flatten(gray_image))
+        
+        try: 
+            cv2.imshow('Output', 
+                       cv2.resize(
+                           np.resize(recv_array(subscriber, flags=zmq.DONTWAIT), (90,160)),
+                           (640,360)))
         except:
-            cv2.imshow('Output', np.random.rand(360,640))
+            cv2.imshow('Output', np.random.rand(360, 640))
 
         cv2.waitKey(100)
 
-def audio(state, mic, speaker):
+def audio():
     me = mp.current_process()
-    me.name = 'AUDIO'
     print me.name, 'PID', me.pid
+
+    context = zmq.Context()
+    publisher = context.socket(zmq.PUB)
+    publisher.bind('tcp://*:{}'.format(MIC))
+
+    subscriber = context.socket(zmq.PULL)
+    subscriber.bind('tcp://*:{}'.format(SPEAKER))
+
+    stateQ = context.socket(zmq.SUB)
+    stateQ.connect('tcp://localhost:{}'.format(STATE))
+    stateQ.setsockopt(zmq.SUBSCRIBE, b'') 
+
+    eventQ = context.socket(zmq.SUB)
+    eventQ.connect('tcp://localhost:{}'.format(EVENT))
+    eventQ.setsockopt(zmq.SUBSCRIBE, b'') 
+
+    snapshot = context.socket(zmq.REQ)
+    snapshot.connect('tcp://localhost:{}'.format(SNAPSHOT))
+    snapshot.send(b'Send me the state, please')
+    state = snapshot.recv_json()
+
+    poller = zmq.Poller()
+    poller.register(subscriber, zmq.POLLIN)
+    poller.register(stateQ, zmq.POLLIN)
+    poller.register(eventQ, zmq.POLLIN)
 
     import csnd6
     cs = csnd6.Csound()
@@ -92,6 +136,11 @@ def audio(state, mic, speaker):
         if fftoutFlag:
             fftout_amplist = map(tGet,fftout_amptabs,fftbinindices)
             fftout_freqlist = map(tGet,fftout_freqtabs,fftbinindices)
+
+        events = dict(poller.poll(timeout=0))
+
+        if stateQ in events:
+            state = stateQ.recv_json()
         
         # get Csound channel data
         audioStatus = cGet("audioStatus")
@@ -100,84 +149,79 @@ def audio(state, mic, speaker):
         
         if state['autolearn']:
             if audioStatusTrig > 0:
-                state['record'] = True
+                send('startrec', context)
             if audioStatusTrig < 0:
-                state['record'] = False
-                send('learn')
+                send('stoprec', context)
+                send('learn', context)
 
         if state['autorespond']:
             if audioStatusTrig > 0:
-                state['record'] = True
+                send('startrec', context)
             if audioStatusTrig < 0:
-                state['record'] = False
-                send('respond')
+                send('stoprec', context)
+                send('respond', context) 
 
-        if state['selfvoice']:
-            mode = '{}'.format(state['selfvoice'])
-            if mode in ['partikkel', 'spectral', 'noiseband']:
-                print 'self change voice to...', mode
-                cs.InputMessage('i -51 0 .1')
-                cs.InputMessage('i -52 0 .1')
-                cs.InputMessage('i -53 0 .1')
-                if mode == 'noiseband': cs.InputMessage('i 51 0 -1')
-                if mode == 'partikkel': cs.InputMessage('i 52 0 -1')
-                if mode == 'spectral': cs.InputMessage('i 53 0 -1')
-            else:
-                print 'unknown voice mode', mode
-            state['selfvoice'] = False
-            
-        if state['inputLevel']:
-            mode = '{}'.format(state['inputLevel'])
-            if mode == 'mute': cs.InputMessage('i 21 0 .1 0')
-            if mode == 'unmute': cs.InputMessage('i 21 0 .1 1')
-            if mode == 'reset': 
-                cs.InputMessage('i 21 0 .1 0')
-                cs.InputMessage('i 21 1 .1 1')
-            state['inputLevel'] = False
+        if eventQ in events:
+            pushbutton = eventQ.recv_json()
+            if 'selfvoice' in pushbutton:
+                mode = '{}'.format(pushbutton['selfvoice'])
+                if mode in ['partikkel', 'spectral', 'noiseband']:
+                    print 'self change voice to...', mode
+                    cs.InputMessage('i -51 0 .1')
+                    cs.InputMessage('i -52 0 .1')
+                    cs.InputMessage('i -53 0 .1')
+                    if mode == 'noiseband': cs.InputMessage('i 51 0 -1')
+                    if mode == 'partikkel': cs.InputMessage('i 52 0 -1')
+                    if mode == 'spectral': cs.InputMessage('i 53 0 -1')
+                else:
+                    print 'unknown voice mode', mode
 
-        if state['calibrateAudio']:            
-            cs.InputMessage('i -17 0 1') # turn off old noise gate
-            cs.InputMessage('i 12 0 4') # measure roundtrip latency
-            cs.InputMessage('i 13 4 2') # get audio input noise print
-            cs.InputMessage('i 14 6 -1 5') # enable noiseprint and self-output suppression
-            cs.InputMessage('i 15 6.2 2') # get noise floor level 
-            cs.InputMessage('i 16 8.3 0.1') # set noise gate shape
-            cs.InputMessage('i 17 8.5 -1') # turn on new noise gate
-            state['calibrateAudio'] = False
+            if 'inputLevel' in pushbutton:
+                mode = '{}'.format(pushbutton['inputLevel'])
+                if mode == 'mute': cs.InputMessage('i 21 0 .1 0')
+                if mode == 'unmute': cs.InputMessage('i 21 0 .1 1')
+                if mode == 'reset': 
+                    cs.InputMessage('i 21 0 .1 0')
+                    cs.InputMessage('i 21 1 .1 1')
 
-        if state['csinstr']:
-            # generic csound instr message
-            cs.InputMessage('{}'.format(state['csinstr']))
-            print 'sent {}'.format(state['csinstr'])
-            state['csinstr'] = False
+            if 'calibrateAudio' in pushbutton:
+                cs.InputMessage('i -17 0 1') # turn off old noise gate
+                cs.InputMessage('i 12 0 4') # measure roundtrip latency
+                cs.InputMessage('i 13 4 2') # get audio input noise print
+                cs.InputMessage('i 14 6 -1 5') # enable noiseprint and self-output suppression
+                cs.InputMessage('i 15 6.2 2') # get noise floor level 
+                cs.InputMessage('i 16 8.3 0.1') # set noise gate shape
+                cs.InputMessage('i 17 8.5 -1') # turn on new noise gate
 
-        if state['zerochannels']:
-            zeroChannelsOnNoBrain = int('{}'.format(state['zerochannels']))
-            state['zerochannels'] = False
-            
-        if state['playfile']:
-            print '[self.] wants to play {}'.format(state['playfile'])
-            print '{}'.format(state['playfile'])
-            cs.InputMessage('i3 0 5 "%s"'%'{}'.format(state['playfile']))
-            state['playfile'] = False
+            if 'csinstr' in pushbutton:
+                # generic csound instr message
+                cs.InputMessage('{}'.format(pushbutton['csinstr']))
+                print 'sent {}'.format(pushbutton['csinstr'])
 
-        mic.append([cGet("level1"), 
-                    cGet("pitch1ptrack"), 
-                    cGet("pitch1pll"), 
-                    cGet("autocorr1"), 
-                    cGet("centroid1"),
-                    cGet("spread1"), 
-                    cGet("skewness1"), 
-                    cGet("kurtosis1"), 
-                    cGet("flatness1"), 
-                    cGet("crest1"), 
-                    cGet("flux1"), 
-                    cGet("epochSig1"), 
-                    cGet("epochRms1"), 
-                    cGet("epochZCcps1")] + fftin_amplist + fftin_freqlist)
+            if 'zerochannels' in pushbutton:
+                zeroChannelsOnNoBrain = int('{}'.format(pushbutton['zerochannels']))
 
-        try:
-            sound = speaker.popleft()
+            if 'playfile' in pushbutton:
+                print '[self.] wants to play {}'.format(pushbutton['playfile'])
+                cs.InputMessage('i3 0 5 "%s"'%'{}'.format(pushbutton['playfile']))
+
+        send_array(publisher, np.array([cGet("level1"), 
+                                        cGet("pitch1ptrack"), 
+                                        cGet("pitch1pll"), 
+                                        cGet("autocorr1"), 
+                                        cGet("centroid1"),
+                                        cGet("spread1"), 
+                                        cGet("skewness1"), 
+                                        cGet("kurtosis1"), 
+                                        cGet("flatness1"), 
+                                        cGet("crest1"), 
+                                        cGet("flux1"), 
+                                        cGet("epochSig1"), 
+                                        cGet("epochRms1"), 
+                                        cGet("epochZCcps1")] + fftin_amplist + fftin_freqlist))
+
+        if subscriber in events:
+            sound = recv_array(subscriber)
             cSet("respondLevel1", sound[0])
             cSet("respondPitch1ptrack", sound[1])
             cSet("respondPitch1pll", sound[2])
@@ -217,7 +261,7 @@ def audio(state, mic, speaker):
             cSet("partikkel1_trainChroma",sound[partikkelparmOffset+19])
             cSet("partikkel1_wavemorf",sound[partikkelparmOffset+20])
             '''
-        except:
+        else:
             if zeroChannelsOnNoBrain:  
                 cSet("respondLevel1", 0)
                 cSet("respondPitch1ptrack", 0)
@@ -230,11 +274,17 @@ def audio(state, mic, speaker):
                 # zero fft frame 
                 bogusamp = map(tSet,fftresyn_amptabs,fftbinindices,fftzeros)
 
+# Setup so it can be accessed from processes which don't have a zmq context
+def send(message, context=None, host='localhost', port=EXTERNAL):
+    context = context or zmq.Context()
+    sender = context.socket(zmq.PUSH)
+    sender.connect('tcp://{}:{}'.format(host, port))
+    sender.send_json(message)
             
-def load_cns(state, mic, speaker, camera, projector):
+# def load_cns(state, mic, speaker, camera, projector):
 
-    for filename in glob.glob(state['load']+'*'):
-        audio_net, audio_video_net, scaler = pickle.load(file(filename, 'r'))
-        mp.Process(target=live, args=(state, mic, speaker, camera, projector, audio_net, audio_video_net, scaler)).start()
-        print 'Brain loaded from file {} ({})'.format(filename, filesize(filename))
+#     for filename in glob.glob(state['load']+'*'):
+#         audio_net, audio_video_net, scaler = pickle.load(file(filename, 'r'))
+#         mp.Process(target=live, args=(state, mic, speaker, camera, projector, audio_net, audio_video_net, scaler)).start()
+#         print 'Brain loaded from file {} ({})'.format(filename, filesize(filename))
 

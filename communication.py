@@ -7,45 +7,13 @@
 @contact: axel.tidemann@gmail.com
 @license: GPL
 
-Talk to [self.] over sockets.
+Talk to [self.] over ØMQ sockets.
 '''
 
-from __future__ import print_function
-
-import multiprocessing as mp
 import sys
-import socket
 
-def receive(callback, host='localhost', port=7777):
-    me = mp.current_process()
-    me.name = 'RECEIVE'
-    print('{} PID {}'.format(me.name, me.pid))
-
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock.bind((host, port))
-    sock.listen(1)
-
-    print('Communication channel listening on {}:{}'.format(host, port))
-    while True:
-        try:
-            connection, address = sock.accept()
-            data = connection.recv(1024)
-            connection.close()
-            callback(data)
-        except:
-            print('Communication channel going down.')
-            sock.close()
-            break
-    
-def send(message, host='localhost', port=7777):
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock.connect((host, port))
-    sock.sendall(message)
-    sock.close()
+from IO import send
 
 if __name__ == '__main__':
     if len(sys.argv) > 1:
         send(' '.join(sys.argv[1:]))
-    else:
-        receive(print)
-
