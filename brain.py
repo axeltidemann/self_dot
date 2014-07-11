@@ -18,7 +18,7 @@ if __name__ == '__main__':
 
     name = 'BRAIN'+str(uuid1())
     
-    print '{} connecting to ØMQ ports on {}'.format(name, host)
+    print '{} connecting to {}'.format(name, host)
 
     context = zmq.Context()
 
@@ -56,6 +56,9 @@ if __name__ == '__main__':
     audio = deque()
     video = deque()
 
+    audio_first_segment = []
+    video_first_segment = []
+
     while True:
         events = dict(poller.poll())
         
@@ -76,11 +79,23 @@ if __name__ == '__main__':
             pushbutton = eventQ.recv_json()
             if 'learn' in pushbutton and pushbutton['learn'] == name:
                 mp.Process(target=learn, 
-                           args=(np.array(list(audio)), np.array(list(video)), host),
+                           args=(audio_first_segment if len(audio_first_segment) else np.array(list(audio)), 
+                                 np.array(list(audio)), 
+                                 video_first_segment if len(video_first_segment) else np.array(list(video)),
+                                 np.array(list(video)), 
+                                 host),
                            name='NEURALNETWORK'+str(uuid1())).start()
-                audio.clear()
-                video.clear()
+                
+                pushbutton['reset'] = True
 
             if 'reset' in pushbutton:
+                audio.clear()
+                video.clear()
+                audio_first_segment = []
+                video_first_segment = []
+            
+            if 'setmarker' in pushbutton:
+                audio_first_segment = np.array(list(audio))
+                video_first_segment = np.array(list(video))
                 audio.clear()
                 video.clear()

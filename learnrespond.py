@@ -58,5 +58,26 @@ elif mode == 'association':
     time.sleep(secs)
     send('stoprec')
     send('learn')
+elif mode == 'longshort':
+    send('startrec')
+    time.sleep(7)
+    send('stoprec')
+    send('setmarker')
+    time.sleep(autowait)
+    send('startrec')
+    time.sleep(2)
+    send('stoprec')
+    send('learn')
+elif mode == 'shortlong':
+    send('startrec')
+    time.sleep(2)
+    send('stoprec')
+    send('setmarker')
+    time.sleep(autowait)
+    send('startrec')
+    time.sleep(7)
+    send('stoprec')
+    send('learn')
+
 else:
     print 'unknown mode', mode

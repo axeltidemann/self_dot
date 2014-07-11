@@ -11,53 +11,61 @@ import numpy as np
 from utils import signal_rmse, sleep, filesize, send_array, recv_array
 from IO import MIC, SPEAKER, CAMERA, PROJECTOR, STATE, SNAPSHOT, EVENT, EXTERNAL
 
-
-def learn(audio_data, video_data, host):
-
-    # Create recognizer and producer of audio and video, so the logic of this mix can be done in brain.py
-    from esn import ACDCESN
+def _train_network(x, y, output_dim=100, leak_rate=.9, bias_scaling=.2, reset_states=False, use_pinv=True):
     import Oger
     import mdp
     
+    mdp.numx.random.seed(7)
+    
+    reservoir = Oger.nodes.LeakyReservoirNode(output_dim=output_dim, 
+                                              leak_rate=leak_rate, 
+                                              bias_scaling=bias_scaling, 
+                                              reset_states=reset_states)
+    readout = mdp.nodes.LinearRegressionNode(use_pinv=use_pinv)
+    net = mdp.hinet.FlowNode(reservoir + readout)
+    net.train(x,y)
+
+    return net
+
+
+def learn(audio_in, audio_out, video_in, video_out, host):
     print '[self.] learns', 
     start_time = time.time()
 
     scaler = pp.MinMaxScaler() 
-    scaled_data = scaler.fit_transform(audio_data)
+    scaled_audio = scaler.fit_transform(np.vstack([ audio_in, audio_out ]))
+    scaled_audio_in = scaled_audio[:len(audio_in)]
+    scaled_audio_out = scaled_audio[len(audio_in):]
 
-    mdp.numx.random.seed(7)
-    
-    reservoir = Oger.nodes.LeakyReservoirNode(output_dim=100, 
-                                              leak_rate=0.9, 
-                                              bias_scaling=.2, 
-                                              reset_states=False)
-    readout = mdp.nodes.LinearRegressionNode(use_pinv=True)
-    audio_net = mdp.hinet.FlowNode(reservoir + readout)
+    x = scaled_audio_in[:-1]
+    y = scaled_audio_in[1:]
+    audio_recognizer = _train_network(x, y)
 
-    x = scaled_data[:-1]
-    y = scaled_data[1:]
+    row_diff = audio_in.shape[0] - audio_out.shape[0]
+    if row_diff < 0:
+        scaled_audio_in = np.vstack([ scaled_audio_in, np.zeros((-row_diff, scaled_audio_in.shape[1])) ]) # Zeros because of level
+    elif row_diff > 0:
+        scaled_audio_in = scaled_audio_in[:len(scaled_audio_out)]
 
-    audio_net.train(x,y)
-
-    audio_video_net = ACDCESN(hidden_nodes=100,
-                              leak_rate=0.9,
-                              bias_scaling=.2,
-                              reset_states=True,
-                              use_pinv=True)
+    x = scaled_audio_in[:-1]
+    y = scaled_audio_out[1:]
+    audio_producer = _train_network(x, y)
+    audio_producer.length = audio_out.shape[0]
 
     # Video is sampled at a much lower frequency than audio.
-    stride = audio_data.shape[0]/video_data.shape[0]
-
-    x = scaled_data[scaled_data.shape[0] - stride*video_data.shape[0]::stride]
-    y = video_data
+    stride = audio_out.shape[0]/video_out.shape[0]
     
-    audio_video_net.train(x,y)
+    x = scaled_audio_in[scaled_audio_in.shape[0] - stride*video_out.shape[0]::stride]
+    y = video_out
+    
+    audio2video = _train_network(x, y)
+    audio2video.length = video_out.shape[0]
 
     print 'in {} seconds'.format(time.time() - start_time)
-    live(audio_net, audio_video_net, scaler, host)
+    live(audio_recognizer, audio_producer, audio2video, scaler, host)
 
     
-def live(audio_net, audio_video_net, scaler, host):
+def live(audio_recognizer, audio_producer, audio2video, scaler, host):
     import Oger
 
     me = mp.current_process()
@@ -117,7 +125,7 @@ def live(audio_net, audio_video_net, scaler, host):
             scaled_signals = scaler.transform(new_audio)
             if len(previous_prediction):
                 error.append(scaled_signals.flatten() - previous_prediction.flatten())
-            previous_prediction = audio_net(scaled_signals)
+            previous_prediction = audio_recognizer(scaled_signals)
             if state['record']:
                 audio.append(np.ndarray.flatten(scaled_signals))
 
@@ -143,10 +151,16 @@ def live(audio_net, audio_video_net, scaler, host):
 
                 print '{} chosen to respond. Audio data: {} Video data: {}'.format(me.name, audio_data.shape, video_data.shape)
 
-                sound = audio_net(audio_data)
+                row_diff = audio_data.shape[0] - audio_producer.length
+                if row_diff < 0:
+                    audio_data = np.vstack([ audio_data, np.zeros((-row_diff, audio_data.shape[1])) ])
+                else:
+                    audio_data = audio_data[:audio_producer.length]
 
-                stride = audio_data.shape[0]/video_data.shape[0]
-                projection = audio_video_net(audio_data[audio_data.shape[0] - stride*video_data.shape[0]::stride]) 
+                sound = audio_producer(audio_data)
+                
+                stride = audio_producer.length/audio2video.length
+                projection = audio2video(audio_data[audio_data.shape[0] - stride*audio2video.length::stride])
 
                 # DREAM MODE: You can train a network with zero audio input -> video output, and use this
                 # to recreate the original training sequence with scary accuracy...
@@ -158,9 +172,19 @@ def live(audio_net, audio_video_net, scaler, host):
                 for row in scaler.inverse_transform(sound):
                     send_array(speaker, row)
 
+            if 'save' in state:
+                filename = '{}.{}'.format(state['save'], me.name)
+                pickle.dump((audio_recognizer, audio_producer, audio2video, scaler, host), file(filename, 'w'))
+                print '{} saved as file {} ({})'.format(me.name, filename, filesize(filename))
 
 
+    # row_diff = audio_in.shape[0] - audio_out.shape[0]
+    # if row_diff < 0:
+    #     scaled_audio_in = np.vstack([ scaled_audio_in, np.zeros((-row_diff, scaled_audio_in.shape[1])) ]) # Zeros because of level
+    # elif row_diff > 0:
+    #     scaled_audio_out = np.vstack([ scaled_audio_out, np.zeros((row_diff, scaled_audio_out.shape[1])) ])
 
+#                projection = audio_video_net(audio_data[audio_data.shape[0] - stride*video_data.shape[0]::stride]) 
 
 def old_live(state, mic, speaker, camera, projector, audio_net, audio_video_net, scaler):
     me = mp.current_process()

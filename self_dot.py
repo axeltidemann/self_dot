@@ -93,7 +93,7 @@ class Controller:
                 self.event.send_json({ 'rmse': True })
 
             if message == 'setmarker':
-                print 'EVALUATE USAGE OF THESE'
+                self.event.send_json({ 'setmarker': True })
 
             if 'autolearn' in message:
                 self.state['autolearn'] = message[10:] in ['True', '1']
