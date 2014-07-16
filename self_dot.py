@@ -14,7 +14,6 @@ from zmq.utils.jsonapi import dumps
 
 from AI import learn
 from IO import audio, video, STATE, EXTERNAL, SNAPSHOT, EVENT
-from utils import MyDeque, reset_rmses, find_winner
        
 class Controller:
     def __init__(self, init_state):

@@ -27,10 +27,11 @@ def learn(sequence, freerun_steps=None, repeat=10):
                                               bias_scaling=.2, 
                                               reset_states=False)
     readout = Oger.nodes.RidgeRegressionNode()
-    train_signals = np.tile(train_signals, [repeat,1])
 
     if freerun_steps is None:
-        freerun_steps =  len(sequence)
+        freerun_steps = len(sequence)
+
+    train_signals = np.tile(train_signals, [repeat,1])
 
     flow = Oger.nodes.FreerunFlow([reservoir, readout], freerun_steps=freerun_steps)
 
@@ -52,8 +53,26 @@ if __name__ == '__main__':
     for line in txt.readlines():
         symbols.extend(line.split())
     net, train_signals, dictionary = learn(symbols)
+
+
+    dummy = np.empty( (len(symbols), train_signals.shape[1]) )
+    dummy[:] = np.nan
+    print 'Regenerating entire learned sequence, feeding the entire sequence as input. This should yield stable behaviour.'
+    print _index_to_text(net(
+        np.vstack((train_signals, dummy)))[-len(symbols):],
+        dictionary)
+
+    print 'Predicting rest of learned sequence. The network is fed up until this word, i.e. this is the input:'
+    marker = np.random.choice(len(symbols))
+    up_until = train_signals[:marker]
+    print _index_to_text(up_until, dictionary)
+    print _index_to_text(net(
+        np.vstack(( up_until, dummy )))[marker:len(symbols)],
+        dictionary)
     
-    # Try to regenerate entire sequence
-    print _index_to_text(net(np.tile(train_signals, [2,1]))[:-len(symbols)], dictionary)
-    
-    
+    random_word = np.atleast_2d(train_signals[np.random.choice(len(symbols))])
+    print 'Starting with a randomly selected word, feeding just this one word to the network: {}\
+    This should yield unstable sequences.'.format(_index_to_text(random_word, dictionary))
+    print _index_to_text(net(
+        np.vstack((random_word, dummy)))[1:],
+        dictionary)
