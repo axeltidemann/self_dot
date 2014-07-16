@@ -1,0 +1,10 @@
+hei jeg heter axel dette er en test for å vise hvordan nettverket lærer 
+jeg synes det er morsomt med selvgenererende nettverk 
+ord følger andre ord
+så hvis man starter nettverket midt i sekvensen vil det også gå fint
+lengre sekvenser vil føre til mer ustabilitet
+ustabilitet mot slutten må man regne med
+denne ustabiliteten vil være kaotisk og vanskelig å forstå 
+men kan kanskje føre til interessant oppførsel
+
+
