@@ -13,7 +13,7 @@ import zmq
 from zmq.utils.jsonapi import dumps
 
 from AI import learn
-from IO import audio, video, STATE, EXTERNAL, SNAPSHOT, EVENT # load_cns
+from IO import audio, video, STATE, EXTERNAL, SNAPSHOT, EVENT
 from utils import MyDeque, reset_rmses, find_winner
        
 class Controller:
@@ -82,11 +82,15 @@ class Controller:
             if message == 'stoprec':
                 self.state['record'] = False
 
+            if 'decrement' in message:
+                _, name = message.split()
+                self.state['brains'][name] -= 1
+                print '{} has now {} available slots'.format(name, self.state['brains'][name])
+                
             if message == 'learn':
                 d = self.state['brains']
                 winner = max(d, key=d.get)
                 print '{} chosen to learn, has {} available slots'.format(winner, self.state['brains'][winner])
-                self.state['brains'][winner] -= 1
                 self.event.send_json({ 'learn': winner })
 
             if message == 'respond':
@@ -120,11 +124,10 @@ class Controller:
                 self.event.send_json({ 'selfvoice': message[10:] })
 
             if 'save' in message:
-                self.event.send_json({ 'save': 'brain' if len(message) == 4 else message[5:] })
+                self.event.send_json({ 'save': 'cns' if len(message) == 4 else message[5:] })
 
-            # if 'load' in message:
-            #     self.state['load'] = message[5:]
-            #     load_cns(self.state, self.mic, self.speaker, self.camera, self.projector)
+            if 'load' in message:
+                self.event.send_json({ 'load': 'cns' if len(message) == 4 else message[5:] })
 
             self.publisher.send_json(self.state)
 

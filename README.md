@@ -38,25 +38,11 @@ OpenCV: http://opencv.org
 
 Csound: http://www.csounds.com
 
-OpenMPI: http://www.open-mpi.org/
+ØMQ: http://zeromq.org/
 
-Now you can install mpi4py, so you can use MPI with python. It should be enough to put mpicc on your path, then do 
+Now you can install pyzmq, so you can use ØMQ with python. 
 
-> pip install mpi4py
-
-If this does not work, download mpi4py, edit mpi.cfg so it reads like this:
-
-```
-mpicc                = mpicc
-mpicxx               = mpicxx
-include_dirs         = $VIRTUAL_ENV/include/openmpi
-library_dirs         = $VIRTUAL_ENV/lib/openmpi
-runtime_library_dirs = $VIRTUAL_ENV/lib/openmpi
-```
-
-Proceed with 
-
-> ARCHFLAGS="-arch x86_64" python setup.py install
+> pip install pyzmq
 
 ## Specific Mac OS X stuff:
 

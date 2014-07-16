@@ -1,15 +1,13 @@
 #!/usr/bin/python
 # -*- coding: latin-1 -*-
 
-import cPickle as pickle
-import glob
 import multiprocessing as mp
 
 import cv2
 import numpy as np
 import zmq
 
-from utils import filesize, send_array, recv_array
+from utils import send_array, recv_array
 import myCsoundAudioOptions
 
 # ØMQ ports
@@ -274,17 +272,9 @@ def audio():
                 # zero fft frame 
                 bogusamp = map(tSet,fftresyn_amptabs,fftbinindices,fftzeros)
 
-# Setup so it can be accessed from processes which don't have a zmq context
+# Setup so it can be accessed from processes which don't have a zmq context, i.e. for one-shot messaging
 def send(message, context=None, host='localhost', port=EXTERNAL):
     context = context or zmq.Context()
     sender = context.socket(zmq.PUSH)
     sender.connect('tcp://{}:{}'.format(host, port))
     sender.send_json(message)
-            
-# def load_cns(state, mic, speaker, camera, projector):
-
-#     for filename in glob.glob(state['load']+'*'):
-#         audio_net, audio_video_net, scaler = pickle.load(file(filename, 'r'))
-#         mp.Process(target=live, args=(state, mic, speaker, camera, projector, audio_net, audio_video_net, scaler)).start()
-#         print 'Brain loaded from file {} ({})'.format(filename, filesize(filename))
-

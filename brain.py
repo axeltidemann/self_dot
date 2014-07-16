@@ -5,13 +5,25 @@ import multiprocessing as mp
 from uuid import uuid1
 from collections import deque
 import sys
+import glob
+import cPickle as pickle
 
 import numpy as np
 import zmq
 
-from AI import learn
-from utils import recv_array, send_array
-from IO import MIC, CAMERA, STATE, SNAPSHOT, EVENT, EXTERNAL
+from AI import learn, live
+from utils import filesize, recv_array, send_array
+from IO import MIC, CAMERA, STATE, SNAPSHOT, EVENT, EXTERNAL, send
+            
+def load_cns(prefix, brain_name):
+    for filename in glob.glob(prefix+'*'):
+        audio_recognizer, audio_producer, audio2video, scaler, host = pickle.load(file(filename, 'r'))
+        name = filename[filename.rfind('.')+1:]
+        mp.Process(target = live, 
+                   args = (audio_recognizer, audio_producer, audio2video, scaler, host),
+                   name = name).start()
+        print 'Network loaded from file {} ({})'.format(filename, filesize(filename))
+        send('decrement {}'.format(brain_name))
 
 if __name__ == '__main__':
     host = sys.argv[1] if len(sys.argv) == 2 else 'localhost' 
@@ -78,14 +90,14 @@ if __name__ == '__main__':
         if eventQ in events:
             pushbutton = eventQ.recv_json()
             if 'learn' in pushbutton and pushbutton['learn'] == name:
-                mp.Process(target=learn, 
-                           args=(audio_first_segment if len(audio_first_segment) else np.array(list(audio)), 
-                                 np.array(list(audio)), 
-                                 video_first_segment if len(video_first_segment) else np.array(list(video)),
-                                 np.array(list(video)), 
-                                 host),
-                           name='NEURALNETWORK'+str(uuid1())).start()
-                
+                mp.Process(target = learn, 
+                           args = (audio_first_segment if len(audio_first_segment) else np.array(list(audio)), 
+                                   np.array(list(audio)), 
+                                   video_first_segment if len(video_first_segment) else np.array(list(video)),
+                                   np.array(list(video)), 
+                                   host),
+                           name = 'NEURALNETWORK'+str(uuid1())).start()
+                sender.send_json('decrement {}'.format(name))
                 pushbutton['reset'] = True
 
             if 'reset' in pushbutton:
@@ -99,3 +111,6 @@ if __name__ == '__main__':
                 video_first_segment = np.array(list(video))
                 audio.clear()
                 video.clear()
+
+            if 'load' in pushbutton:
+                load_cns(pushbutton['load'], name)
