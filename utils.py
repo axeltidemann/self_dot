@@ -1,6 +1,7 @@
 import os
 
 import numpy as np
+import zmq
 
 # http://goo.gl/zeJZl
 def bytes2human(n, format="%(value)i%(symbol)s"):
