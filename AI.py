@@ -109,9 +109,9 @@ def live(audio_recognizer, audio_producer, audio2video, scaler, host):
     poller.register(stateQ, zmq.POLLIN)
     poller.register(eventQ, zmq.POLLIN)
 
-    error = deque()
     previous_prediction = []
     # Approximately 10 seconds of audio/video
+    error = deque(maxlen=3400)
     audio = deque(maxlen=3400)
     video = deque(maxlen=80)
     while True:
@@ -122,12 +122,12 @@ def live(audio_recognizer, audio_producer, audio2video, scaler, host):
 
         if mic in events:
             new_audio = np.atleast_2d(recv_array(mic))
-            scaled_signals = scaler.transform(new_audio)
-            if len(previous_prediction):
-                error.append(scaled_signals.flatten() - previous_prediction.flatten())
-            previous_prediction = audio_recognizer(scaled_signals)
             if state['record']:
+                scaled_signals = scaler.transform(new_audio)
                 audio.append(np.ndarray.flatten(scaled_signals))
+                if len(previous_prediction):
+                    error.append(scaled_signals.flatten() - previous_prediction.flatten())
+                previous_prediction = audio_recognizer(scaled_signals)
 
         if camera in events:
             new_video = recv_array(camera)
@@ -151,6 +151,10 @@ def live(audio_recognizer, audio_producer, audio2video, scaler, host):
 
                 print '{} chosen to respond. Audio data: {} Video data: {}'.format(me.name, audio_data.shape, video_data.shape)
 
+                if audio_data.size == 0 and video_data.size == 0:
+                    print '*** Audio data and video data arrays are empty. Aborting the response. ***'
+                    continue
+
                 row_diff = audio_data.shape[0] - audio_producer.length
                 if row_diff < 0:
                     audio_data = np.vstack([ audio_data, np.zeros((-row_diff, audio_data.shape[1])) ])
@@ -165,7 +169,6 @@ def live(audio_recognizer, audio_producer, audio2video, scaler, host):
                 # DREAM MODE: You can train a network with zero audio input -> video output, and use this
                 # to recreate the original training sequence with scary accuracy...
 
-                # Ordering to try to align video/sound 
                 for row in projection:
                     send_array(projector, row)
 

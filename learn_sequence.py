@@ -48,7 +48,7 @@ if __name__ == '__main__':
     net, train_signals, dictionary = learn(symbols)
 
     dummy = np.empty( (len(symbols), train_signals.shape[1]) )
-    dummy[:] = np.nan # NaNs spread like the plauge, we therefore use them to check for programming errors.
+    dummy[:] = np.nan # NaNs spread like the plague, we therefore use them to check for programming errors.
 
     print 'Regenerating entire learned sequence, feeding the entire sequence as input. This should yield stable behaviour.'
     dummy[0] = train_signals[0] # Due to a bug (?) in Oger, the first non-teacher forced signal must be manually set.
