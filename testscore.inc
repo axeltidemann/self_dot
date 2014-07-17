@@ -16,10 +16,10 @@ i3 	4525 900 "../../../testsounds_talk/N2_030911_NRK_SDA_NO.wav"		; audio file i
 */
 
 ; short test
-i3 	1 97 "../../../testsounds_talk/N2_010510_NRK_HON_NO.wav"		; audio file input
-i3 	100 97 "../../../testsounds_talk/N2_030505_NRK_D12_NO.wav"		; audio file input
-i3 	200 97 "../../../testsounds_talk/N2_030508_NRK_POK_NO.wav"		; audio file input
-i3 	300 97 "../../../testsounds_talk/N2_030510_NRK_UKS_NO.wav"		; audio file input
-i3 	400 97 "../../../testsounds_talk/N2_030510_NRK_VPL_NO.wav"		; audio file input
-i3 	500 97 "../../../testsounds_talk/N2_030911_NRK_SDA_NO.wav"		; audio file input
+i3 	1 97 "testsounds_talk/N2_010510_NRK_HON_NO.wav"		; audio file input
+i3 	100 97 "testsounds_talk/N2_030505_NRK_D12_NO.wav"		; audio file input
+i3 	200 97 "testsounds_talk/N2_030508_NRK_POK_NO.wav"		; audio file input
+i3 	300 97 "testsounds_talk/N2_030510_NRK_UKS_NO.wav"		; audio file input
+i3 	400 97 "testsounds_talk/N2_030510_NRK_VPL_NO.wav"		; audio file input
+i3 	500 97 "testsounds_talk/N2_030911_NRK_SDA_NO.wav"		; audio file input
 #define SCORELEN # 600 #

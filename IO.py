@@ -216,7 +216,7 @@ def audio():
                                         cGet("flux1"), 
                                         cGet("epochSig1"), 
                                         cGet("epochRms1"), 
-                                        cGet("epochZCcps1")] + fftin_amplist + fftin_freqlist))
+                                        cGet("epochZCcps1")]))# + fftin_amplist + fftin_freqlist)) #FFT temporarily disabled
 
         if subscriber in events:
             sound = recv_array(subscriber)
@@ -231,8 +231,8 @@ def audio():
             cSet("partikkel1_graindur", sound[3]+0.1)
             # transfer fft frame
             fft_index = 14
-            bogusamp = map(tSet,fftresyn_amptabs,fftbinindices,sound[fft_index:ffttabsize+fft_index])
-            bogusfreq = map(tSet,fftresyn_freqtabs,fftbinindices,sound[ffttabsize+fft_index:ffttabsize+fft_index+ffttabsize])
+            #bogusamp = map(tSet,fftresyn_amptabs,fftbinindices,sound[fft_index:ffttabsize+fft_index]) #FFT temporarily disabled
+            #bogusfreq = map(tSet,fftresyn_freqtabs,fftbinindices,sound[ffttabsize+fft_index:ffttabsize+fft_index+ffttabsize])
 
             '''
             # partikkel parameters ready to be set
