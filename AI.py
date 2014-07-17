@@ -140,6 +140,7 @@ def live(audio_recognizer, audio_producer, audio2video, scaler, host):
                 error.clear()
                 audio.clear()
                 video.clear()
+                previous_prediction = []
 
             if 'rmse' in pushbutton:
                 rmse = np.sqrt((np.array(list(error)).flatten() ** 2).mean())
