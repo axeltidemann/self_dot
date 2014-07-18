@@ -1,3 +1,13 @@
+#!/usr/bin/python
+# -*- coding: latin-1 -*-
+
+''' [self.]
+
+@author: Axel Tidemann, Øyvind Brandtsegg
+@contact: axel.tidemann@gmail.com, obrandts@gmail.com
+@license: GPL
+'''
+
 import time
 import multiprocessing as mp
 import cPickle as pickle
@@ -29,7 +39,6 @@ def _train_network(x, y, output_dim=100, leak_rate=.9, bias_scaling=.2, reset_st
 
 
 def learn(audio_in, audio_out, video_in, video_out, host):
-    print '[self.] learns', 
     start_time = time.time()
 
     scaler = pp.MinMaxScaler() 
@@ -61,7 +70,7 @@ def learn(audio_in, audio_out, video_in, video_out, host):
     audio2video = _train_network(x, y)
     audio2video.length = video_out.shape[0]
 
-    print 'in {} seconds'.format(time.time() - start_time)
+    print '[self.] learns in {} seconds'.format(time.time() - start_time)
     live(audio_recognizer, audio_producer, audio2video, scaler, host)
 
     

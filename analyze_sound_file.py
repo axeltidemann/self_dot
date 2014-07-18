@@ -54,8 +54,8 @@ if __name__ == '__main__':
     fftin_freqlist = [0]*ffttabsize
 
     print 'Playing {}'.format(playfile)
-    cs.InputMessage('i3 0 5 "%s"'%'{}'.format(playfile))
-
+    cs.InputMessage('i3 0 10 \"{}\"'.format(playfile))
+    cs.InputMessage('i22 	0 .1 \"inputNoisefloor\" -30')
     audio_buffer = deque()
     
     while not stopflag:
@@ -90,7 +90,7 @@ if __name__ == '__main__':
                                       cGet("flux1"), 
                                       cGet("epochSig1"), 
                                       cGet("epochRms1"), 
-                                      cGet("epochZCcps1")] + fftin_amplist + fftin_freqlist))
+                                      cGet("epochZCcps1")]))# + fftin_amplist + fftin_freqlist))
 
         if audioStatusTrig < 0:
             stopflag = True
@@ -98,23 +98,23 @@ if __name__ == '__main__':
     print 'Length of audio buffer: {}'.format(len(audio_buffer))
             
     analysis = np.array(list(audio_buffer))
-    scaler = pp.MinMaxScaler() 
-    scaled_audio = scaler.fit_transform(analysis)
+    # scaler = pp.MinMaxScaler() 
+    # scaled_audio = scaler.fit_transform(analysis)
 
-    fft_index = 14
+    # fft_index = 14
     
-    plt.plot(scaled_audio[:,:fft_index])
-    plt.title('Without FFT')
-    plt.ylim([0,1])
-    plt.xlim([0,len(audio_buffer)])
+    # plt.plot(scaled_audio[:,:fft_index])
+    # plt.title('Without FFT')
+    # plt.ylim([0,1])
+    # plt.xlim([0,len(audio_buffer)])
 
-    plt.figure()
-    plt.plot(scaled_audio[:,fft_index:])
-    plt.title('FFT')
-    plt.ylim([0,1])
-    plt.xlim([0,len(audio_buffer)])
+    # plt.figure()
+    # plt.plot(scaled_audio[:,fft_index:])
+    # plt.title('FFT')
+    # plt.ylim([0,1])
+    # plt.xlim([0,len(audio_buffer)])
     
-    plt.show()
+    # plt.show()
 
     filename = '{}.npy'.format(playfile)
     pickle.dump(analysis, open(filename, 'w'))
