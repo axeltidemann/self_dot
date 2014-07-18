@@ -54,7 +54,7 @@ if __name__ == '__main__':
     fftin_freqlist = [0]*ffttabsize
 
     print 'Playing {}'.format(playfile)
-    cs.InputMessage('i3 0 10 \"{}\"'.format(playfile))
+    cs.InputMessage('i3 0 0 \"{}\"'.format(playfile))
     cs.InputMessage('i22 	0 .1 \"inputNoisefloor\" -30')
     audio_buffer = deque()
     

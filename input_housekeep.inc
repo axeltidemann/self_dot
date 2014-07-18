@@ -17,6 +17,10 @@
 	Ssound	strget p4
 ;	Spath	="testsounds/"
 ;	S1	strcat Spath, Ssound
+        ilen    filelen Ssound
+        if p3 == 0 then
+        p3 = ilen
+        endif
 	a1	soundin Ssound
 	a2	= 0
 		outs a1, a2
