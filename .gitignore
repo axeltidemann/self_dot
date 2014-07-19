@@ -3,3 +3,4 @@
 *.sfk
 myCsoundAudioOptions.py
 test.wav
+*.npy
