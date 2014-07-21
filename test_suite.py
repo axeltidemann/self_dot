@@ -14,7 +14,7 @@ from IO import send
 
 def play_sounds(secs):
     #soundfiles = ['dakata4.wav', 'fallpitch.wav', 'fox.wav', 'todidot.wav', 'washaboa.wav', 'count1.wav', 'count2.wav', 'tell1.wav']
-    soundfiles = ['count1.wav', 'count2.wav', 'count3.wav', 'count4.wav', 'count5.wav', 'count6.wav', 'count7.wav', 'count8.wav']
+    soundfiles = ['count1.wav', 'count2.wav', 'count3.wav', 'count4.wav']#, 'count5.wav', 'count6.wav', 'count7.wav', 'count8.wav']
     path = 'testsounds'
 
     for f in soundfiles:

@@ -136,7 +136,7 @@ def live(audio_recognizer, audio_producer, audio2video, scaler, host):
                 audio.append(np.ndarray.flatten(scaled_signals))
                 if len(previous_prediction):
                     error.append(scaled_signals.flatten() - previous_prediction.flatten())
-                previous_prediction = audio_recognizer(scaled_signals)
+                previous_prediction = audio_recognizer(scaled_signals) # This would not be necessary in a sentralized recognizer
 
         if camera in events:
             new_video = recv_array(camera)
