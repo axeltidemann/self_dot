@@ -19,6 +19,8 @@ STATE = 5565
 EXTERNAL = 5566
 SNAPSHOT = 5567
 EVENT = 5568
+RECOGNIZE_IN = 5569
+RECOGNIZE_LEARN = 5570
 
 def video():
     me = mp.current_process()
@@ -201,7 +203,7 @@ def audio():
 
             if 'playfile' in pushbutton:
                 print '[self.] wants to play {}'.format(pushbutton['playfile'])
-                cs.InputMessage('i3 0 5 "%s"'%'{}'.format(pushbutton['playfile']))
+                cs.InputMessage('i3 0 0 "%s"'%'{}'.format(pushbutton['playfile']))
 
         send_array(publisher, np.array([cGet("level1"), 
                                         cGet("pitch1ptrack"), 

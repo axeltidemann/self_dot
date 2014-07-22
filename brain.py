@@ -7,27 +7,28 @@ from collections import deque
 import sys
 import glob
 import cPickle as pickle
+import time
 
 import numpy as np
 import zmq
+from sklearn import preprocessing as pp
 
-from AI import learn, live
+from AI import learn, live, recognize
 from utils import filesize, recv_array, send_array
-from IO import MIC, CAMERA, STATE, SNAPSHOT, EVENT, EXTERNAL, send
+from IO import MIC, CAMERA, STATE, SNAPSHOT, EVENT, EXTERNAL, send, RECOGNIZE_IN, RECOGNIZE_LEARN
             
 def load_cns(prefix, brain_name):
     for filename in glob.glob(prefix+'*'):
         audio_recognizer, audio_producer, audio2video, scaler, host = pickle.load(file(filename, 'r'))
         name = filename[filename.rfind('.')+1:]
-        mp.Process(target = live, 
+        mp.Process(target = AI.live, 
                    args = (audio_recognizer, audio_producer, audio2video, scaler, host),
                    name = name).start()
         print 'Network loaded from file {} ({})'.format(filename, filesize(filename))
         send('decrement {}'.format(brain_name))
 
-if __name__ == '__main__':
-    host = sys.argv[1] if len(sys.argv) == 2 else 'localhost' 
-
+        
+def start_brain(host):
     name = 'BRAIN'+str(uuid1())
     
     print '{} connecting to {}'.format(name, host)
@@ -50,6 +51,12 @@ if __name__ == '__main__':
     eventQ.connect('tcp://{}:{}'.format(host, EVENT))
     eventQ.setsockopt(zmq.SUBSCRIBE, b'') 
 
+    rec_in = context.socket(zmq.PUB)
+    rec_in.bind('tcp://*:{}'.format(RECOGNIZE_IN))
+
+    rec_learn = context.socket(zmq.PUB)
+    rec_learn.bind('tcp://*:{}'.format(RECOGNIZE_LEARN))
+        
     sender = context.socket(zmq.PUSH)
     sender.connect('tcp://{}:{}'.format(host, EXTERNAL))
     sender.send_json('register {} {}'.format(name, mp.cpu_count()))
@@ -58,7 +65,7 @@ if __name__ == '__main__':
     snapshot.connect('tcp://{}:{}'.format(host, SNAPSHOT))
     snapshot.send(b'Send me the state, please')
     state = snapshot.recv_json()
-
+    
     poller = zmq.Poller()
     poller.register(mic, zmq.POLLIN)
     poller.register(camera, zmq.POLLIN)
@@ -71,6 +78,10 @@ if __name__ == '__main__':
     audio_first_segment = []
     video_first_segment = []
 
+    mp.Process(target = recognize,
+               args = ('localhost',),
+               name = 'RECOGNIZER').start()
+    
     while True:
         events = dict(poller.poll())
         
@@ -90,6 +101,7 @@ if __name__ == '__main__':
         if eventQ in events:
             pushbutton = eventQ.recv_json()
             if 'learn' in pushbutton and pushbutton['learn'] == name:
+                
                 mp.Process(target = learn, 
                            args = (audio_first_segment if len(audio_first_segment) else np.array(list(audio)), 
                                    np.array(list(audio)), 
@@ -97,6 +109,8 @@ if __name__ == '__main__':
                                    np.array(list(video)), 
                                    host),
                            name = 'NEURALNETWORK'+str(uuid1())).start()
+
+                send_array(rec_learn, audio_first_segment if len(audio_first_segment) else np.array(list(audio)))
                 sender.send_json('decrement {}'.format(name))
                 pushbutton['reset'] = True
 
@@ -114,3 +128,11 @@ if __name__ == '__main__':
 
             if 'load' in pushbutton:
                 load_cns(pushbutton['load'], name)
+
+            if 'findwinner' in pushbutton:
+                if len(audio):
+                    send_array(rec_in, audio_first_segment if len(audio_first_segment) else np.array(list(audio)))
+                        
+if __name__ == '__main__':
+    start_brain(sys.argv[1] if len(sys.argv) == 2 else 'localhost')
+

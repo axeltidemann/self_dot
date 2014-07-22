@@ -74,7 +74,12 @@ class Controller:
                     self.event.send_json({ 'respond': winner })
                     self.event.send_json({ 'reset': True })
                     self.state['RMSEs'] = {}
-            
+
+            if 'winner' in message:
+                _, winner = message.split()
+                self.event.send_json({ 'respond' : self.state['nets'][int(winner)] })
+                self.event.send_json({ 'reset': True })
+                    
             if message == 'startrec':
                 self.state['record'] = True
 
@@ -93,7 +98,8 @@ class Controller:
                 self.event.send_json({ 'learn': winner })
 
             if message == 'respond':
-                self.event.send_json({ 'rmse': True })
+                #self.event.send_json({ 'rmse': True })
+                self.event.send_json({ 'findwinner': True })
 
             if message == 'setmarker':
                 self.event.send_json({ 'setmarker': True })

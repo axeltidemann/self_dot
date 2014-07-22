@@ -19,14 +19,14 @@ from sklearn import preprocessing as pp
 import numpy as np
 
 from utils import filesize, send_array, recv_array
-from IO import MIC, SPEAKER, CAMERA, PROJECTOR, STATE, SNAPSHOT, EVENT, EXTERNAL
+from IO import MIC, SPEAKER, CAMERA, PROJECTOR, STATE, SNAPSHOT, EVENT, EXTERNAL, RECOGNIZE_IN, RECOGNIZE_LEARN
 
 def _train_network(x, y, output_dim=100, leak_rate=.9, bias_scaling=.2, reset_states=False, use_pinv=True):
     import Oger
     import mdp
-    
+
     mdp.numx.random.seed(7)
-    
+
     reservoir = Oger.nodes.LeakyReservoirNode(output_dim=output_dim, 
                                               leak_rate=leak_rate, 
                                               bias_scaling=bias_scaling, 
@@ -37,7 +37,59 @@ def _train_network(x, y, output_dim=100, leak_rate=.9, bias_scaling=.2, reset_st
 
     return net
 
+def recognize(host):
+    me = mp.current_process()
+    print me.name, 'PID', me.pid
 
+    context = zmq.Context()
+
+    rec_in = context.socket(zmq.SUB)
+    rec_in.connect('tcp://{}:{}'.format(host, RECOGNIZE_IN))
+    rec_in.setsockopt(zmq.SUBSCRIBE, b'')
+
+    rec_learn = context.socket(zmq.SUB)
+    rec_learn.connect('tcp://{}:{}'.format(host, RECOGNIZE_LEARN))
+    rec_learn.setsockopt(zmq.SUBSCRIBE, b'')
+
+    sender = context.socket(zmq.PUSH)
+    sender.connect('tcp://{}:{}'.format(host, EXTERNAL))
+
+    poller = zmq.Poller()
+    poller.register(rec_in, zmq.POLLIN)
+    poller.register(rec_learn, zmq.POLLIN)
+
+    memories = []
+    recognizer = []
+
+    while True:
+        events = dict(poller.poll())
+
+        if rec_in in events:
+            audio_segment = recv_array(rec_in)
+            scaler = pp.MinMaxScaler()
+            scaled_audio = scaler.fit_transform(audio_segment)
+            output = recognizer(scaled_audio)
+            winner = np.argmax(np.mean(output, axis=0))
+            sender.send_json('winner {}'.format(winner))
+
+        if rec_learn in events:
+            audio_segment = recv_array(rec_learn)
+            scaler = pp.MinMaxScaler()
+            scaled_audio = scaler.fit_transform(audio_segment)
+            memories.append(scaled_audio)
+            
+            targets = []
+            for i, memory in enumerate(memories):
+                target = np.zeros(memory.shape)
+                target[:,i] = 1
+                targets.append(target)
+                
+            start_time = time.time()                            
+            recognizer = _train_network(np.vstack(memories), np.vstack(targets), output_dim=200, leak_rate=.7)
+            print 'Learning new categorizing network in {} seconds.'.format(time.time() - start_time)
+
+        
+    
 def learn(audio_in, audio_out, video_in, video_out, host):
     start_time = time.time()
 
@@ -49,8 +101,8 @@ def learn(audio_in, audio_out, video_in, video_out, host):
     x = scaled_audio_in[:-1]
     y = scaled_audio_in[1:]
     audio_recognizer = _train_network(x, y)
-
     row_diff = audio_in.shape[0] - audio_out.shape[0]
+
     if row_diff < 0:
         scaled_audio_in = np.vstack([ scaled_audio_in, np.zeros((-row_diff, scaled_audio_in.shape[1])) ]) # Zeros because of level
     elif row_diff > 0:
