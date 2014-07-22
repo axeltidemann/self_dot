@@ -2,6 +2,8 @@
 ; read audio segments from memoryRecording
         instr 70
         ; use python and ._CSOUND_ to get the file names and initiate events of instr 71
+	; major parts of this instr (python defs) can be moved to global area
+
         pyruni {{
 import os
 import csnd6
@@ -42,10 +44,43 @@ def parseMarkerfile(basename):
             totaldur = float(line[15:])
     return markers, totaldur
 
+ftableNums = []
+# use ftable nums between 800 and 899, with markers loaded in tables 900 to 999
+filesloaded ={}
+# populate filesloaded with sublist [filename, ftablenum, accesstime]
+# where accesstime is initially set to load time
+# accesstime is updated each time Csound makes use of the file
+# When Csound needs to use the file, query Python for the ftable num and update accesstime.
+# GC: Files that has not been used for N minutes (20 min?) are GC'ed, 
+# ...make Csound instrument to ftfree the table and also update Python list of available table nums
+
+def getftableNum():
+    tableNum = 800
+    if len(ftableNums)<99:
+        while tableNum in ftableNums:
+            tableNum += 1
+        if tableNum > 899: tableNum = 800
+        ftableNums.append(tableNum)
+    return tableNum
+
 def loadAudioAndMarkers(basename):
-    markers, totaldur = parseMarkerfile(memoryPath+basename)
-    csnd6.csoundInputMessage(csInstance, 'i 71 0 .1 \"%s.wav\" \"%s\" %f'%(memoryPath+basename, markers, totaldur))
-    print 'cs event sent:', 'i 71 0 .1 \"%s.wav\" \"%s\" %f'%(basename, markers, totaldur)
+    if basename not in filesloaded.keys():
+        markers, totaldur = parseMarkerfile(memoryPath+basename)
+        ftableNum = getftableNum()
+        csnd6.csoundInputMessage(csInstance, 'i 71 0 .1 %i \"%s.wav\" \"%s\" %f'%(ftableNum, memoryPath+basename, markers, totaldur))
+        print 'cs event sent:', 'i 71 0 .1 \"%s.wav\" \"%s\" %f'%(basename, markers, totaldur)
+        filesloaded[basename] = [ftableNum, time.time()]
+
+def soundfileGC(gcPeriod=20):
+    gcTime = time.time()-(gcPeriod*60)
+    for f in filesloaded.keys():
+        if filesloaded[f][1] < gcTime: 
+            ftableNum = filesloaded[f][0]
+            del filesloaded[f]
+            soundfileFree(ftableNum)
+
+def soundfileFree(ftableNum):
+    ##FIX ME
 
 def loadRandomFromMemory():
     loadAudioAndMarkers(random.choice(getBasenames()))
@@ -56,12 +91,13 @@ loadRandomFromMemory()
 
         instr 71
 ; load sound file and corresonding transient markers
-        Swavname        strget p4
-        iSound          ftgen 0, 0, 0, 1, Swavname, 0, 0, 0
+	itabNum		= p4
+        Swavname        strget p5
+        iSound          ftgen itabNum, 0, 0, 1, Swavname, 0, 0, 0
 
-        Smarkers        strget p5
-        iTotdur         = p6
-        iMarkers        ftgen 0, 0, 1024, 7, -1, 1024, -1 ; we can use -1 as eof, the first address not explicitly set will now contain -1
+        Smarkers        strget p6
+        iTotdur         = p7
+        iMarkers        ftgen itabNum+100, 0, 1024, 7, -1, 1024, -1 ; we can use -1 as eof, the first address not explicitly set will now contain -1
                         tableiw  iTotdur, 0, iMarkers
         index           = 1
         parseMarkers:

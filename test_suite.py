@@ -14,9 +14,8 @@ import glob
 from IO import send
 
 def play_sounds(secs):
-    soundfiles = glob.glob('testsounds/*.wav')
 
-    for f in soundfiles:
+    for f in glob.glob('testsounds/*.wav'):
         send('playfile {}'.format(f))
         sleep(secs)
 
