@@ -12,13 +12,13 @@ from time import sleep
 import glob
 
 from IO import send
+from utils import wav_duration
 
-def play_sounds(secs):
+def play_sounds(wait_secs):
 
-    for f in glob.glob('testsounds/*.wav'):
+    for f in glob.glob('testsounds/*.wav')[:8]:
         send('playfile {}'.format(f))
-        sleep(secs)
-
+        sleep(wav_duration(f) + wait_secs)
 
 if __name__ == '__main__':
 
@@ -28,11 +28,11 @@ if __name__ == '__main__':
     print 'Playing sounds [self.] will learn. Make gestures.'
 
     send('autolearn 1')
-    play_sounds(10)
+    play_sounds(5)
     send('autolearn 0')
     
     print 'Playing sounds [self.] will respond to. See if the gestures are the same.'
 
     send('autorespond 1')
-    play_sounds(16)
+    play_sounds(5)
     send('autorespond 0')

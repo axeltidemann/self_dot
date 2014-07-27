@@ -98,8 +98,7 @@ class Controller:
                 self.event.send_json({ 'learn': winner })
 
             if message == 'respond':
-                #self.event.send_json({ 'rmse': True })
-                self.event.send_json({ 'findwinner': True })
+                self.event.send_json({ 'rmse': True })
 
             if message == 'setmarker':
                 self.event.send_json({ 'setmarker': True })

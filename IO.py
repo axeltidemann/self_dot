@@ -218,7 +218,7 @@ def audio():
                                         cGet("flux1"), 
                                         cGet("epochSig1"), 
                                         cGet("epochRms1"), 
-                                        cGet("epochZCcps1")]))# + fftin_amplist + fftin_freqlist)) #FFT temporarily disabled
+                                        cGet("epochZCcps1")]))# + fftin_amplist + fftin_freqlist))
 
         if subscriber in events:
             sound = recv_array(subscriber)

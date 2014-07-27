@@ -1,4 +1,5 @@
 import os
+import wave
 
 import numpy as np
 import zmq
@@ -23,6 +24,10 @@ def bytes2human(n, format="%(value)i%(symbol)s"):
 
 def filesize(filename):
     return bytes2human(os.path.getsize(filename))
+
+def wav_duration(filename):
+    sound = wave.open(filename, 'r')
+    return sound.getnframes()/float(sound.getframerate())
 
 def send_array(socket, A, flags=0, copy=True, track=False):
     """send a numpy array with metadata"""

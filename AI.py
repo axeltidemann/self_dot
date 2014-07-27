@@ -21,7 +21,10 @@ import numpy as np
 from utils import filesize, send_array, recv_array
 from IO import MIC, SPEAKER, CAMERA, PROJECTOR, STATE, SNAPSHOT, EVENT, EXTERNAL, RECOGNIZE_IN, RECOGNIZE_LEARN
 
-def _train_network(x, y, output_dim=100, leak_rate=.9, bias_scaling=.2, reset_states=False, use_pinv=True):
+#idxs = [0,3,8,9,11,12]
+idxs = [0,6,7,8,9,12]
+
+def _train_network(x, y, output_dim=100, leak_rate=.9, bias_scaling=.2, reset_states=True, use_pinv=True):
     import Oger
     import mdp
 
@@ -31,9 +34,13 @@ def _train_network(x, y, output_dim=100, leak_rate=.9, bias_scaling=.2, reset_st
                                               leak_rate=leak_rate, 
                                               bias_scaling=bias_scaling, 
                                               reset_states=reset_states)
+    #readout = Oger.nodes.RidgeRegressionNode(.01, use_pinv=use_pinv)
     readout = mdp.nodes.LinearRegressionNode(use_pinv=use_pinv)
-    net = mdp.hinet.FlowNode(reservoir + readout)
-    net.train(x,y)
+    net = mdp.Flow([ reservoir, readout ])
+    
+    net.train([None, zip(x, y)])
+    # net = mdp.hinet.FlowNode(reservoir + readout)
+    # net.train(x,y)
 
     return net
 
@@ -80,7 +87,7 @@ def recognize(host):
             
             targets = []
             for i, memory in enumerate(memories):
-                target = np.zeros(memory.shape)
+                target = np.zeros((memory.shape[0], len(memories)))
                 target[:,i] = 1
                 targets.append(target)
                 
@@ -100,7 +107,7 @@ def learn(audio_in, audio_out, video_in, video_out, host):
 
     x = scaled_audio_in[:-1]
     y = scaled_audio_in[1:]
-    audio_recognizer = _train_network(x, y)
+    audio_recognizer = _train_network(x[:,idxs], y[:,idxs])
     row_diff = audio_in.shape[0] - audio_out.shape[0]
 
     if row_diff < 0:
@@ -187,8 +194,8 @@ def live(audio_recognizer, audio_producer, audio2video, scaler, host):
                 scaled_signals = scaler.transform(new_audio)
                 audio.append(np.ndarray.flatten(scaled_signals))
                 if len(previous_prediction):
-                    error.append(scaled_signals.flatten() - previous_prediction.flatten())
-                previous_prediction = audio_recognizer(scaled_signals) # This would not be necessary in a sentralized recognizer
+                    error.append(scaled_signals[:,idxs].flatten() - previous_prediction.flatten())
+                previous_prediction = audio_recognizer(scaled_signals[:,idxs]) # This would not be necessary in a centralized recognizer
 
         if camera in events:
             new_video = recv_array(camera)
