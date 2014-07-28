@@ -236,6 +236,10 @@ def monolithic_brain(host):
                 start_time = time.time()
                 audio_segment = np.array(list(audio))
                 video_segment = np.array(list(video))
+
+                if audio_segment.shape[0] == 0:
+                    continue
+
                 scaler = pp.MinMaxScaler()
                 scaled_audio = scaler.fit_transform(audio_segment)
 
@@ -289,6 +293,10 @@ def monolithic_brain(host):
             if 'rmse' in pushbutton and len(audio):
                 video_segment = np.array(list(video))
                 audio_segment = np.array(list(audio))
+
+                if audio_segment.shape[0] == 0:
+                    continue
+
                 scaler = pp.MinMaxScaler()
                 scaled_audio = scaler.fit_transform(audio_segment)
 
