@@ -46,6 +46,6 @@ ga.setMutationRate(.5)
 ga.setPopulationSize(100)
 ga.setGenerations(100)
 ga.evolve(freq_stats=10)
-print ga.bestIndividual().genomeList
+print ga.bestIndividual()
 
 
