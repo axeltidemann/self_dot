@@ -250,9 +250,9 @@ def monolithic_brain(host):
                 audio_memories.append(chop(scaled_audio[:, idxs ]))#[:len(audio)/2,idxs])
                 video_memories.append(video_segment)
 
-                plt.figure()
-                plt.plot(audio_memories[-1])
-                plt.draw()
+                # plt.figure()
+                # plt.plot(audio_memories[-1])
+                # plt.draw()
 
                 targets = []
                 for i, memory in enumerate(audio_memories):
@@ -282,9 +282,9 @@ def monolithic_brain(host):
 
                 pushbutton['reset'] = True
 
-                # if len(audio_memories) == 40:
-                #     pickle.dump(audio_memories, open('counts.pickle','w'))
-                #     print 'Data saved'
+                if len(audio_memories) == 40:
+                    pickle.dump(audio_memories, open('dicks.pickle','w'))
+                    print 'Data saved'
 
             if 'rmse' in pushbutton and len(audio):
                 video_segment = np.array(list(video))
@@ -292,14 +292,14 @@ def monolithic_brain(host):
                 scaler = pp.MinMaxScaler()
                 scaled_audio = scaler.fit_transform(audio_segment)
 
-                plt.figure()
-                plt.plot(chop(scaled_audio[:,idxs]))
-                plt.draw()
+                # plt.figure()
+                # plt.plot(chop(scaled_audio[:,idxs]))
+                # plt.draw()
 
                 output = audio_recognizer(chop(scaled_audio[:,idxs]))
-                plt.figure()
-                plt.plot(output)
-                plt.draw()
+                # plt.figure()
+                # plt.plot(output)
+                # plt.draw()
 
                 winner = np.argmax(np.mean(output, axis=0))
                 print 'WINNER NETWORK', winner
