@@ -282,9 +282,9 @@ def monolithic_brain(host):
 
                 pushbutton['reset'] = True
 
-                if len(audio_memories) == 40:
-                    pickle.dump(audio_memories, open('dicks.pickle','w'))
-                    print 'Data saved'
+                # if len(audio_memories) == 40:
+                #     pickle.dump(audio_memories, open('dicks.pickle','w'))
+                #     print 'Data saved'
 
             if 'rmse' in pushbutton and len(audio):
                 video_segment = np.array(list(video))
