@@ -237,7 +237,7 @@ def monolithic_brain(host):
                 audio_segment = np.array(list(audio))
                 video_segment = np.array(list(video))
 
-                if audio_segment.shape[0] == 0:
+                if audio_segment.shape[0] < 10:
                     continue
 
                 scaler = pp.MinMaxScaler()
@@ -294,7 +294,7 @@ def monolithic_brain(host):
                 video_segment = np.array(list(video))
                 audio_segment = np.array(list(audio))
 
-                if audio_segment.shape[0] == 0:
+                if audio_segment.shape[0] < 10:
                     continue
 
                 scaler = pp.MinMaxScaler()
