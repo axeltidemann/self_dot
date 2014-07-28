@@ -14,6 +14,7 @@ import numpy as np
 from pyevolve import G1DList, GSimpleGA, Mutators
 
 from AI import _train_network
+from brain import chop
 
 audio_memories = pickle.load(open('counts.pickle'))
 
@@ -22,12 +23,12 @@ train = audio_memories[:-1:2]
 
 idxs = [0,6,7,8,9,12]
 
-new_test = [t[:,idxs] for t in test ]
-new_train = [t[:,idxs] for t in train ]
+new_test = [chop(t[:,idxs]) for t in test ]
+new_train = [chop(t[:,idxs]) for t in train ]
 
 targets = []
 
-for i, memory in enumerate(train):
+for i, memory in enumerate(new_train):
     target = np.zeros((memory.shape[0], len(train))) - 1
     target[:,i] = 1
     targets.append(target)

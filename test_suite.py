@@ -28,7 +28,7 @@ if __name__ == '__main__':
     print 'Playing sounds [self.] will learn. Make gestures.'
 
     send('autolearn 1')
-    play_sounds(5)
+    play_sounds(7)
     send('autolearn 0')
     
     print 'Playing sounds [self.] will respond to. See if the gestures are the same.'

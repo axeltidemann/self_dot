@@ -12,6 +12,7 @@ import time
 import numpy as np
 import zmq
 from sklearn import preprocessing as pp
+from sklearn.decomposition import PCA
 from sklearn.naive_bayes import GaussianNB
 
 from AI import learn, live, recognize, _train_network
@@ -246,8 +247,12 @@ def monolithic_brain(host):
 
                 audio_producer.append(_train_network([scaled_audio[:-1]], [scaled_audio[1:]]))
 
-                audio_memories.append(scaled_audio[:, idxs ])#[:len(audio)/2,idxs])
+                audio_memories.append(chop(scaled_audio[:, idxs ]))#[:len(audio)/2,idxs])
                 video_memories.append(video_segment)
+
+                plt.figure()
+                plt.plot(audio_memories[-1])
+                plt.draw()
 
                 targets = []
                 for i, memory in enumerate(audio_memories):
@@ -261,8 +266,8 @@ def monolithic_brain(host):
                 #inputs, targets = map(np.vstack, zip(*the_message))
                 #inputs += .3*np.random.random_sample(inputs.shape) - .3 # 20% noise
 
-                # Parameters to network found by evolution
-                audio_recognizer = _train_network(audio_memories, targets, output_dim=580, leak_rate=.12, bias_scaling=.98) 
+                # Parameters to network found by evolution: 58, 12, 98
+                audio_recognizer = _train_network(audio_memories, targets, output_dim=200, leak_rate=.12, bias_scaling=.98) 
 
                 print 'Testing recently learned audio segments: {}% correct'\
                     .format(np.mean([ i == np.argmax(np.mean(audio_recognizer(memory), axis=0)) for i, memory in enumerate(audio_memories) ])*100)
@@ -277,9 +282,9 @@ def monolithic_brain(host):
 
                 pushbutton['reset'] = True
 
-                if len(audio_memories) == 40:
-                    pickle.dump(audio_memories, open('counts.pickle','w'))
-                    print 'Data saved'
+                # if len(audio_memories) == 40:
+                #     pickle.dump(audio_memories, open('counts.pickle','w'))
+                #     print 'Data saved'
 
             if 'rmse' in pushbutton and len(audio):
                 video_segment = np.array(list(video))
@@ -287,11 +292,15 @@ def monolithic_brain(host):
                 scaler = pp.MinMaxScaler()
                 scaled_audio = scaler.fit_transform(audio_segment)
 
-                # plt.figure()
-                # plt.plot(scaled_audio[:,idxs])
-                # plt.draw()
+                plt.figure()
+                plt.plot(chop(scaled_audio[:,idxs]))
+                plt.draw()
 
-                output = audio_recognizer(scaled_audio[:,idxs + range(14, scaled_audio.shape[1])])
+                output = audio_recognizer(chop(scaled_audio[:,idxs]))
+                plt.figure()
+                plt.plot(output)
+                plt.draw()
+
                 winner = np.argmax(np.mean(output, axis=0))
                 print 'WINNER NETWORK', winner
 
@@ -326,6 +335,14 @@ def monolithic_brain(host):
                 load_cns(pushbutton['load'], name)
 
 
+def chop(A, threshold=.05):
+    right = A.shape[0]-1
+    while A[right,0] < threshold:
+        right -= 1
+    left = 0 
+    while A[left,0] < threshold:
+        left += 1
+    return A[left:right]
 
 def gaussian_brain(host):
     name = 'BRAIN'+str(uuid1())
@@ -402,8 +419,8 @@ def gaussian_brain(host):
                                         "epochRms1", 
                                         "epochZCcps1"]
 
-    #idxs = [0,6,7,8,9,12]
-    idxs = [0]
+    idxs = [0,6,7,8,9,12]
+    #idxs = [0]
     #idxs = range(14) # Uncomment to include all parameters
     minlength = []
     
@@ -433,15 +450,13 @@ def gaussian_brain(host):
                 scaler = pp.MinMaxScaler()
                 scaled_audio = scaler.fit_transform(audio_segment)
 
-                # plt.figure()
-                # for i, l in zip(idxs, legends):
-                #     plt.plot(scaled_audio[:,i], label=l)
-                # plt.legend()
-                # plt.draw()
+                plt.figure()
+                plt.plot(chop(scaled_audio[:,idxs]))
+                plt.draw()
 
                 audio_producer.append(_train_network([scaled_audio[:-1]], [scaled_audio[1:]]))
 
-                audio_memories.append(scaled_audio)#[:len(audio)/2,idxs])
+                audio_memories.append(chop(scaled_audio))#[:len(audio)/2,idxs])
                 video_memories.append(video_segment)
 
                 targets = range(len(audio_memories))
@@ -473,12 +488,15 @@ def gaussian_brain(host):
                 scaler = pp.MinMaxScaler()
                 scaled_audio = scaler.fit_transform(audio_segment)
 
-                # plt.figure()
-                # plt.plot(scaled_audio[:,idxs])
-                # plt.draw()
-                print scaled_audio.shape
+                plt.figure()
+                plt.plot(scaled_audio[:minlength,idxs])
+                plt.draw()
                 
-                winner = audio_recognizer.predict(np.ndarray.flatten(scaled_audio[:minlength,idxs]))[0]
+                selectah = np.ndarray.flatten(scaled_audio[:minlength,idxs])
+                if selectah.shape[0] < minlength:
+                    selectah = np.concatenate((selectah, np.zeros(minlength - selectah.shape[0],)))
+
+                winner = audio_recognizer.predict(selectah)[0]
                 print 'WINNER NETWORK', winner
 
                 sound = audio_producer[winner](scaled_audio)
