@@ -44,3 +44,7 @@
 	giPanalyzeTempRef	ftgen	0, 0, 1024, 2, 0	; empty buffer
 
 	gkPanalyzeArr[]		init 11
+
+; secondary synth, keep track of tables currently in use
+        giTablesInUseSecondary  ftgen   0, 0, 1024, 2, 0        ; init empty
+        
