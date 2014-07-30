@@ -24,6 +24,24 @@ from IO import MIC, SPEAKER, CAMERA, PROJECTOR, STATE, SNAPSHOT, EVENT, EXTERNAL
 #idxs = [0,3,8,9,11,12]
 idxs = [0,6,7,8,9,12]
 
+class MultiClassifier:
+
+    def __init__(bins=10):
+        self.bins = bins
+
+    def fit(data):
+        minlength = min([ d.shape[0] for d in data ])
+        maxlength = max([ d.shape[0] for d in data ])
+    
+        zones = np.linspace(minlength, maxlength, self.bins)
+        zones.astype('int')
+
+        
+        
+    def predict(test):
+        pass
+        
+
 def _train_network(x, y, output_dim=100, leak_rate=.9, bias_scaling=.2, reset_states=True, use_pinv=True):
     import Oger
     import mdp
