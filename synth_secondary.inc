@@ -74,7 +74,11 @@ loadAudioAndMarkers(testname)
         itab            = p4
                         tableiw 1, itab, giTablesInUseSecondary ; indicate that the table is in use
 
-;; FIXME (USE tab as partikkel source)
+;; FIXME 
+;;      (USE tab as partikkel source)
+;;      (Use time stretch to create slow moving playback of secondary associations)
+;;      (this may require setting a longer release time, letting playback gently fade away when next secndary association is triggered)
+
 #include "partikkel2_chn.inc"
 #include "partikkel2_self.inc"
 
