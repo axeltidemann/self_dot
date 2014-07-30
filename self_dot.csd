@@ -73,8 +73,8 @@ i99 	0 $SCORELEN			; master out
 
 ; test
 ;i2      4 1                             ; exit Csound
-i 70    1 1                             ; test read a segment from memoryRecording       
-i 74    2 1 800                         ; test play a loaded segment from memoryRecording       
+;i 70    1 1                             ; test read a segment from memoryRecording       
+;i 74    2 1 800                         ; test play a loaded segment from memoryRecording       
 </CsScore>
 
 </CsoundSynthesizer>
