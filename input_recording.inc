@@ -63,6 +63,8 @@
         
                 instr 35
         ; TEST
+                        pyruni "import time"
+                        pyruni "print time.time()"
                         pyruni "f = open('test.txt', 'w')"
                         pyruni "f.write('We can write')"
                         pyruni "f.close()"

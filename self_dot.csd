@@ -75,6 +75,7 @@ i79     0 $SCORELEN			; mixer for secondary associations playback
 i99 	0 $SCORELEN			; master out
 
 ; test
+i35 2 1
 ;i2      4 1                             ; exit Csound
 ;i 70    1 1                             ; test read a segment from memoryRecording       
 ;i 74    2 1 800                         ; test play a loaded segment from memoryRecording       
