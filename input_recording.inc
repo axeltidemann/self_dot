@@ -63,5 +63,6 @@
         
                 instr 35
         ; TEST
+                        pyruni "import time"
                         pyruni "print 'Python is working inside Csound hahahahahahahaha'"
                 endin
