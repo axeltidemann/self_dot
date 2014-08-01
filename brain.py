@@ -270,8 +270,9 @@ def monolithic_brain(host):
                 #inputs, targets = map(np.vstack, zip(*the_message))
                 #inputs += .3*np.random.random_sample(inputs.shape) - .3 # 20% noise
 
-                # Parameters to network found by evolution: 58, 12, 98
-                audio_recognizer = _train_network(audio_memories, targets, output_dim=200, leak_rate=.12, bias_scaling=.98) 
+                # Parameters to network found by evolution: 58, 12, 98 for counts.pickle
+                # 27 13 98 for dicks.pickle
+                audio_recognizer = _train_network(audio_memories, targets, output_dim=270, leak_rate=.13, bias_scaling=.98) 
 
                 print 'Testing recently learned audio segments: {}% correct'\
                     .format(np.mean([ i == np.argmax(np.mean(audio_recognizer(memory), axis=0)) for i, memory in enumerate(audio_memories) ])*100)
@@ -430,7 +431,7 @@ def gaussian_brain(host):
     idxs = [0,6,7,8,9,12]
     #idxs = [0]
     #idxs = range(14) # Uncomment to include all parameters
-    minlength = []
+    maxlength = []
     
     while True:
         events = dict(poller.poll())
@@ -458,27 +459,26 @@ def gaussian_brain(host):
                 scaler = pp.MinMaxScaler()
                 scaled_audio = scaler.fit_transform(audio_segment)
 
-                plt.figure()
-                plt.plot(chop(scaled_audio[:,idxs]))
-                plt.draw()
+                # plt.figure()
+                # plt.plot(chop(scaled_audio[:,idxs]))
+                # plt.draw()
 
                 audio_producer.append(_train_network([scaled_audio[:-1]], [scaled_audio[1:]]))
 
-                audio_memories.append(chop(scaled_audio))#[:len(audio)/2,idxs])
+                audio_memories.append(scaled_audio[:,idxs])#[:len(audio)/2,idxs])
                 video_memories.append(video_segment)
 
                 targets = range(len(audio_memories))
 
-                minlength = min(map(lambda x: x.shape[0], audio_memories))
-                print minlength
+                maxlength = max(map(lambda x: x.shape[0], audio_memories))
 
-                train_data = [ np.ndarray.flatten(memory[:minlength,idxs]) for memory in audio_memories ]                
+                train_data = [ np.ndarray.flatten(np.vstack((memory, np.zeros((maxlength - memory.shape[0], memory.shape[1]))))) for memory in audio_memories ]                
                                 
                 audio_recognizer = GaussianNB()
                 audio_recognizer.fit(train_data, targets)
                 
                 print 'Testing recently learned audio segments: {}% correct'\
-                    .format(np.mean([ i == audio_recognizer.predict(np.ndarray.flatten(memory[:minlength,idxs]))[0] for i, memory in enumerate(audio_memories) ])*100)
+                    .format(np.mean([ i == audio_recognizer.predict(np.ndarray.flatten(np.vstack((memory, np.zeros((maxlength - memory.shape[0], memory.shape[1]))))))[0] for i, memory in enumerate(audio_memories) ])*100)
 
                 stride = scaled_audio.shape[0]/video_segment.shape[0]
                 
@@ -496,13 +496,11 @@ def gaussian_brain(host):
                 scaler = pp.MinMaxScaler()
                 scaled_audio = scaler.fit_transform(audio_segment)
 
-                plt.figure()
-                plt.plot(scaled_audio[:minlength,idxs])
-                plt.draw()
+                # plt.figure()
+                # plt.plot(scaled_audio[:minlength,idxs])
+                # plt.draw()
                 
-                selectah = np.ndarray.flatten(scaled_audio[:minlength,idxs])
-                if selectah.shape[0] < minlength:
-                    selectah = np.concatenate((selectah, np.zeros(minlength - selectah.shape[0],)))
+                selectah = np.ndarray.flatten( scaled_audio[:maxlength, idxs] if scaled_audio.shape[0] > maxlength else np.vstack( (scaled_audio[:,idxs], np.zeros(( maxlength - scaled_audio.shape[0], len(idxs) )))) )
 
                 winner = audio_recognizer.predict(selectah)[0]
                 print 'WINNER NETWORK', winner
@@ -540,5 +538,5 @@ def gaussian_brain(host):
                         
 if __name__ == '__main__':
     #start_brain(sys.argv[1] if len(sys.argv) == 2 else 'localhost')
-    monolithic_brain(sys.argv[1] if len(sys.argv) == 2 else 'localhost')
-    #gaussian_brain(sys.argv[1] if len(sys.argv) == 2 else 'localhost')
+    #monolithic_brain(sys.argv[1] if len(sys.argv) == 2 else 'localhost')
+    gaussian_brain(sys.argv[1] if len(sys.argv) == 2 else 'localhost')

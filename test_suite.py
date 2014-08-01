@@ -16,7 +16,7 @@ from utils import wav_duration
 
 def play_sounds(wait_secs):
 
-    for f in glob.glob('testsounds/*.wav')[:10]:
+    for f in glob.glob('testsounds/*.wav'):
         send('playfile {}'.format(f))
         sleep(wav_duration(f) + wait_secs)
 
@@ -34,5 +34,5 @@ if __name__ == '__main__':
     print 'Playing sounds [self.] will respond to. See if the gestures are the same.'
 
     send('autorespond 1')
-    play_sounds(5)
+    play_sounds(10)
     send('autorespond 0')
