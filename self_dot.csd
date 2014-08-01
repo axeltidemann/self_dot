@@ -12,7 +12,9 @@
 	nchnls = 2	
 	0dbfs = 1
 
-#include "cs_python_globals.inc"
+pyinit          ; so we can call Python from Csound
+
+;#include "cs_python_globals.inc"
 #include "ftables.inc"
 #include "udos.inc"
 
