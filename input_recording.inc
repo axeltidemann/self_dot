@@ -63,6 +63,8 @@
         
                 instr 35
         ; TEST
-                        pyruni "import time"
+                        pyruni "f = open('test.txt', 'w')"
+                        pyruni "f.write('We can write')"
+                        pyruni "f.close()"
                         pyruni "print 'Python is working inside Csound hahahahahahahaha'"
                 endin
