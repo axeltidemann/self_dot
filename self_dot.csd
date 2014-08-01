@@ -12,8 +12,7 @@
 	nchnls = 2	
 	0dbfs = 1
 
-        pyinit          ; we will call Python from Csound
-
+#include "cs_python_globals.inc"
 #include "ftables.inc"
 #include "udos.inc"
 
@@ -67,11 +66,15 @@ i31 	0 $SCORELEN			; analysis
 i52 	0 -1				; partikkel resynthesis
 ;i53 	3 -1				; fft resynthesis
 ;i98 	0 $SCORELEN			; analysis of own output
+i77     0 $SCORELEN			; delay for secondary associations playback
+i78     0 $SCORELEN			; reverb for secondary associations playback
+i79     0 $SCORELEN			; mixer for secondary associations playback
 i99 	0 $SCORELEN			; master out
 
 ; test
 ;i2      4 1                             ; exit Csound
-;i 70    1 1                             ; test read random segment from memoryRecording       
+;i 70    1 1                             ; test read a segment from memoryRecording       
+;i 74    2 1 800                         ; test play a loaded segment from memoryRecording       
 </CsScore>
 
 </CsoundSynthesizer>

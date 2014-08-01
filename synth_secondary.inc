@@ -1,91 +1,16 @@
 ; ******************************
 ; read audio segments from memoryRecording
         instr 70
-        ; use python and ._CSOUND_ to get the file names and initiate events of instr 71
-	; major parts of this instr (python defs) can be moved to global area
+        ; use python and ._CSOUND_ to get the file names and initiate events of instr 71 and 72
 
         pyruni {{
-import os
-import csnd6
-import random
-
-csInstance = csnd6.csoundGetInstance(_CSOUND_)
-memoryPath = '../memoryRecording/'
 files = os.listdir(memoryPath)
+# simple test
+#loadAudioAndMarkers(random.choice(getBasenames()))
+testname = getBasenames(files)[1]
+loadAudioAndMarkers(testname)
+#soundfileGC(-1) # GC immediately
 
-def getBasenames():
-    wavfiles = []
-    txtfiles = []
-    basenames = []
-    # find wav and txt files
-    for f in files:
-        if (f.find('.wav') > -1):
-            wavfiles.append(f)
-        if (f.find('.txt') > -1):
-            txtfiles.append(f)        
-    # find base names for files that exist both with wav and txt extension
-    for f in wavfiles:
-        basename = f.split(".wav")[0]
-        for t in txtfiles:
-            if basename in t:
-                basenames.append(basename)
-    return basenames
-
-def parseMarkerfile(basename):
-    f = file(basename+".txt", 'r')
-    markers = ''
-    for line in f:
-        try:
-            num = float(line)
-            markers += str(num)+' '
-        except:
-            pass    
-        if "Total duration" in line:
-            totaldur = float(line[15:])
-    return markers, totaldur
-
-ftableNums = []
-# use ftable nums between 800 and 899, with markers loaded in tables 900 to 999
-filesloaded ={}
-# populate filesloaded with sublist [filename, ftablenum, accesstime]
-# where accesstime is initially set to load time
-# accesstime is updated each time Csound makes use of the file
-# When Csound needs to use the file, query Python for the ftable num and update accesstime.
-# GC: Files that has not been used for N minutes (20 min?) are GC'ed, 
-# ...make Csound instrument to ftfree the table and also update Python list of available table nums
-
-def getftableNum():
-    tableNum = 800
-    if len(ftableNums)<99:
-        while tableNum in ftableNums:
-            tableNum += 1
-        if tableNum > 899: tableNum = 800
-        ftableNums.append(tableNum)
-    return tableNum
-
-def loadAudioAndMarkers(basename):
-    if basename not in filesloaded.keys():
-        markers, totaldur = parseMarkerfile(memoryPath+basename)
-        ftableNum = getftableNum()
-        csnd6.csoundInputMessage(csInstance, 'i 71 0 .1 %i \"%s.wav\" \"%s\" %f'%(ftableNum, memoryPath+basename, markers, totaldur))
-        print 'cs event sent:', 'i 71 0 .1 \"%s.wav\" \"%s\" %f'%(basename, markers, totaldur)
-        filesloaded[basename] = [ftableNum, time.time()]
-
-def soundfileGC(gcPeriod=20):
-    gcTime = time.time()-(gcPeriod*60)
-    for f in filesloaded.keys():
-        if filesloaded[f][1] < gcTime: 
-            ftableNum = filesloaded[f][0]
-            del filesloaded[f]
-            soundfileFree(ftableNum)
-
-def soundfileFree(ftableNum):
-    ##FIX ME
-
-def loadRandomFromMemory():
-    loadAudioAndMarkers(random.choice(getBasenames()))
-
-loadRandomFromMemory()
 }}
         endin
 
@@ -114,33 +39,68 @@ loadRandomFromMemory()
 
         endin
 
+        instr 72
+; free sound file and marker table
+	itabNum		= p4
+        Sbasename        strget p5
+        puts Sbasename, 1
+
+        ; we might want to check if the table is being used by any secondary synth before deleting (fixme on this)
+        itabInUse       = 0
+        if itabInUse == 0 then
+                        ftfree itabNum, 0       ; sound file
+                        ftfree itabNum+100, 0   ; markers
+        Spystring       sprintf "del filesloaded['%s']", Sbasename
+        pyruni "print filesloaded"
+        pyruni Spystring
+        endif
+        endin
+
 ; ******************************
 ; straight playback of audio segments
-        instr 73
-; FIXME
+        instr 74
+        itab            = p4
+                        tableiw 1, itab, giTablesInUseSecondary ; indicate that the table is in use
+        idur            = nsamp(itab)/sr
+        p3              = idur
+        a1              loscil3 1, 1, itab, 1
+
+#include "synth_secondary_out_and_release.inc"
         endin
 
 ; ******************************
 ; partikkel instr 
-	instr 74
+	instr 75
+        itab            = p4
+                        tableiw 1, itab, giTablesInUseSecondary ; indicate that the table is in use
+
+;; FIXME 
+;;      (USE tab as partikkel source)
+;;      (Use time stretch to create slow moving playback of secondary associations)
+;;      (this may require setting a longer release time, letting playback gently fade away when next secndary association is triggered)
+
 #include "partikkel2_chn.inc"
 #include "partikkel2_self.inc"
-			chnmix aDry, "SecondaryDry"
-			chnmix aDelaySend, "SecondaryDelaySend"
-			chnmix aReverbSend, "SecondaryReverbSend"
+
+#include "synth_secondary_out_and_release.inc"
 	endin
 
 ; ******************************
 ; spectral synth playback of audio segments
-        instr 75
-; FIXME
+        instr 76
+        itab            = p4
+                        tableiw 1, itab, giTablesInUseSecondary ; indicate that the table is in use
+
+;; FIXME (PLAYBACK METHOD)
+        a1              = 0
+#include "synth_secondary_out_and_release.inc"
         endin
 
 ; ******************************
 ; delay for secondary assoc 
 	instr 77
 	a1              chnget "SecondaryDelaySend"
-        kTime		chnget "SecondaryDelayFeed"
+        kTime		chnget "SecondaryDelayTime"
         kFeed		chnget "SecondaryDelayFeed"
 	kFiltFq		chnget "SecondaryDelayFiltFq"
         imaxdel         = 2
@@ -150,6 +110,7 @@ loadRandomFromMemory()
 	aout		deltapi adelTim				; tap delay 
 	adelw		= a1 + (aout*kFeed)			; mix input and feedback
 	adelw		butterlp adelw, kFiltFq			; filter delay signal
+	adelw           butterhp adelw, 40                      ; low cut on feedback
 			delayw	adelw				; write source to delay line
 	aout		butterhp aout, 120
 			chnmix aout, "SecondaryDry"
@@ -173,7 +134,9 @@ loadRandomFromMemory()
 	klevel          chnget "SecondaryMasterLevel"
         klevel          = ampdbfs(klevel)
 	a1              chnget "SecondaryDry"
-        aout            = a1*klevel        
+        aout            = a1*klevel
+        kLoFreq         chnget "SecondaryMasterLoCut"
+        aout            butterhp aout, kLoFreq        
 			chnmix aout, "MasterOut2"
         ; reset channels for secondary assoc
         a0              = 0
