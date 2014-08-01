@@ -60,3 +60,8 @@
                         pyrun "f.close()"
         endif
         endin
+        
+                instr 35
+        ; TEST
+                        pyruni "print 'Python is working inside Csound hahahahahahahaha'"
+                endin
