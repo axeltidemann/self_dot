@@ -13,6 +13,7 @@
 	0dbfs = 1
 
         pyinit          ; so we can call Python from Csound
+        pyruni "print 'helllllooo there ****** ***** !!!!!'"
 
 ;#include "cs_python_globals.inc"
 #include "ftables.inc"
