@@ -86,6 +86,12 @@ class Controller:
             if message == 'stoprec':
                 self.state['record'] = False
 
+            if message == 'memoryRecording 1':
+                self.state['memoryRecording'] = True
+            
+            if message == 'memoryRecording 0':
+                self.state['memoryRecording'] = False
+
             if 'decrement' in message:
                 _, name = message.split()
                 self.state['brains'][name] -= 1
@@ -146,7 +152,8 @@ if __name__ == '__main__':
                          'brains': {},
                          'nets': [],
                          'RMSEs': {},
-                         'record': False,}
+                         'record': False,
+                         'memoryRecording': False}
 
     mp.Process(target=audio, name='AUDIO').start() 
     mp.Process(target=video, name='VIDEO').start()

@@ -1,5 +1,6 @@
 ; Python defs and inits to be used by python calls within Csound instrumets
 
+pyinit          ; so we can call Python from Csound
 
 pyruni {{
 import os

@@ -75,10 +75,10 @@ in the file "self_dot.csd
 
 Recording of learned audio input
 Recording should be active at all times under normal running conditions. Still it is not enabled by default during the development process.
-Two commands are needed to enable recording:
-python communication.py csinstr i 22 0 1 \"memoryRecording\" 1
-python communication.py csinstr i 33 0 -1
-The setup may be refined later. Probably, instr 33 could be always on.
+To enable recording:
+python communication.py memoryRecording 1
+and to disable:
+python communication.py memoryRecording0
 
 ** Learnrespond contains timed macros for certain communication events
 python learnrespond.py [time, mode, file]

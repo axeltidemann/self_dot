@@ -82,7 +82,11 @@ def audio():
     poller.register(subscriber, zmq.POLLIN)
     poller.register(stateQ, zmq.POLLIN)
     poller.register(eventQ, zmq.POLLIN)
-
+    
+    import time
+    t = time.strftime
+    memRecPath = "../memoryRecording/"
+    
     import csnd6
     cs = csnd6.Csound()
     arguments = csnd6.CsoundArgVList()
@@ -143,10 +147,29 @@ def audio():
             state = stateQ.recv_json()
         
         # get Csound channel data
-        audioStatus = cGet("audioStatus")
-        audioStatusTrig = cGet("audioStatusTrig")
-        transient = cGet("transient")
-        
+        audioStatus = cGet("audioStatus")           
+        audioStatusTrig = cGet("audioStatusTrig")       # signals start of a statement (audio in)
+        transient = cGet("transient")                   # signals start of a segment within a statement (audio in)        
+        memRecTimeMarker = cGet("memRecTimeMarker")     # (in memRec) get the time since start of statement
+        memRecActive = cGet("memRecActive")             # flag to check if memoryRecording is currently recording to file in Csound
+         
+        if state['memoryRecording']:
+            if audioStatusTrig > 0:
+                print 'starting memoryRec'
+                timestamp = t('%Y_%m_%d_%H_%M_%S')
+                wavfile = memRecPath+timestamp+'.wav'
+                cs.InputMessage('i 34 0 -1 "%s"'%wavfile)
+                markerfile = open(memRecPath+timestamp+'.txt', 'w')
+                markerfile.write('Self. audio clip perceived at %s\n'%timestamp)
+                segments = 'Sub segment start times: \n0.000 \n'
+            if (transient > 0) & (memRecActive > 0):
+                segments += '%.3f \n'%memRecTimeMarker
+            if (audioStatusTrig < 0) & (memRecActive > 0):
+                print 'stopping memoryRec'
+                markerfile.write(segments)
+                markerfile.write('Total duration: %f'%memRecTimeMarker)
+                cs.InputMessage('i -34 0 1 %s'%wavfile)
+                
         if state['autolearn']:
             if audioStatusTrig > 0:
                 send('startrec', context)

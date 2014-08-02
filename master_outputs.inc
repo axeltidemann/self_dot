@@ -41,5 +41,4 @@
 		chnset a0, "MasterOut2"
 		chnset a0, "in1"
 		chnset a0, "in2"
-
 	endin
