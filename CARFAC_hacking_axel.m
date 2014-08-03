@@ -39,7 +39,7 @@ function smooth_nap = CARFAC_hacking_axel(filename) %used to be filename
   
   % only ear 1:
   ear = 1;
-  smoothed = max(0, smoothed(50:50:end, :, 1));
+  smoothed = max(0, smoothed(50:50:end, :, 1)); 
   %MultiScaleSmooth(smoothed.^0.5, 1);
   
   %figure(1)

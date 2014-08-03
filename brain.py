@@ -350,14 +350,10 @@ def monolithic_brain(host):
 
 def read_and_process(filename, matlab, plt=False):
     data, rate, nbits = matlab.wavread(filename, nout=3)
-    new_rate = rate/4 # Important parameter!
-    #data_resampled = matlab.resample(trim(data, threshold=.025), new_rate, rate)
-    data_resampled = resample(trim(data, threshold=.025), 1./4, 'sinc_best')
+    decimator = 4
+    data_resampled = resample(trim(data, threshold=.025), 1./decimator, 'sinc_best')
     data_resampled.shape = (data_resampled.shape[0], 1)
-    print data.shape, data_resampled.shape
-    #new_rate = rate #BEWARE OF THIS!
-    #matlab.wavwrite(data_resampled, new_rate, int(nbits), 'tmp.wav')
-    matlab.wavwrite(data_resampled, rate/4, int(nbits), 'tmp.wav')
+    matlab.wavwrite(data_resampled, rate/decimator, int(nbits), 'tmp.wav')
     carfac = matlab.CARFAC_hacking_axel('tmp.wav')
 
     if plt:
@@ -450,8 +446,8 @@ def gaussian_brain(host):
     #idxs = range(14) # Uncomment to include all parameters
     maxlen = []
 
-    #matlab = matlab_init()
-    matlab = Oct2Py()
+    #matlab = matlab_init() #SPEED, BABY!
+    matlab = Oct2Py() 
         
     while True:
         events = dict(poller.poll())
@@ -487,7 +483,6 @@ def gaussian_brain(host):
                 wav_memories.append(pushbutton['wavfile'])
 
                 maxlen = max([ memory.shape[0] for memory in audio_memories ])
-                #resampled_memories = [ matlab.resample(memory, maxlen, memory.shape[0]) for memory in audio_memories ]
                 resampled_memories = [ resample(memory, float(maxlen)/memory.shape[0], 'sinc_best') for memory in audio_memories ]
                 resampled_flattened_memories = [ np.ndarray.flatten(memory) for memory in resampled_memories ]
                 
