@@ -14,9 +14,13 @@ import zmq
 from sklearn import preprocessing as pp
 from sklearn.decomposition import PCA
 from sklearn.naive_bayes import GaussianNB
+from mlabwrap import init as matlab_init
+from scipy.io import wavfile
+from oct2py import Oct2Py
+from scikits.samplerate import resample
 
 from AI import learn, live, recognize, _train_network
-from utils import filesize, recv_array, send_array
+from utils import filesize, recv_array, send_array, trim
 from IO import MIC, CAMERA, STATE, SNAPSHOT, EVENT, EXTERNAL, send, RECOGNIZE_IN, RECOGNIZE_LEARN, SPEAKER, PROJECTOR
             
 def load_cns(prefix, brain_name):
@@ -232,7 +236,7 @@ def monolithic_brain(host):
         if eventQ in events:
             pushbutton = eventQ.recv_json()
             if 'learn' in pushbutton and pushbutton['learn'] == name:
-
+                
                 start_time = time.time()
                 audio_segment = np.array(list(audio))
                 video_segment = np.array(list(video))
@@ -344,15 +348,27 @@ def monolithic_brain(host):
                 load_cns(pushbutton['load'], name)
 
 
-def chop(A, threshold=.05):
-    right = A.shape[0]-1
-    while A[right,0] < threshold:
-        right -= 1
-    left = 0 
-    while A[left,0] < threshold:
-        left += 1
-    return A[left:right]
+def read_and_process(filename, matlab, plt=False):
+    data, rate, nbits = matlab.wavread(filename, nout=3)
+    new_rate = rate/4 # Important parameter!
+    #data_resampled = matlab.resample(trim(data, threshold=.025), new_rate, rate)
+    data_resampled = resample(trim(data, threshold=.025), 1./4, 'sinc_best')
+    data_resampled.shape = (data_resampled.shape[0], 1)
+    print data.shape, data_resampled.shape
+    #new_rate = rate #BEWARE OF THIS!
+    #matlab.wavwrite(data_resampled, new_rate, int(nbits), 'tmp.wav')
+    matlab.wavwrite(data_resampled, rate/4, int(nbits), 'tmp.wav')
+    carfac = matlab.CARFAC_hacking_axel('tmp.wav')
 
+    if plt:
+        plt.figure()
+        plt.imshow(carfac, aspect='auto')
+        plt.title(filename)
+        plt.draw()
+
+    return carfac.T
+    
+                
 def gaussian_brain(host):
     name = 'BRAIN'+str(uuid1())
     
@@ -405,6 +421,7 @@ def gaussian_brain(host):
     
     audio_memories = []
     video_memories = []
+    wav_memories = []
 
     audio_recognizer = []
     audio_producer = []
@@ -431,8 +448,11 @@ def gaussian_brain(host):
     idxs = [0,6,7,8,9,12]
     #idxs = [0]
     #idxs = range(14) # Uncomment to include all parameters
-    maxlength = []
-    
+    maxlen = []
+
+    #matlab = matlab_init()
+    matlab = Oct2Py()
+        
     while True:
         events = dict(poller.poll())
         
@@ -453,69 +473,98 @@ def gaussian_brain(host):
             pushbutton = eventQ.recv_json()
             if 'learn' in pushbutton and pushbutton['learn'] == name:
 
-                start_time = time.time()
-                audio_segment = np.array(list(audio))
-                video_segment = np.array(list(video))
-                scaler = pp.MinMaxScaler()
-                scaled_audio = scaler.fit_transform(audio_segment)
+                print 'LEARN', pushbutton['wavfile']
 
-                # plt.figure()
-                # plt.plot(chop(scaled_audio[:,idxs]))
-                # plt.draw()
+                # Super ugly hack! Since Csound might not be finished writing to the file, we try to read it, and upon fail (i.e. it was not closed) we wait .1 seconds.
+                while True:
+                    try:
+                        wavfile.read(pushbutton['wavfile'])
+                        break
+                    except:
+                        time.sleep(.1)
 
-                audio_producer.append(_train_network([scaled_audio[:-1]], [scaled_audio[1:]]))
+                audio_memories.append(read_and_process(pushbutton['wavfile'], matlab, plt))
+                wav_memories.append(pushbutton['wavfile'])
 
-                audio_memories.append(scaled_audio[:,idxs])#[:len(audio)/2,idxs])
-                video_memories.append(video_segment)
-
-                targets = range(len(audio_memories))
-
-                maxlength = max(map(lambda x: x.shape[0], audio_memories))
-
-                train_data = [ np.ndarray.flatten(np.vstack((memory, np.zeros((maxlength - memory.shape[0], memory.shape[1]))))) for memory in audio_memories ]                
-                                
+                maxlen = max([ memory.shape[0] for memory in audio_memories ])
+                #resampled_memories = [ matlab.resample(memory, maxlen, memory.shape[0]) for memory in audio_memories ]
+                resampled_memories = [ resample(memory, float(maxlen)/memory.shape[0], 'sinc_best') for memory in audio_memories ]
+                resampled_flattened_memories = [ np.ndarray.flatten(memory) for memory in resampled_memories ]
+                
                 audio_recognizer = GaussianNB()
-                audio_recognizer.fit(train_data, targets)
+                audio_recognizer.fit(resampled_flattened_memories, range(len(audio_memories)))
                 
-                print 'Testing recently learned audio segments: {}% correct'\
-                    .format(np.mean([ i == audio_recognizer.predict(np.ndarray.flatten(np.vstack((memory, np.zeros((maxlength - memory.shape[0], memory.shape[1]))))))[0] for i, memory in enumerate(audio_memories) ])*100)
+                # start_time = time.time()
+                # audio_segment = np.array(list(audio))
+                # video_segment = np.array(list(video))
+                # scaler = pp.MinMaxScaler()
+                # scaled_audio = scaler.fit_transform(audio_segment)
 
-                stride = scaled_audio.shape[0]/video_segment.shape[0]
+                # # plt.figure()
+                # # plt.plot(chop(scaled_audio[:,idxs]))
+                # # plt.draw()
+
+                # audio_producer.append(_train_network([scaled_audio[:-1]], [scaled_audio[1:]]))
+
+                # audio_memories.append(scaled_audio[:,idxs])#[:len(audio)/2,idxs])
+                # video_memories.append(video_segment)
+
+                # targets = range(len(audio_memories))
+
+                # maxlength = max(map(lambda x: x.shape[0], audio_memories))
+
+                # train_data = [ np.ndarray.flatten(np.vstack((memory, np.zeros((maxlength - memory.shape[0], memory.shape[1]))))) for memory in audio_memories ]                
+                                
+                # audio_recognizer = GaussianNB()
+                # audio_recognizer.fit(train_data, targets)
                 
-                x = [ scaled_audio[scaled_audio.shape[0] - stride*video_segment.shape[0]::stride] ]
-                y = [ video_segment ]
-                video_producer.append(_train_network(x,y, output_dim=100))
+                # print 'Testing recently learned audio segments: {}% correct'\
+                #     .format(np.mean([ i == audio_recognizer.predict(np.ndarray.flatten(np.vstack((memory, np.zeros((maxlength - memory.shape[0], memory.shape[1]))))))[0] for i, memory in enumerate(audio_memories) ])*100)
+
+                # stride = scaled_audio.shape[0]/video_segment.shape[0]
                 
-                print 'Lessons learned in {} seconds'.format(time.time() - start_time)
+                # x = [ scaled_audio[scaled_audio.shape[0] - stride*video_segment.shape[0]::stride] ]
+                # y = [ video_segment ]
+                # video_producer.append(_train_network(x,y, output_dim=100))
+                
+                # print 'Lessons learned in {} seconds'.format(time.time() - start_time)
 
                 pushbutton['reset'] = True
 
             if 'rmse' in pushbutton and len(audio):
-                video_segment = np.array(list(video))
-                audio_segment = np.array(list(audio))
-                scaler = pp.MinMaxScaler()
-                scaled_audio = scaler.fit_transform(audio_segment)
+                print 'RESPOND to', pushbutton['wavfile']
 
-                # plt.figure()
-                # plt.plot(scaled_audio[:minlength,idxs])
-                # plt.draw()
+                test = read_and_process(pushbutton['wavfile'], matlab, plt)
+                #test = matlab.resample(test, maxlen, test.shape[0])
+                test = resample(test, float(maxlen)/test.shape[0], 'sinc_best')
+                winner = audio_recognizer.predict(np.ndarray.flatten(test))[0]
+                sender.send_json('playfile {}'.format(wav_memories[winner]))
+
+                # video_segment = np.array(list(video))
+                # audio_segment = np.array(list(audio))
+                # scaler = pp.MinMaxScaler()
+                # scaled_audio = scaler.fit_transform(audio_segment)
+
+                # # plt.figure()
+                # # plt.plot(scaled_audio[:minlength,idxs])
+                # # plt.draw()
                 
-                selectah = np.ndarray.flatten( scaled_audio[:maxlength, idxs] if scaled_audio.shape[0] > maxlength else np.vstack( (scaled_audio[:,idxs], np.zeros(( maxlength - scaled_audio.shape[0], len(idxs) )))) )
+                # selectah = np.ndarray.flatten( scaled_audio[:maxlength, idxs] if scaled_audio.shape[0] > maxlength else np.vstack( (scaled_audio[:,idxs], np.zeros(( maxlength - scaled_audio.shape[0], len(idxs) )))) )
 
-                winner = audio_recognizer.predict(selectah)[0]
-                print 'WINNER NETWORK', winner
+                # winner = audio_recognizer.predict(selectah)[0]
+                # print 'WINNER NETWORK', winner
 
-                sound = audio_producer[winner](scaled_audio)
+                # sound = audio_producer[winner](scaled_audio)
 
-                stride = audio_segment.shape[0]/video_segment.shape[0]
+                # stride = audio_segment.shape[0]/video_segment.shape[0]
 
-                projection = video_producer[winner](audio_segment[audio_segment.shape[0] - stride*video_segment.shape[0]::stride])
+                # projection = video_producer[winner](audio_segment[audio_segment.shape[0] - stride*video_segment.shape[0]::stride])
 
-                for row in projection:
-                    send_array(projector, row)
+                # for row in projection:
+                #     send_array(projector, row)
 
-                for row in scaler.inverse_transform(sound):
-                    send_array(speaker, row)
+                # for row in scaler.inverse_transform(sound):
+                #     send_array(speaker, row)
 
                 pushbutton['reset'] = True
 

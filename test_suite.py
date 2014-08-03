@@ -16,7 +16,7 @@ from utils import wav_duration
 
 def play_sounds(wait_secs):
 
-    for f in glob.glob('testsounds/*.wav'):
+    for f in glob.glob('testsounds/44100/*.wav')[:10]:
         send('playfile {}'.format(f))
         sleep(wav_duration(f) + wait_secs)
 

@@ -9,12 +9,15 @@
 '''
 
 import multiprocessing as mp
+import time
+
 import zmq
 from zmq.utils.jsonapi import dumps
 
 from AI import learn
 from IO import audio, video, STATE, EXTERNAL, SNAPSHOT, EVENT
-       
+from utils import wav_duration
+
 class Controller:
     def __init__(self, init_state):
         me = mp.current_process()
@@ -97,14 +100,16 @@ class Controller:
                 self.state['brains'][name] -= 1
                 print '{} has now {} available slots'.format(name, self.state['brains'][name])
                 
-            if message == 'learn':
+            if 'learnwav' in message:
                 d = self.state['brains']
                 winner = max(d, key=d.get)
+                _, wavfile = message.split()
                 print '{} chosen to learn, has {} available slots'.format(winner, self.state['brains'][winner])
-                self.event.send_json({ 'learn': winner })
+                self.event.send_json({ 'learn': winner, 'wavfile': wavfile })
 
-            if message == 'respond':
-                self.event.send_json({ 'rmse': True })
+            if 'respondwav' in message:
+                _, wavfile = message.split()
+                self.event.send_json({ 'rmse': True, 'wavfile': wavfile })
 
             if message == 'setmarker':
                 self.event.send_json({ 'setmarker': True })
@@ -128,7 +133,10 @@ class Controller:
                 self.event.send_json({ 'zerochannels': message[13:] })
 
             if 'playfile' in message:
+                self.event.send_json({ 'inputLevel': 'mute' }) # A bit ugly - Csound should mute itself, maybe?
                 self.event.send_json({ 'playfile': message[9:] })
+                time.sleep(wav_duration(message[9:]))
+                self.event.send_json({ 'inputLevel': 'unmute' })
 
             if 'selfvoice' in message:
                 self.event.send_json({ 'selfvoice': message[10:] })

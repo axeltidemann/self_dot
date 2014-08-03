@@ -2,6 +2,7 @@
 # -*- coding: latin-1 -*-
 
 import multiprocessing as mp
+import os
 
 import cv2
 import numpy as np
@@ -86,7 +87,10 @@ def audio():
     import time
     t = time.strftime
     memRecPath = "../memoryRecording/"
-    
+
+    if not os.path.exists(memRecPath):
+        os.makedirs(memRecPath)
+        
     import csnd6
     cs = csnd6.Csound()
     arguments = csnd6.CsoundArgVList()
@@ -165,24 +169,30 @@ def audio():
             if (transient > 0) & (memRecActive > 0):
                 segments += '%.3f \n'%memRecTimeMarker
             if (audioStatusTrig < 0) & (memRecActive > 0):
-                print 'stopping memoryRec'
+                cs.InputMessage('i -34 0 1 %s'%wavfile)
                 markerfile.write(segments)
                 markerfile.write('Total duration: %f'%memRecTimeMarker)
-                cs.InputMessage('i -34 0 1 %s'%wavfile)
-                
+                print 'stopping memoryRec'
+
+        if not state['memoryRecording'] and memRecActive:
+            cs.InputMessage('i -34 0 1 %s'%wavfile)
+            markerfile.write(segments)
+            markerfile.write('Total duration: %f'%memRecTimeMarker)
+            print 'stopping memoryRec'
+                                
         if state['autolearn']:
             if audioStatusTrig > 0:
                 send('startrec', context)
             if audioStatusTrig < 0:
                 send('stoprec', context)
-                send('learn', context)
+                send('learnwav {}'.format(os.path.abspath(wavfile)), context)
 
         if state['autorespond']:
             if audioStatusTrig > 0:
                 send('startrec', context)
             if audioStatusTrig < 0:
                 send('stoprec', context)
-                send('respond', context) 
+                send('respondwav {}'.format(os.path.abspath(wavfile)), context) 
 
         if eventQ in events:
             pushbutton = eventQ.recv_json()
@@ -200,9 +210,13 @@ def audio():
                     print 'unknown voice mode', mode
 
             if 'inputLevel' in pushbutton:
-                mode = '{}'.format(pushbutton['inputLevel'])
-                if mode == 'mute': cs.InputMessage('i 21 0 .1 0')
-                if mode == 'unmute': cs.InputMessage('i 21 0 .1 1')
+                mode = pushbutton['inputLevel']
+                if mode == 'mute':
+                    cs.InputMessage('i 21 0 .1 0')
+                    print 'Mute'
+                if mode == 'unmute':
+                    cs.InputMessage('i 21 0 .1 1')
+                    print 'Un-mute'
                 if mode == 'reset': 
                     cs.InputMessage('i 21 0 .1 0')
                     cs.InputMessage('i 21 1 .1 1')

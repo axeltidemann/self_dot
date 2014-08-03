@@ -5,3 +5,4 @@ myCsoundAudioOptions.py
 test.wav
 test.txt
 *.npy
+testsounds/*

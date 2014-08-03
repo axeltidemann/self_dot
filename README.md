@@ -44,6 +44,24 @@ Now you can install pyzmq, so you can use ØMQ with python.
 
 > pip install pyzmq
 
+These are needed for resampling:
+
+libsndfile: http://www.mega-nerd.com/libsndfile/ (Test if it is really necessary to install this to achieve scikits.samplerate)
+libsamplerate: http://www.mega-nerd.com/SRC/download.html
+
+> pip install scikits.samplerate
+
+Octave: http://www.gnu.org/software/octave/
+
+> pip install oct2py
+
+You must also install the software for Lyon's cochlear model: https://github.com/google/carfac
+
+Start Octave, navigate to path/to/carfac/matlab and add the path to Octave, e.g.
+
+> addpath(pwd)
+> savepath
+
 ## Specific Mac OS X stuff:
 
 These are some experiences found when installing the software under 10.7.5 and 10.8.5.
@@ -56,7 +74,6 @@ On 10.7.5 this had to be set prior to installation of scipy:
 export CC=clang
 export CXX=clang
 ```
-
 
 _Important:_ in order to install OpenCV specific to the virtualenv you
 are using, specify this in the cmake input arguments listed
@@ -108,6 +125,24 @@ export PYTHONPATH=/Library/Python/2.7/site-packages/:$PYTHONPATH
 ```
 
 This could also be set in postactivate, of course.
+
+To install libsndfile: 
+
+```
+./configure --prefix=$VIRTUAL_ENV
+make clean
+make install 
+```
+
+To install libsamplerate:
+
+```
+./configure --prefix=$VIRTUAL_ENV --build='x86_64' --disable-octave --disable-fftw
+make clean
+make install
+```
+
+Check to see if --build and --disable-octave are necessary. The --disable-fftw was what finally made it install. Phew.
 
 And you should be good to go!
 
