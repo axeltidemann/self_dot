@@ -40,8 +40,6 @@ Csound: http://www.csounds.com
 
 ØMQ: http://zeromq.org/
 
-Now you can install pyzmq, so you can use ØMQ with python. 
-
 > pip install pyzmq
 
 These are needed for resampling:
