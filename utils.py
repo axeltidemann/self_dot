@@ -1,5 +1,6 @@
 import os
 import wave
+import csv
 
 import numpy as np
 import zmq
@@ -21,6 +22,19 @@ def bytes2human(n, format="%(value)i%(symbol)s"):
             value = float(n) / prefix[symbol]
             return format % locals()
     return format % dict(symbol=symbols[0], value=n)
+
+def csv_to_array(filename, delimiter=' '):
+    with open(filename, 'r') as csvfile:
+        reader = csv.reader(csvfile, delimiter=delimiter)
+        return np.array([ map(lambda x: float(x), row) for row in reader ])
+
+def array_to_csv(filename, data, delimiter=' '):
+    with open(filename, 'w') as csvfile:
+        writer = csv.writer(csvfile, delimiter=delimiter)
+        if len(data.shape) == 1:
+            data.shape = (data.shape[0],1)
+        for row in data:
+            writer.writerow(row)
 
 def filesize(filename):
     return bytes2human(os.path.getsize(filename))

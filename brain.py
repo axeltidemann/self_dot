@@ -8,19 +8,21 @@ import sys
 import glob
 import cPickle as pickle
 import time
+from subprocess import call
 
 import numpy as np
 import zmq
 from sklearn import preprocessing as pp
 from sklearn.decomposition import PCA
 from sklearn.naive_bayes import GaussianNB
-from mlabwrap import init as matlab_init
 from scipy.io import wavfile
-from oct2py import Oct2Py
+#from mlabwrap import init as matlab_init
+#from oct2py import Oct2Py
 from scikits.samplerate import resample
+from scipy.signal import filtfilt
 
 from AI import learn, live, recognize, _train_network
-from utils import filesize, recv_array, send_array, trim
+from utils import filesize, recv_array, send_array, trim, array_to_csv, csv_to_array
 from IO import MIC, CAMERA, STATE, SNAPSHOT, EVENT, EXTERNAL, send, RECOGNIZE_IN, RECOGNIZE_LEARN, SPEAKER, PROJECTOR
             
 def load_cns(prefix, brain_name):
@@ -348,22 +350,44 @@ def monolithic_brain(host):
                 load_cns(pushbutton['load'], name)
 
 
-def read_and_process(filename, matlab, plt=False):
-    data, rate, nbits = matlab.wavread(filename, nout=3)
-    decimator = 4
-    data_resampled = resample(trim(data, threshold=.025), 1./decimator, 'sinc_best')
-    data_resampled.shape = (data_resampled.shape[0], 1)
-    matlab.wavwrite(data_resampled, rate/decimator, int(nbits), 'tmp.wav')
-    carfac = matlab.CARFAC_hacking_axel('tmp.wav')
+# def read_and_process(filename, matlab, plt=False):
+#     data, rate, nbits = matlab.wavread(filename, nout=3)
+#     decimator = 4
+#     data_resampled = resample(trim(data, threshold=.025), 1./decimator, 'sinc_best')
+#     data_resampled.shape = (data_resampled.shape[0], 1)
+#     matlab.wavwrite(data_resampled, rate/decimator, int(nbits), 'tmp.wav')
+#     carfac = matlab.CARFAC_hacking_axel('tmp.wav')
 
-    if plt:
-        plt.figure()
-        plt.imshow(carfac, aspect='auto')
-        plt.title(filename)
-        plt.draw()
+#     if plt:
+#         plt.figure()
+#         plt.imshow(carfac, aspect='auto')
+#         plt.title(filename)
+#         plt.draw()
 
-    return carfac.T
-    
+#     return carfac.T
+
+def cochlear(filename, db = -40, stride = 441, new_rate = 22050):
+    rate, data = wavfile.read(filename)
+    assert data.dtype == np.int16
+    data = data / float(2**15)
+    data = resample(trim(data, threshold=.025), float(new_rate)/rate, 'sinc_best')
+    data = data*10**(db/20)
+    array_to_csv('{}-audio.txt'.format(filename), data)
+    call(['./carfac-cmd', filename, str(len(data))])
+    carfac = csv_to_array('{}-output.txt'.format(filename))
+    smooth = filtfilt([1], [1, -.995], carfac, axis=0)
+    decim = smooth[::stride]
+    scaled = np.sqrt(np.maximum(0, decim)/np.max(decim))
+    return scaled
+
+def wait_for_file(filename):
+    # Super ugly hack! Since Csound might not be finished writing to the file, we try to read it, and upon fail (i.e. it was not closed) we wait .1 seconds.
+    while True:
+        try:
+            wavfile.read(filename)
+            break
+        except:
+            time.sleep(.1)
                 
 def gaussian_brain(host):
     name = 'BRAIN'+str(uuid1())
@@ -447,7 +471,7 @@ def gaussian_brain(host):
     maxlen = []
 
     #matlab = matlab_init() #SPEED, BABY!
-    matlab = Oct2Py() 
+    #matlab = Oct2Py() 
         
     while True:
         events = dict(poller.poll())
@@ -470,16 +494,12 @@ def gaussian_brain(host):
             if 'learn' in pushbutton and pushbutton['learn'] == name:
 
                 print 'LEARN', pushbutton['wavfile']
-
-                # Super ugly hack! Since Csound might not be finished writing to the file, we try to read it, and upon fail (i.e. it was not closed) we wait .1 seconds.
-                while True:
-                    try:
-                        wavfile.read(pushbutton['wavfile'])
-                        break
-                    except:
-                        time.sleep(.1)
-
-                audio_memories.append(read_and_process(pushbutton['wavfile'], matlab, plt))
+                wait_for_file(pushbutton['wavfile'])
+    
+                audio_memories.append(cochlear(pushbutton['wavfile']))
+                plt.figure()
+                plt.imshow(audio_memories[-1].T, aspect='auto')
+                plt.draw()
                 wav_memories.append(pushbutton['wavfile'])
 
                 maxlen = max([ memory.shape[0] for memory in audio_memories ])
@@ -529,8 +549,11 @@ def gaussian_brain(host):
             if 'rmse' in pushbutton and len(audio):
                 print 'RESPOND to', pushbutton['wavfile']
 
-                test = read_and_process(pushbutton['wavfile'], matlab, plt)
-                #test = matlab.resample(test, maxlen, test.shape[0])
+                wait_for_file(pushbutton['wavfile'])
+                test = cochlear(pushbutton['wavfile'])
+                plt.figure()
+                plt.imshow(test.T, aspect='auto')
+                plt.draw()
                 test = resample(test, float(maxlen)/test.shape[0], 'sinc_best')
                 winner = audio_recognizer.predict(np.ndarray.flatten(test))[0]
                 sender.send_json('playfile {}'.format(wav_memories[winner]))

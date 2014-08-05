@@ -21,7 +21,7 @@ pip install MDP
 easy_install readline
 ```
 
-Unfortunately, there are a few packages that must be installed manually. 
+There are a few packages that must be installed manually. 
 
 ```
 hg clone https://bitbucket.org/benjamin_schrauwen/organic-reservoir-computing-engine Oger
@@ -44,21 +44,71 @@ Csound: http://www.csounds.com
 
 These are needed for resampling:
 
-libsndfile: http://www.mega-nerd.com/libsndfile/ (Test if it is really necessary to install this to achieve scikits.samplerate)
+libsndfile: http://www.mega-nerd.com/libsndfile/ (Test if it is really necessary to install this to achieve scikits.samplerate, try it without first)
 libsamplerate: http://www.mega-nerd.com/SRC/download.html
 
 > pip install scikits.samplerate
+
+Lyon's cochlear model: https://github.com/google/carfac
+
+These are some notes on getting the C++ version of the CARFAC library working. 
+
+SCons http://www.scons.org/
+
+Clang 3.3 (or better) in order to compile the code with SCons. http://clang.llvm.org/
+
+The Eigen library http://eigen.tuxfamily.org/ and set the EIGEN_PATH to where the Eigen folder is (note: NOT the Eigen folder itself, but the folder underneath). 
+
+> export EIGEN_PATH=/path/to/eigen/
+
+The SConstruct file in carfac/cpp should look like this, the result of STRESS, SWEAT & TEARS (big up to Boye). Note: change the path to clang, of course. 
+
+```
+import commands
+import os
+
+env = Environment(CPPPATH = [os.environ['EIGEN_PATH']])
+env['CC'] = '/Users/tidemann/.virtualenvs/self_dot/bin/clang'
+env['CXX'] = '/Users/tidemann/.virtualenvs/self_dot/bin/clang++'
+
+env.MergeFlags(['-std=c++11 -stdlib=libc++ -v'])
+carfac_sources = [
+    'binaural_sai.cc',
+    'carfac.cc',
+    'ear.cc',
+    'sai.cc'
+    ]
+
+carfac = env.Library(target = 'carfac', source = carfac_sources)
+Default(carfac)
+
+axel_sources = carfac_sources + ['carfac_cmd.cc']
+axel = env.Program(target = 'carfac-cmd',
+                    source = axel_sources,
+                    LINKFLAGS = '-std=c++11 -stdlib=libc++ -v')
+
+```
+
+The file carfac_cmd.cc must be in the /path/to/carfac/cpp folder, move it from your self_dot home to this location.
+
+To compile it, run 
+
+> scons carfac-cmd
+
+Afterwards, you must move the carfac-cmd executable to your self_dot home, since python is calling it from brain.py.
+
+If you want to install Octave, e.g. the C++ version is too troublesome, follow these steps:
 
 Octave: http://www.gnu.org/software/octave/
 
 > pip install oct2py
 
-You must also install the software for Lyon's cochlear model: https://github.com/google/carfac
-
 Start Octave, navigate to path/to/carfac/matlab and add the path to Octave, e.g.
 
 > addpath(pwd)
 > savepath
+
+However, in production mode we must run the C++-version as it is a lot faster than the Octave counterpart. 
 
 ## Specific Mac OS X stuff:
 
@@ -86,7 +136,7 @@ cd opencv*
 mkdir build 
 cd build 
 cmake -D CMAKE_INSTALL_PREFIX=$VIRTUAL_ENV -D PYTHON_EXECUTABLE=$VIRTUAL_ENV/bin/python -D PYTHON_PACKAGES_PATH=$VIRTUAL_ENV/lib/python2.7/site-packages/ -D PYTHON_LIBRARY=/Library/Frameworks/Python.framework/Versions/2.7/lib/libpython2.7.dylib -G "Unix Makefiles" ..
-make -j8
+make -j
 make install 
 ```
 
@@ -137,6 +187,22 @@ To install libsamplerate:
 ```
 ./configure --prefix=$VIRTUAL_ENV --build='x86_64' --disable-octave --disable-fftw
 make clean
+make install
+```
+Test to see if --build and --disable-octave are necessary. --disable-fftw is what finally made it install on my Mac.
+
+To install clang 3.3: Change 33 -> 35 to try later version. 
+
+```
+cd ~
+svn co http://llvm.org/svn/llvm-project/llvm/tags/RELEASE\_33/final llvm33
+cd llvm33/tools
+svn co http://llvm.org/svn/llvm-project/cfe/tags/RELEASE\_33/final clang
+cd ../..
+mkdir llvm33build
+cd llvm33build
+cmake -D CMAKE_INSTALL_PREFIX=$VIRTUAL_ENV -DCMAKE\_BUILD\_TYPE=Release -G "Unix Makefiles" ../llvm33
+make -j
 make install
 ```
 
