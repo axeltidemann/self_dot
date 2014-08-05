@@ -45,6 +45,7 @@ Csound: http://www.csounds.com
 These are needed for resampling:
 
 libsndfile: http://www.mega-nerd.com/libsndfile/ (Test if it is really necessary to install this to achieve scikits.samplerate, try it without first)
+
 libsamplerate: http://www.mega-nerd.com/SRC/download.html
 
 > pip install scikits.samplerate
@@ -53,11 +54,11 @@ Lyon's cochlear model: https://github.com/google/carfac
 
 These are some notes on getting the C++ version of the CARFAC library working. 
 
-SCons http://www.scons.org/
+SCons: http://www.scons.org/
 
-Clang 3.3 (or better) in order to compile the code with SCons. http://clang.llvm.org/
+Clang 3.3 (or better) in order to compile the code with SCons: http://clang.llvm.org/
 
-The Eigen library http://eigen.tuxfamily.org/ and set the EIGEN_PATH to where the Eigen folder is (note: NOT the Eigen folder itself, but the folder underneath). 
+The Eigen library: http://eigen.tuxfamily.org/ and set the EIGEN_PATH to where the Eigen folder is (note: NOT the Eigen folder itself, but the folder underneath). 
 
 > export EIGEN_PATH=/path/to/eigen/
 
@@ -86,7 +87,6 @@ axel_sources = carfac_sources + ['carfac_cmd.cc']
 axel = env.Program(target = 'carfac-cmd',
                     source = axel_sources,
                     LINKFLAGS = '-std=c++11 -stdlib=libc++ -v')
-
 ```
 
 The file carfac_cmd.cc must be in the /path/to/carfac/cpp folder, move it from your self_dot home to this location.
@@ -105,8 +105,10 @@ Octave: http://www.gnu.org/software/octave/
 
 Start Octave, navigate to path/to/carfac/matlab and add the path to Octave, e.g.
 
-> addpath(pwd)
-> savepath
+```
+addpath(pwd)
+savepath
+```
 
 However, in production mode we must run the C++-version as it is a lot faster than the Octave counterpart. 
 
