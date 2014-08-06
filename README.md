@@ -18,7 +18,6 @@ pip install scipy
 pip install scikit-learn
 pip install ipdb
 pip install MDP
-easy_install readline
 ```
 
 There are a few packages that must be installed manually. 
@@ -41,10 +40,6 @@ Csound: http://www.csounds.com
 ØMQ: http://zeromq.org/
 
 > pip install pyzmq
-
-These are needed for resampling:
-
-libsndfile: http://www.mega-nerd.com/libsndfile/ (Test if it is really necessary to install this to achieve scikits.samplerate, try it without first)
 
 libsamplerate: http://www.mega-nerd.com/SRC/download.html
 
@@ -125,7 +120,7 @@ export CC=clang
 export CXX=clang
 ```
 
-_Important:_ in order to install OpenCV specific to the virtualenv you
+_Important:_ in order to install OpenCV 2.4.8 (could not get 2.4.9 to compile) specific to the virtualenv you
 are using, specify this in the cmake input arguments listed
 below. This has the advantage that OpenCV will be installed locally
 *and* linked to the Python version of the virtualenv - if not
@@ -226,3 +221,70 @@ And you should be good to go!
  compiling code than 10.8. What about 10.9, you say? Well, by now it
  should be obvious why I won't be upgrading _anytime soon_, since I
  have some colleagues who have. They wish they hadn't.
+
+## Ubuntu on VirtualBox 
+
+VirtualBox https://www.virtualbox.org
+
+Ubuntu: http://www.ubuntu.com
+
+Insert the "Devices > Guest additions" CD to have a more smooth experience. To SSH into your Ubuntu virtual machine, stop the virtual machine, go to Settings > Network > Adapter 1 and select "Attached to: Bridged adapter". Furthermore, on the virtual machine you must install the ssh server. We include git and python-pip here as well, since you'll be needing these.
+
+```
+> sudo apt-get install openssh-server git python-pip
+
+Then run ifconfig to see your IP address. Now you can SSH into the virtual machine, which makes copying/pasting code and doing installation thingies a lot easier in my experience.
+
+To install numpy and scipy:
+
+> sudo apt-get install python-numpy python-scipy python-matplotlib ipython 
+
+Note how we do not use virtualenvwrapper - this virtual machine will not be used for anything else, and there is a lot of precompiled libraries for Ubuntu, so we are taking the easy route here.
+
+
+OpenCV:
+
+```
+version="$(wget -q -O - http://sourceforge.net/projects/opencvlibrary/files/opencv-unix | egrep -m1 -o '\"[0-9](\.[0-9])+' | cut -c2-)"
+echo "Installing OpenCV" $version
+mkdir OpenCV
+cd OpenCV
+echo "Removing any pre-installed ffmpeg and x264"
+sudo apt-get -qq remove ffmpeg x264 libx264-dev
+echo "Installing Dependenices"
+sudo apt-get -qq install libopencv-dev build-essential checkinstall cmake pkg-config yasm libjpeg-dev libjasper-dev libavcodec-dev libavformat-dev libswscale-dev libdc1394-22-dev libxine-dev libgstreamer0.10-dev libgstreamer-plugins-base0.10-dev libv4l-dev python-dev python-numpy libtbb-dev libqt4-dev libgtk2.0-dev libfaac-dev libmp3lame-dev libopencore-amrnb-dev libopencore-amrwb-dev libtheora-dev libvorbis-dev libxvidcore-dev x264 v4l-utils
+echo "Downloading OpenCV" $version
+wget -O OpenCV-$version.zip http://sourceforge.net/projects/opencvlibrary/files/opencv-unix/$version/opencv-"$version".zip/download
+echo "Installing OpenCV" $version
+unzip OpenCV-$version.zip
+cd opencv-$version
+mkdir build
+cd build
+cmake -D CMAKE_BUILD_TYPE=RELEASE -D CMAKE_INSTALL_PREFIX=/usr/local -D WITH_TBB=ON -D BUILD_NEW_PYTHON_SUPPORT=ON -D WITH_V4L=ON -D INSTALL_C_EXAMPLES=ON -D INSTALL_PYTHON_EXAMPLES=ON -D BUILD_EXAMPLES=ON -D WITH_QT=OFF -D WITH_OPENGL=ON ..
+make 
+sudo make install
+```
+
+CSound:
+
+> sudo apt-get build-dep csound
+
+And then:
+
+```
+cd ~
+mkdir csound
+cd csound
+git clone https://github.com/csound/csound.git csound
+mkdir cs6make
+cd cs6make
+cmake ../csound
+make 
+sudo make install
+sudo ldconfig
+
+```
+
+Getting libc++ to work on Ubuntu, otherwise installation of Lyon's cochlear model won't work:
+
+> sudo apt-get install libc++-dev
