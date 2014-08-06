@@ -236,7 +236,7 @@ Then run ifconfig to see your IP address. Now you can SSH into the virtual machi
 
 To install numpy and scipy:
 
-> sudo apt-get install python-numpy python-scipy python-matplotlib ipython 
+> sudo apt-get install python-numpy python-scipy python-matplotlib ipython python-nose
 
 Note how we do not use virtualenvwrapper - this virtual machine will not be used for anything else, and there is a lot of precompiled libraries for Ubuntu, so we are taking the easy route here.
 
