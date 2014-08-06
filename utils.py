@@ -1,9 +1,11 @@
 import os
 import wave
 import csv
+import time
 
 import numpy as np
 import zmq
+from scipy.io import wavfile
 
 # http://goo.gl/zeJZl
 def bytes2human(n, format="%(value)i%(symbol)s"):
@@ -26,7 +28,7 @@ def bytes2human(n, format="%(value)i%(symbol)s"):
 def csv_to_array(filename, delimiter=' '):
     with open(filename, 'r') as csvfile:
         reader = csv.reader(csvfile, delimiter=delimiter)
-        return np.array([ map(lambda x: float(x), row) for row in reader ])
+        return np.array([ [ float(r) for r in row ] for row in reader ])
 
 def array_to_csv(filename, data, delimiter=' '):
     with open(filename, 'w') as csvfile:
@@ -36,6 +38,16 @@ def array_to_csv(filename, data, delimiter=' '):
         for row in data:
             writer.writerow(row)
 
+
+def wait_for_wav(filename):
+    # Super ugly hack! Since Csound might not be finished writing to the file, we try to read it, and upon fail (i.e. it was not closed) we wait .1 seconds.
+    while True:
+        try:
+            wavfile.read(filename)
+            break
+        except:
+            time.sleep(.1)
+            
 def filesize(filename):
     return bytes2human(os.path.getsize(filename))
 

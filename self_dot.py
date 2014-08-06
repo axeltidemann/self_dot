@@ -17,6 +17,7 @@ from zmq.utils.jsonapi import dumps
 from AI import learn
 from IO import audio, video, STATE, EXTERNAL, SNAPSHOT, EVENT
 from utils import wav_duration
+from brain import classifier_brain
 
 class Controller:
     def __init__(self, init_state):
@@ -166,6 +167,7 @@ if __name__ == '__main__':
     mp.Process(target=audio, name='AUDIO').start() 
     mp.Process(target=video, name='VIDEO').start()
     mp.Process(target=Controller, args=(persistent_states,), name='CONTROLLER').start()
+    mp.Process(target=classifier_brain, args=('localhost',)).start()
 
     try:
         raw_input('')

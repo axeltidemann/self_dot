@@ -145,9 +145,10 @@ specified this way, it will use the system Python instead, which is
 sure to cause massive headaches and the death of many adorable kittens
 in the future. A source of __immensive__ frustration when trying to
 reinstall OpenCV was that you must *not* set CC and CXX to clang, as
-you do before installing virtually every other package. So if you just did, close
-that window and start anew. A bit baffling, and this took me quite som
-hours to figure out.
+you do before installing virtually every other package (ØMQ being a
+notable exception, where you must include clang to install pyzmq
+again). So if you just did, close that window and start anew. A bit
+baffling, and this took me quite som hours to figure out.
 
 ```
 cd opencv*
@@ -170,11 +171,9 @@ the VIRTUALENVWRAPPER_PYTHON was the same as the system wide python,
 so this worked.
 
 In order to use the new shared libraries, you must specify where they
-are. This is not needed in 10.7, check to see if it is needed in 10.8
-- it could be that this is taken care of automatically when you put
-everything in $VIRTUAL_ENV. Not setting this could be why ØMQ installed itself
-automatically when I pip install pyzmq, because it could not find what I had just
-installed. Weird.
+are. This is not needed in 10.7, check to see if it is needed in 10.8.
+It could be that this is taken care of automatically when you put
+everything in $VIRTUAL_ENV.
 
 > export DYLD_LIBRARY_PATH=$VIRTUAL_ENV/lib 
 

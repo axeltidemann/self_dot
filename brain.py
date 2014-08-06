@@ -7,23 +7,20 @@ from collections import deque
 import sys
 import glob
 import cPickle as pickle
-import time
 from subprocess import call
+import time
 
 import numpy as np
 import zmq
 from sklearn import preprocessing as pp
-from sklearn.decomposition import PCA
-from sklearn.naive_bayes import GaussianNB
+from sklearn import svm
 from scipy.io import wavfile
-#from mlabwrap import init as matlab_init
-#from oct2py import Oct2Py
 from scikits.samplerate import resample
 from scipy.signal import filtfilt
 
 from AI import learn, live, recognize, _train_network
-from utils import filesize, recv_array, send_array, trim, array_to_csv, csv_to_array
-from IO import MIC, CAMERA, STATE, SNAPSHOT, EVENT, EXTERNAL, send, RECOGNIZE_IN, RECOGNIZE_LEARN, SPEAKER, PROJECTOR
+from utils import filesize, recv_array, send_array, trim, array_to_csv, csv_to_array, wait_for_wav
+from IO import MIC, CAMERA, STATE, SNAPSHOT, EVENT, EXTERNAL, send, SPEAKER, PROJECTOR
             
 def load_cns(prefix, brain_name):
     for filename in glob.glob(prefix+'*'):
@@ -36,363 +33,24 @@ def load_cns(prefix, brain_name):
         send('decrement {}'.format(brain_name))
 
         
-def start_brain(host):
-    name = 'BRAIN'+str(uuid1())
-    
-    print '{} connecting to {}'.format(name, host)
-
-    context = zmq.Context()
-
-    mic = context.socket(zmq.SUB)
-    mic.connect('tcp://{}:{}'.format(host, MIC))
-    mic.setsockopt(zmq.SUBSCRIBE, b'')
-
-    camera = context.socket(zmq.SUB)
-    camera.connect('tcp://{}:{}'.format(host, CAMERA))
-    camera.setsockopt(zmq.SUBSCRIBE, b'')
-
-    stateQ = context.socket(zmq.SUB)
-    stateQ.connect('tcp://{}:{}'.format(host, STATE))
-    stateQ.setsockopt(zmq.SUBSCRIBE, b'') 
-
-    eventQ = context.socket(zmq.SUB)
-    eventQ.connect('tcp://{}:{}'.format(host, EVENT))
-    eventQ.setsockopt(zmq.SUBSCRIBE, b'') 
-
-    rec_in = context.socket(zmq.PUB)
-    rec_in.bind('tcp://*:{}'.format(RECOGNIZE_IN))
-
-    rec_learn = context.socket(zmq.PUB)
-    rec_learn.bind('tcp://*:{}'.format(RECOGNIZE_LEARN))
-        
-    sender = context.socket(zmq.PUSH)
-    sender.connect('tcp://{}:{}'.format(host, EXTERNAL))
-    sender.send_json('register {} {}'.format(name, mp.cpu_count()))
-
-    snapshot = context.socket(zmq.REQ)
-    snapshot.connect('tcp://{}:{}'.format(host, SNAPSHOT))
-    snapshot.send(b'Send me the state, please')
-    state = snapshot.recv_json()
-    
-    poller = zmq.Poller()
-    poller.register(mic, zmq.POLLIN)
-    poller.register(camera, zmq.POLLIN)
-    poller.register(stateQ, zmq.POLLIN)
-    poller.register(eventQ, zmq.POLLIN)
-
-    audio = deque()
-    video = deque()
-
-    audio_first_segment = []
-    video_first_segment = []
-
-    # mp.Process(target = recognize,
-    #            args = ('localhost',),
-    #            name = 'RECOGNIZER').start()
-    
-    while True:
-        events = dict(poller.poll())
-        
-        if stateQ in events:
-            state = stateQ.recv_json()
-
-        if mic in events:
-            new_audio = recv_array(mic)
-            if state['record']:
-                audio.append(new_audio)
-            
-        if camera in events:
-            new_video = recv_array(camera)
-            if state['record']:
-                video.append(new_video)
-        
-        if eventQ in events:
-            pushbutton = eventQ.recv_json()
-            if 'learn' in pushbutton and pushbutton['learn'] == name:
-                
-                mp.Process(target = learn, 
-                           args = (audio_first_segment if len(audio_first_segment) else np.array(list(audio)), 
-                                   np.array(list(audio)), 
-                                   video_first_segment if len(video_first_segment) else np.array(list(video)),
-                                   np.array(list(video)), 
-                                   host),
-                           name = 'NEURALNETWORK'+str(uuid1())).start()
-
-                #send_array(rec_learn, audio_first_segment if len(audio_first_segment) else np.array(list(audio)))
-                sender.send_json('decrement {}'.format(name))
-                pushbutton['reset'] = True
-
-            if 'reset' in pushbutton:
-                audio.clear()
-                video.clear()
-                audio_first_segment = []
-                video_first_segment = []
-            
-            if 'setmarker' in pushbutton:
-                audio_first_segment = np.array(list(audio))
-                video_first_segment = np.array(list(video))
-                audio.clear()
-                video.clear()
-
-            if 'load' in pushbutton:
-                load_cns(pushbutton['load'], name)
-
-            if 'findwinner' in pushbutton:
-                if len(audio):
-                    send_array(rec_in, audio_first_segment if len(audio_first_segment) else np.array(list(audio)))
-
-def monolithic_brain(host):
-    name = 'BRAIN'+str(uuid1())
-    
-    print '{} connecting to {}'.format(name, host)
-
-    context = zmq.Context()
-
-    mic = context.socket(zmq.SUB)
-    mic.connect('tcp://{}:{}'.format(host, MIC))
-    mic.setsockopt(zmq.SUBSCRIBE, b'')
-
-    speaker = context.socket(zmq.PUSH)
-    speaker.connect('tcp://{}:{}'.format(host, SPEAKER)) 
-
-    camera = context.socket(zmq.SUB)
-    camera.connect('tcp://{}:{}'.format(host, CAMERA))
-    camera.setsockopt(zmq.SUBSCRIBE, b'')
-
-    projector = context.socket(zmq.PUSH)
-    projector.connect('tcp://{}:{}'.format(host, PROJECTOR)) 
-
-    stateQ = context.socket(zmq.SUB)
-    stateQ.connect('tcp://{}:{}'.format(host, STATE))
-    stateQ.setsockopt(zmq.SUBSCRIBE, b'') 
-
-    eventQ = context.socket(zmq.SUB)
-    eventQ.connect('tcp://{}:{}'.format(host, EVENT))
-    eventQ.setsockopt(zmq.SUBSCRIBE, b'') 
-
-    sender = context.socket(zmq.PUSH)
-    sender.connect('tcp://{}:{}'.format(host, EXTERNAL))
-    sender.send_json('register {} {}'.format(name, mp.cpu_count()))
-
-    snapshot = context.socket(zmq.REQ)
-    snapshot.connect('tcp://{}:{}'.format(host, SNAPSHOT))
-    snapshot.send(b'Send me the state, please')
-    state = snapshot.recv_json()
-    
-    poller = zmq.Poller()
-    poller.register(mic, zmq.POLLIN)
-    poller.register(camera, zmq.POLLIN)
-    poller.register(stateQ, zmq.POLLIN)
-    poller.register(eventQ, zmq.POLLIN)
-
-    audio = deque()
-    video = deque()
-
-    audio_first_segment = []
-    video_first_segment = []
-    
-    audio_memories = []
-    video_memories = []
-
-    audio_recognizer = []
-    audio_producer = []
-    video_producer = []
-
-    import matplotlib.pyplot as plt
-    plt.ion()
-
-    legends= ["level1", 
-                                        "pitch1ptrack", 
-                                        "pitch1pll", 
-                                        "autocorr1", 
-                                        "centroid1",
-                                        "spread1", 
-                                        "skewness1", 
-                                        "kurtosis1", 
-                                        "flatness1", 
-                                        "crest1", 
-                                        "flux1", 
-                                        "epochSig1", 
-                                        "epochRms1", 
-                                        "epochZCcps1"]
-
-    idxs = [0,6,7,8,9,12]
-    #idxs = range(14) # Uncomment to include all parameters
-    
-    while True:
-        events = dict(poller.poll())
-        
-        if stateQ in events:
-            state = stateQ.recv_json()
-
-        if mic in events:
-            new_audio = recv_array(mic)
-            if state['record']:
-                audio.append(new_audio)
-            
-        if camera in events:
-            new_video = recv_array(camera)
-            if state['record']:
-                video.append(new_video)
-        
-        if eventQ in events:
-            pushbutton = eventQ.recv_json()
-            if 'learn' in pushbutton and pushbutton['learn'] == name:
-                
-                start_time = time.time()
-                audio_segment = np.array(list(audio))
-                video_segment = np.array(list(video))
-
-                if audio_segment.shape[0] < 10:
-                    continue
-
-                scaler = pp.MinMaxScaler()
-                scaled_audio = scaler.fit_transform(audio_segment)
-
-                # plt.figure()
-                # for i, l in zip(idxs, legends):
-                #     plt.plot(scaled_audio[:,i], label=l)
-                # plt.legend()
-                # plt.draw()
-
-                audio_producer.append(_train_network([scaled_audio[:-1]], [scaled_audio[1:]]))
-
-                audio_memories.append(chop(scaled_audio[:, idxs ]))#[:len(audio)/2,idxs])
-                video_memories.append(video_segment)
-
-                # plt.figure()
-                # plt.plot(audio_memories[-1])
-                # plt.draw()
-
-                targets = []
-                for i, memory in enumerate(audio_memories):
-                    target = np.zeros((memory.shape[0], len(audio_memories))) - 1
-                    target[:,i] = 1
-                    targets.append(target)
-
-                #the_message = zip(audio_memories, targets)
-                #the_message *= 10
-                #np.random.shuffle(the_message)
-                #inputs, targets = map(np.vstack, zip(*the_message))
-                #inputs += .3*np.random.random_sample(inputs.shape) - .3 # 20% noise
-
-                # Parameters to network found by evolution: 58, 12, 98 for counts.pickle
-                # 27 13 98 for dicks.pickle
-                audio_recognizer = _train_network(audio_memories, targets, output_dim=270, leak_rate=.13, bias_scaling=.98) 
-
-                print 'Testing recently learned audio segments: {}% correct'\
-                    .format(np.mean([ i == np.argmax(np.mean(audio_recognizer(memory), axis=0)) for i, memory in enumerate(audio_memories) ])*100)
-
-                stride = scaled_audio.shape[0]/video_segment.shape[0]
-                
-                x = [ scaled_audio[scaled_audio.shape[0] - stride*video_segment.shape[0]::stride] ]
-                y = [ video_segment ]
-                video_producer.append(_train_network(x,y, output_dim=100))
-                
-                print 'Lessons learned in {} seconds'.format(time.time() - start_time)
-
-                pushbutton['reset'] = True
-
-                # if len(audio_memories) == 40:
-                #     pickle.dump(audio_memories, open('dicks.pickle','w'))
-                #     print 'Data saved'
-
-            if 'rmse' in pushbutton and len(audio):
-                video_segment = np.array(list(video))
-                audio_segment = np.array(list(audio))
-
-                if audio_segment.shape[0] < 10:
-                    continue
-
-                scaler = pp.MinMaxScaler()
-                scaled_audio = scaler.fit_transform(audio_segment)
-
-                # plt.figure()
-                # plt.plot(chop(scaled_audio[:,idxs]))
-                # plt.draw()
-
-                output = audio_recognizer(chop(scaled_audio[:,idxs]))
-                # plt.figure()
-                # plt.plot(output)
-                # plt.draw()
-
-                winner = np.argmax(np.mean(output, axis=0))
-                print 'WINNER NETWORK', winner
-
-                sound = audio_producer[winner](scaled_audio)
-
-                stride = audio_segment.shape[0]/video_segment.shape[0]
-
-                projection = video_producer[winner](audio_segment[audio_segment.shape[0] - stride*video_segment.shape[0]::stride])
-
-                for row in projection:
-                    send_array(projector, row)
-
-                for row in scaler.inverse_transform(sound):
-                    send_array(speaker, row)
-
-                pushbutton['reset'] = True
-
-
-            if 'reset' in pushbutton:
-                audio.clear()
-                video.clear()
-                audio_first_segment = []
-                video_first_segment = []
-            
-            if 'setmarker' in pushbutton:
-                audio_first_segment = np.array(list(audio))
-                video_first_segment = np.array(list(video))
-                audio.clear()
-                video.clear()
-
-            if 'load' in pushbutton:
-                load_cns(pushbutton['load'], name)
-
-
-# def read_and_process(filename, matlab, plt=False):
-#     data, rate, nbits = matlab.wavread(filename, nout=3)
-#     decimator = 4
-#     data_resampled = resample(trim(data, threshold=.025), 1./decimator, 'sinc_best')
-#     data_resampled.shape = (data_resampled.shape[0], 1)
-#     matlab.wavwrite(data_resampled, rate/decimator, int(nbits), 'tmp.wav')
-#     carfac = matlab.CARFAC_hacking_axel('tmp.wav')
-
-#     if plt:
-#         plt.figure()
-#         plt.imshow(carfac, aspect='auto')
-#         plt.title(filename)
-#         plt.draw()
-
-#     return carfac.T
-
-def cochlear(filename, db = -40, stride = 441, new_rate = 22050):
+def cochlear(filename, db = -40, stride = 441, new_rate = 22050, threshold=.025):
     rate, data = wavfile.read(filename)
     assert data.dtype == np.int16
     data = data / float(2**15)
-    data = resample(trim(data, threshold=.025), float(new_rate)/rate, 'sinc_best')
+    data = resample(trim(data, threshold=threshold), float(new_rate)/rate, 'sinc_best')
     data = data*10**(db/20)
     array_to_csv('{}-audio.txt'.format(filename), data)
     call(['./carfac-cmd', filename, str(len(data))])
     carfac = csv_to_array('{}-output.txt'.format(filename))
     smooth = filtfilt([1], [1, -.995], carfac, axis=0)
     decim = smooth[::stride]
-    scaled = np.sqrt(np.maximum(0, decim)/np.max(decim))
-    return scaled
+    return np.sqrt(np.maximum(0, decim)/np.max(decim))
 
-def wait_for_file(filename):
-    # Super ugly hack! Since Csound might not be finished writing to the file, we try to read it, and upon fail (i.e. it was not closed) we wait .1 seconds.
-    while True:
-        try:
-            wavfile.read(filename)
-            break
-        except:
-            time.sleep(.1)
-                
-def gaussian_brain(host):
-    name = 'BRAIN'+str(uuid1())
-    
-    print '{} connecting to {}'.format(name, host)
+
+def classifier_brain(host):
+    me = mp.current_process()
+    me.name = 'BRAIN{}'.format(str(uuid1()))
+    print '{} PID {} connecting to {}'.format(me.name, me.pid, host)
 
     context = zmq.Context()
 
@@ -420,7 +78,7 @@ def gaussian_brain(host):
 
     sender = context.socket(zmq.PUSH)
     sender.connect('tcp://{}:{}'.format(host, EXTERNAL))
-    sender.send_json('register {} {}'.format(name, mp.cpu_count()))
+    sender.send_json('register {} {}'.format(me.name, mp.cpu_count()))
 
     snapshot = context.socket(zmq.REQ)
     snapshot.connect('tcp://{}:{}'.format(host, SNAPSHOT))
@@ -447,31 +105,8 @@ def gaussian_brain(host):
     audio_producer = []
     video_producer = []
 
-    import matplotlib.pyplot as plt
-    plt.ion()
-
-    legends= ["level1", 
-                                        "pitch1ptrack", 
-                                        "pitch1pll", 
-                                        "autocorr1", 
-                                        "centroid1",
-                                        "spread1", 
-                                        "skewness1", 
-                                        "kurtosis1", 
-                                        "flatness1", 
-                                        "crest1", 
-                                        "flux1", 
-                                        "epochSig1", 
-                                        "epochRms1", 
-                                        "epochZCcps1"]
-
     idxs = [0,6,7,8,9,12]
-    #idxs = [0]
-    #idxs = range(14) # Uncomment to include all parameters
     maxlen = []
-
-    #matlab = matlab_init() #SPEED, BABY!
-    #matlab = Oct2Py() 
         
     while True:
         events = dict(poller.poll())
@@ -491,24 +126,31 @@ def gaussian_brain(host):
         
         if eventQ in events:
             pushbutton = eventQ.recv_json()
-            if 'learn' in pushbutton and pushbutton['learn'] == name:
+            if 'learn' in pushbutton and pushbutton['learn'] == me.name:
 
-                print 'LEARN', pushbutton['wavfile']
-                wait_for_file(pushbutton['wavfile'])
-    
-                audio_memories.append(cochlear(pushbutton['wavfile']))
-                plt.figure()
-                plt.imshow(audio_memories[-1].T, aspect='auto')
-                plt.draw()
+                print 'Learning', pushbutton['wavfile']
+                wait_for_wav(pushbutton['wavfile'])
+
+                start_time = time.time()
+                try:
+                    audio_memories.append(cochlear(pushbutton['wavfile']))
+                except Exception, e:
+                    print e
+                    print 'Learning aborted.'
+                    continue
+                cochlear_calculation_time = time.time() - start_time
+
                 wav_memories.append(pushbutton['wavfile'])
 
                 maxlen = max([ memory.shape[0] for memory in audio_memories ])
                 resampled_memories = [ resample(memory, float(maxlen)/memory.shape[0], 'sinc_best') for memory in audio_memories ]
                 resampled_flattened_memories = [ np.ndarray.flatten(memory) for memory in resampled_memories ]
-                
-                audio_recognizer = GaussianNB()
-                audio_recognizer.fit(resampled_flattened_memories, range(len(audio_memories)))
-                
+
+                if len(audio_memories) > 1:
+                    audio_recognizer = svm.LinearSVC()
+                    audio_recognizer.fit(resampled_flattened_memories, range(len(audio_memories)))
+
+                print 'Calculating cochlear neural activation patterns took {} seconds'.format(cochlear_calculation_time)
                 # start_time = time.time()
                 # audio_segment = np.array(list(audio))
                 # video_segment = np.array(list(video))
@@ -549,14 +191,14 @@ def gaussian_brain(host):
             if 'rmse' in pushbutton and len(audio):
                 print 'RESPOND to', pushbutton['wavfile']
 
-                wait_for_file(pushbutton['wavfile'])
-                test = cochlear(pushbutton['wavfile'])
-                plt.figure()
-                plt.imshow(test.T, aspect='auto')
-                plt.draw()
-                test = resample(test, float(maxlen)/test.shape[0], 'sinc_best')
-                winner = audio_recognizer.predict(np.ndarray.flatten(test))[0]
-                sender.send_json('playfile {}'.format(wav_memories[winner]))
+                if len(audio_memories) == 1:
+                    sender.send_json('playfile {}'.format(wav_memories[-1]))
+                else:
+                    wait_for_wav(pushbutton['wavfile'])
+                    test = cochlear(pushbutton['wavfile'])
+                    test = resample(test, float(maxlen)/test.shape[0], 'sinc_best')
+                    winner = audio_recognizer.predict(np.ndarray.flatten(test))[0]
+                    sender.send_json('playfile {}'.format(wav_memories[winner]))
 
                 # video_segment = np.array(list(video))
                 # audio_segment = np.array(list(audio))
@@ -600,10 +242,10 @@ def gaussian_brain(host):
                 video.clear()
 
             if 'load' in pushbutton:
-                load_cns(pushbutton['load'], name)
+                load_cns(pushbutton['load'], me.name)
                 
                         
 if __name__ == '__main__':
     #start_brain(sys.argv[1] if len(sys.argv) == 2 else 'localhost')
     #monolithic_brain(sys.argv[1] if len(sys.argv) == 2 else 'localhost')
-    gaussian_brain(sys.argv[1] if len(sys.argv) == 2 else 'localhost')
+    classifier_brain(sys.argv[1] if len(sys.argv) == 2 else 'localhost')
