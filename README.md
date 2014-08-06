@@ -230,7 +230,6 @@ Ubuntu: http://www.ubuntu.com
 
 Insert the "Devices > Guest additions" CD to have a more smooth experience. To SSH into your Ubuntu virtual machine, stop the virtual machine, go to Settings > Network > Adapter 1 and select "Attached to: Bridged adapter". Furthermore, on the virtual machine you must install the ssh server. We include git and python-pip here as well, since you'll be needing these.
 
-```
 > sudo apt-get install openssh-server git python-pip
 
 Then run ifconfig to see your IP address. Now you can SSH into the virtual machine, which makes copying/pasting code and doing installation thingies a lot easier in my experience.
