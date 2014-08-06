@@ -188,17 +188,17 @@ make install
 ```
 Test to see if --build and --disable-octave are necessary. --disable-fftw is what finally made it install on my Mac.
 
-To install clang 3.3: Change 33 -> 35 to try later version. 
+To install clang 3.4: 
 
 ```
 cd ~
-svn co http://llvm.org/svn/llvm-project/llvm/tags/RELEASE\_33/final llvm33
-cd llvm33/tools
-svn co http://llvm.org/svn/llvm-project/cfe/tags/RELEASE\_33/final clang
+svn co http://llvm.org/svn/llvm-project/llvm/tags/RELEASE\_34/final llvm34
+cd llvm34/tools
+svn co http://llvm.org/svn/llvm-project/cfe/tags/RELEASE\_34/final clang
 cd ../..
-mkdir llvm33build
-cd llvm33build
-cmake -D CMAKE_INSTALL_PREFIX=$VIRTUAL_ENV -DCMAKE\_BUILD\_TYPE=Release -G "Unix Makefiles" ../llvm33
+mkdir llvm34build
+cd llvm34build
+cmake -D CMAKE_INSTALL_PREFIX=$VIRTUAL_ENV -DCMAKE\_BUILD\_TYPE=Release -G "Unix Makefiles" ../llvm34
 make -j
 make install
 ```
