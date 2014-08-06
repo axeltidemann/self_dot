@@ -111,8 +111,25 @@ However, in production mode we must run the C++-version as it is a lot faster th
 
 These are some experiences found when installing the software under 10.7.5 and 10.8.5.
 
-On Mac 10.7.5, CMake was required before installing OpenCV: http://www.cmake.org/cmake/resources/software.html 
+On Mac 10.7.5, CMake was required before installing OpenCV:
+http://www.cmake.org/cmake/resources/software.html and you must also
+install numpy and scipy beforehand. You might just as well install
+clang 3.4 right now, since you'll be needing it for SCons.
 
+To install clang 3.4: 
+
+```
+cd ~
+svn co http://llvm.org/svn/llvm-project/llvm/tags/RELEASE\_34/final llvm34
+cd llvm34/tools
+svn co http://llvm.org/svn/llvm-project/cfe/tags/RELEASE\_34/final clang
+cd ../..
+mkdir llvm34build
+cd llvm34build
+cmake -D CMAKE_INSTALL_PREFIX=$VIRTUAL_ENV -DCMAKE\_BUILD\_TYPE=Release -G "Unix Makefiles" ../llvm34
+make -j
+make install
+```
 On 10.7.5 this had to be set prior to installation of scipy:
 
 ```
@@ -120,13 +137,17 @@ export CC=clang
 export CXX=clang
 ```
 
-_Important:_ in order to install OpenCV 2.4.8 (could not get 2.4.9 to compile) specific to the virtualenv you
+_Important:_ in order to install OpenCV specific to the virtualenv you
 are using, specify this in the cmake input arguments listed
 below. This has the advantage that OpenCV will be installed locally
 *and* linked to the Python version of the virtualenv - if not
 specified this way, it will use the system Python instead, which is
 sure to cause massive headaches and the death of many adorable kittens
-in the future. So after downloading and unpacking the opencv tarball:
+in the future. A source of __immensive__ frustration when trying to
+reinstall OpenCV was that you must *not* set CC and CXX to clang, as
+you do before installing virtually every other package. So if you just did, close
+that window and start anew. A bit baffling, and this took me quite som
+hours to figure out.
 
 ```
 cd opencv*
@@ -144,13 +165,16 @@ flag
 
 was necessary in order to compile against the correct version -
 otherwise the wrong dylib would be used, and you would get a
-segmentation fault upon trying to import cv. Now, why there isn't a
-libpython2.7.dylib in ~/.local/lib is a bit beyond me (and maybe I'm
-missing something important here). However, in this particular case,
+segmentation fault upon trying to import cv. In this particular case,
 the VIRTUALENVWRAPPER_PYTHON was the same as the system wide python,
 so this worked.
 
-In order to use the new shared libraries, you must specify where they are. NB: REVISE TO SEE IF THIS REALLY IS NECESSARY. Try it without setting DYLD_LIBRARY_PATH first.
+In order to use the new shared libraries, you must specify where they
+are. This is not needed in 10.7, check to see if it is needed in 10.8
+- it could be that this is taken care of automatically when you put
+everything in $VIRTUAL_ENV. Not setting this could be why ØMQ installed itself
+automatically when I pip install pyzmq, because it could not find what I had just
+installed. Weird.
 
 > export DYLD_LIBRARY_PATH=$VIRTUAL_ENV/lib 
 
@@ -171,39 +195,15 @@ export PYTHONPATH=/Library/Python/2.7/site-packages/:$PYTHONPATH
 
 This could also be set in postactivate, of course.
 
-To install libsndfile: 
-
-```
-./configure --prefix=$VIRTUAL_ENV
-make clean
-make install 
-```
-
 To install libsamplerate:
 
 ```
 ./configure --prefix=$VIRTUAL_ENV --build='x86_64' --disable-octave --disable-fftw
-make clean
-make install
-```
-Test to see if --build and --disable-octave are necessary. --disable-fftw is what finally made it install on my Mac.
-
-To install clang 3.4: 
-
-```
-cd ~
-svn co http://llvm.org/svn/llvm-project/llvm/tags/RELEASE\_34/final llvm34
-cd llvm34/tools
-svn co http://llvm.org/svn/llvm-project/cfe/tags/RELEASE\_34/final clang
-cd ../..
-mkdir llvm34build
-cd llvm34build
-cmake -D CMAKE_INSTALL_PREFIX=$VIRTUAL_ENV -DCMAKE\_BUILD\_TYPE=Release -G "Unix Makefiles" ../llvm34
-make -j
+make 
 make install
 ```
 
-Check to see if --build and --disable-octave are necessary. The --disable-fftw was what finally made it install. Phew.
+It appears as if --build, --disable-octave and --disable-fftw are necessary. 
 
 And you should be good to go!
 
