@@ -19,7 +19,7 @@ from sklearn import preprocessing as pp
 import numpy as np
 
 from utils import filesize, send_array, recv_array
-from IO import MIC, SPEAKER, CAMERA, PROJECTOR, STATE, SNAPSHOT, EVENT, EXTERNAL, RECOGNIZE_IN, RECOGNIZE_LEARN
+from IO import MIC, SPEAKER, CAMERA, PROJECTOR, STATE, SNAPSHOT, EVENT, EXTERNAL
 
 #idxs = [0,3,8,9,11,12]
 idxs = [0,6,7,8,9,12]
@@ -41,26 +41,6 @@ class MultiClassifier:
     def predict(test):
         pass
         
-
-def _train_network(x, y, output_dim=100, leak_rate=.9, bias_scaling=.2, reset_states=True, use_pinv=True):
-    import Oger
-    import mdp
-
-    mdp.numx.random.seed(7)
-
-    reservoir = Oger.nodes.LeakyReservoirNode(output_dim=output_dim, 
-                                              leak_rate=leak_rate, 
-                                              bias_scaling=bias_scaling, 
-                                              reset_states=reset_states)
-    #readout = Oger.nodes.RidgeRegressionNode(.01, use_pinv=use_pinv)
-    readout = mdp.nodes.LinearRegressionNode(use_pinv=use_pinv)
-    net = mdp.Flow([ reservoir, readout ])
-    
-    net.train([None, zip(x, y)])
-    # net = mdp.hinet.FlowNode(reservoir + readout)
-    # net.train(x,y)
-
-    return net
 
 def recognize(host):
     me = mp.current_process()

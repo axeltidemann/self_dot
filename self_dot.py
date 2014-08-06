@@ -65,36 +65,14 @@ class Controller:
                 _, name, free = message.split()
                 self.state['brains'][name] = int(free)
 
-            if 'register' in message and 'NEURALNETWORK' in message:
-                _, name = message.split()
-                self.state['nets'].append(name)
-
-            if 'RMSE' in message:
-                name, _, rmse = message.split()
-                self.state['RMSEs'][name] = float(rmse)
-                if len(self.state['RMSEs']) == len(self.state['nets']):
-                    d = self.state['RMSEs']
-                    winner = min(d, key=d.get)
-                    self.event.send_json({ 'respond': winner })
-                    self.event.send_json({ 'reset': True })
-                    self.state['RMSEs'] = {}
-
-            if 'winner' in message:
-                _, winner = message.split()
-                self.event.send_json({ 'respond' : self.state['nets'][int(winner)] })
-                self.event.send_json({ 'reset': True })
-                    
             if message == 'startrec':
                 self.state['record'] = True
 
             if message == 'stoprec':
                 self.state['record'] = False
 
-            if message == 'memoryRecording 1':
-                self.state['memoryRecording'] = True
-            
-            if message == 'memoryRecording 0':
-                self.state['memoryRecording'] = False
+            if 'memoryRecording' in message:
+                self.state['memoryRecording'] = message[16:] in ['True', '1']
 
             if 'decrement' in message:
                 _, name = message.split()
@@ -110,7 +88,7 @@ class Controller:
 
             if 'respondwav' in message:
                 _, wavfile = message.split()
-                self.event.send_json({ 'rmse': True, 'wavfile': wavfile })
+                self.event.send_json({ 'respond': True, 'wavfile': wavfile })
 
             if message == 'setmarker':
                 self.event.send_json({ 'setmarker': True })

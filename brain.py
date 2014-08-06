@@ -18,7 +18,6 @@ from scipy.io import wavfile
 from scikits.samplerate import resample
 from scipy.signal import filtfilt
 
-from AI import learn, live, recognize, _train_network
 from utils import filesize, recv_array, send_array, trim, array_to_csv, csv_to_array, wait_for_wav
 from IO import MIC, CAMERA, STATE, SNAPSHOT, EVENT, EXTERNAL, send, SPEAKER, PROJECTOR
             
@@ -32,15 +31,32 @@ def load_cns(prefix, brain_name):
         print 'Network loaded from file {} ({})'.format(filename, filesize(filename))
         send('decrement {}'.format(brain_name))
 
+def train_network(x, y, output_dim=100, leak_rate=.9, bias_scaling=.2, reset_states=True, use_pinv=True):
+    import Oger
+    import mdp
+
+    mdp.numx.random.seed(7)
+
+    reservoir = Oger.nodes.LeakyReservoirNode(output_dim=output_dim, 
+                                              leak_rate=leak_rate, 
+                                              bias_scaling=bias_scaling, 
+                                              reset_states=reset_states)
+    readout = mdp.nodes.LinearRegressionNode(use_pinv=use_pinv)
         
-def cochlear(filename, db = -40, stride = 441, new_rate = 22050, threshold=.025):
+    net = mdp.hinet.FlowNode(reservoir + readout)
+    net.train(x,y)
+
+    return net
+
+        
+def cochlear(filename, db=-40, stride=441, threshold=.025, new_rate=22050, ears=1, channels=71):
     rate, data = wavfile.read(filename)
     assert data.dtype == np.int16
     data = data / float(2**15)
     data = resample(trim(data, threshold=threshold), float(new_rate)/rate, 'sinc_best')
     data = data*10**(db/20)
     array_to_csv('{}-audio.txt'.format(filename), data)
-    call(['./carfac-cmd', filename, str(len(data))])
+    call(['./carfac-cmd', filename, str(len(data)), str(ears), str(channels), str(new_rate)])
     carfac = csv_to_array('{}-output.txt'.format(filename))
     smooth = filtfilt([1], [1, -.995], carfac, axis=0)
     decim = smooth[::stride]
@@ -97,9 +113,8 @@ def classifier_brain(host):
     audio_first_segment = []
     video_first_segment = []
     
-    audio_memories = []
-    video_memories = []
-    wav_memories = []
+    NAP_memories = []
+    wavs = []
 
     audio_recognizer = []
     audio_producer = []
@@ -108,6 +123,9 @@ def classifier_brain(host):
     idxs = [0,6,7,8,9,12]
     maxlen = []
         
+    import matplotlib.pyplot as plt
+    plt.ion()
+
     while True:
         events = dict(poller.poll())
         
@@ -128,103 +146,88 @@ def classifier_brain(host):
             pushbutton = eventQ.recv_json()
             if 'learn' in pushbutton and pushbutton['learn'] == me.name:
 
-                print 'Learning', pushbutton['wavfile']
-                wait_for_wav(pushbutton['wavfile'])
-
-                start_time = time.time()
                 try:
-                    audio_memories.append(cochlear(pushbutton['wavfile']))
+                    print 'Learning', pushbutton['wavfile']
+
+                    wait_for_wav(pushbutton['wavfile'])
+                    start_time = time.time()
+                    NAP_memories.append(cochlear(pushbutton['wavfile']))
+                    plt.figure()
+                    plt.imshow(NAP_memories[-1].T, aspect='auto')
+                    plt.draw()
+                    print 'Calculating cochlear neural activation patterns took {} seconds'.format(time.time() - start_time)
+
+                    
+
+                    wavs.append(pushbutton['wavfile'])
+
+                    start_time = time.time()
+                    maxlen = max([ memory.shape[0] for memory in NAP_memories ])
+                    resampled_memories = [ resample(memory, float(maxlen)/memory.shape[0], 'sinc_best') for memory in NAP_memories ]
+                    resampled_flattened_memories = [ np.ndarray.flatten(memory) for memory in resampled_memories ]
+
+                    if len(NAP_memories) > 1:
+                        audio_recognizer = svm.LinearSVC()
+                        audio_recognizer.fit(resampled_flattened_memories, range(len(NAP_memories)))
+
+                    audio_segment = np.array(list(audio))
+                    video_segment = np.array(list(video))
+                    scaler = pp.MinMaxScaler()
+                    scaled_audio = scaler.fit_transform(audio_segment)
+
+                    audio_producer.append(train_network(scaled_audio[:-1], scaled_audio[1:]))
+
+                    stride = scaled_audio.shape[0]/video_segment.shape[0]
+
+                    x = scaled_audio[scaled_audio.shape[0] - stride*video_segment.shape[0]::stride]
+                    y = video_segment
+                    video_producer.append(train_network(x,y))
+
+                    print 'Lessons learned in {} seconds'.format(time.time() - start_time)
+
                 except Exception, e:
-                    print e
-                    print 'Learning aborted.'
+                    print e, 'Learning aborted.'
                     continue
-                cochlear_calculation_time = time.time() - start_time
-
-                wav_memories.append(pushbutton['wavfile'])
-
-                maxlen = max([ memory.shape[0] for memory in audio_memories ])
-                resampled_memories = [ resample(memory, float(maxlen)/memory.shape[0], 'sinc_best') for memory in audio_memories ]
-                resampled_flattened_memories = [ np.ndarray.flatten(memory) for memory in resampled_memories ]
-
-                if len(audio_memories) > 1:
-                    audio_recognizer = svm.LinearSVC()
-                    audio_recognizer.fit(resampled_flattened_memories, range(len(audio_memories)))
-
-                print 'Calculating cochlear neural activation patterns took {} seconds'.format(cochlear_calculation_time)
-                # start_time = time.time()
-                # audio_segment = np.array(list(audio))
-                # video_segment = np.array(list(video))
-                # scaler = pp.MinMaxScaler()
-                # scaled_audio = scaler.fit_transform(audio_segment)
-
-                # # plt.figure()
-                # # plt.plot(chop(scaled_audio[:,idxs]))
-                # # plt.draw()
-
-                # audio_producer.append(_train_network([scaled_audio[:-1]], [scaled_audio[1:]]))
-
-                # audio_memories.append(scaled_audio[:,idxs])#[:len(audio)/2,idxs])
-                # video_memories.append(video_segment)
-
-                # targets = range(len(audio_memories))
-
-                # maxlength = max(map(lambda x: x.shape[0], audio_memories))
-
-                # train_data = [ np.ndarray.flatten(np.vstack((memory, np.zeros((maxlength - memory.shape[0], memory.shape[1]))))) for memory in audio_memories ]                
-                                
-                # audio_recognizer = GaussianNB()
-                # audio_recognizer.fit(train_data, targets)
-                
-                # print 'Testing recently learned audio segments: {}% correct'\
-                #     .format(np.mean([ i == audio_recognizer.predict(np.ndarray.flatten(np.vstack((memory, np.zeros((maxlength - memory.shape[0], memory.shape[1]))))))[0] for i, memory in enumerate(audio_memories) ])*100)
-
-                # stride = scaled_audio.shape[0]/video_segment.shape[0]
-                
-                # x = [ scaled_audio[scaled_audio.shape[0] - stride*video_segment.shape[0]::stride] ]
-                # y = [ video_segment ]
-                # video_producer.append(_train_network(x,y, output_dim=100))
-                
-                # print 'Lessons learned in {} seconds'.format(time.time() - start_time)
 
                 pushbutton['reset'] = True
 
-            if 'rmse' in pushbutton and len(audio):
-                print 'RESPOND to', pushbutton['wavfile']
+            if 'respond' in pushbutton:
+                print 'Respond to', pushbutton['wavfile']
 
-                if len(audio_memories) == 1:
-                    sender.send_json('playfile {}'.format(wav_memories[-1]))
-                else:
+                if len(NAP_memories) == 1:
+                    sender.send_json('playfile {}'.format(wavs[-1]))
+                    continue
+
+                try:
                     wait_for_wav(pushbutton['wavfile'])
                     test = cochlear(pushbutton['wavfile'])
+
+                    plt.figure()
+                    plt.imshow(test.T, aspect='auto')
+                    plt.draw()
+
                     test = resample(test, float(maxlen)/test.shape[0], 'sinc_best')
                     winner = audio_recognizer.predict(np.ndarray.flatten(test))[0]
-                    sender.send_json('playfile {}'.format(wav_memories[winner]))
+                    sender.send_json('playfile {}'.format(wavs[winner]))
 
-                # video_segment = np.array(list(video))
-                # audio_segment = np.array(list(audio))
-                # scaler = pp.MinMaxScaler()
-                # scaled_audio = scaler.fit_transform(audio_segment)
+                    video_segment = np.array(list(video))
+                    audio_segment = np.array(list(audio))
+                    scaler = pp.MinMaxScaler()
+                    scaled_audio = scaler.fit_transform(audio_segment)
+                    sound = audio_producer[winner](scaled_audio)
 
-                # # plt.figure()
-                # # plt.plot(scaled_audio[:minlength,idxs])
-                # # plt.draw()
-                
-                # selectah = np.ndarray.flatten( scaled_audio[:maxlength, idxs] if scaled_audio.shape[0] > maxlength else np.vstack( (scaled_audio[:,idxs], np.zeros(( maxlength - scaled_audio.shape[0], len(idxs) )))) )
+                    stride = audio_segment.shape[0]/video_segment.shape[0]
 
-                # winner = audio_recognizer.predict(selectah)[0]
-                # print 'WINNER NETWORK', winner
+                    projection = video_producer[winner](audio_segment[audio_segment.shape[0] - stride*video_segment.shape[0]::stride])
 
-                # sound = audio_producer[winner](scaled_audio)
+                    for row in projection:
+                        send_array(projector, row)
 
-                # stride = audio_segment.shape[0]/video_segment.shape[0]
+                    for row in scaler.inverse_transform(sound):
+                        send_array(speaker, row)
 
-                # projection = video_producer[winner](audio_segment[audio_segment.shape[0] - stride*video_segment.shape[0]::stride])
-
-                # for row in projection:
-                #     send_array(projector, row)
-
-                # for row in scaler.inverse_transform(sound):
-                #     send_array(speaker, row)
+                except Exception, e:
+                    print e, 'Response aborted.'
 
                 pushbutton['reset'] = True
 
@@ -246,6 +249,4 @@ def classifier_brain(host):
                 
                         
 if __name__ == '__main__':
-    #start_brain(sys.argv[1] if len(sys.argv) == 2 else 'localhost')
-    #monolithic_brain(sys.argv[1] if len(sys.argv) == 2 else 'localhost')
     classifier_brain(sys.argv[1] if len(sys.argv) == 2 else 'localhost')

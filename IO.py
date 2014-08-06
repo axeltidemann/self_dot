@@ -20,8 +20,6 @@ STATE = 5565
 EXTERNAL = 5566
 SNAPSHOT = 5567
 EVENT = 5568
-RECOGNIZE_IN = 5569
-RECOGNIZE_LEARN = 5570
 
 def video():
     me = mp.current_process()
@@ -83,10 +81,11 @@ def audio():
     poller.register(subscriber, zmq.POLLIN)
     poller.register(stateQ, zmq.POLLIN)
     poller.register(eventQ, zmq.POLLIN)
-    
+
     import time
     t = time.strftime
-    memRecPath = "../memoryRecording/"
+    
+    memRecPath = "./memory_recordings/"
 
     if not os.path.exists(memRecPath):
         os.makedirs(memRecPath)

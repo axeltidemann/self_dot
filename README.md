@@ -16,6 +16,7 @@ pip install https://github.com/perone/Pyevolve/zipball/master
 pip install numpy
 pip install scipy
 pip install scikit-learn
+pip install matplotlib
 pip install ipdb
 pip install MDP
 ```
@@ -114,7 +115,7 @@ These are some experiences found when installing the software under 10.7.5 and 1
 On Mac 10.7.5, CMake was required before installing OpenCV:
 http://www.cmake.org/cmake/resources/software.html and you must also
 install numpy and scipy beforehand. You might just as well install
-clang 3.4 right now, since you'll be needing it for SCons.
+clang 3.4 right now, since you'll be needing it for SCons. However, for 10.8.5 you can just download the Command Line Tools from Apple, and you'll get clang 3.4.
 
 To install clang 3.4: 
 
@@ -130,7 +131,7 @@ cmake -D CMAKE_INSTALL_PREFIX=$VIRTUAL_ENV -DCMAKE\_BUILD\_TYPE=Release -G "Unix
 make -j
 make install
 ```
-On 10.7.5 this had to be set prior to installation of scipy:
+On 10.7.5 and 10.8.5 this had to be set prior to installation of scipy and scikit-learn.
 
 ```
 export CC=clang
@@ -144,11 +145,11 @@ below. This has the advantage that OpenCV will be installed locally
 specified this way, it will use the system Python instead, which is
 sure to cause massive headaches and the death of many adorable kittens
 in the future. A source of __immensive__ frustration when trying to
-reinstall OpenCV was that you must *not* set CC and CXX to clang, as
+reinstall OpenCV on 10.7 was that you must *not* set CC and CXX to clang, as
 you do before installing virtually every other package (ØMQ being a
 notable exception, where you must include clang to install pyzmq
 again). So if you just did, close that window and start anew. A bit
-baffling, and this took me quite som hours to figure out.
+baffling, and this took me quite som hours to figure out. However, on 10.8.5 you need not unset clang.
 
 ```
 cd opencv*
@@ -171,9 +172,7 @@ the VIRTUALENVWRAPPER_PYTHON was the same as the system wide python,
 so this worked.
 
 In order to use the new shared libraries, you must specify where they
-are. This is not needed in 10.7, check to see if it is needed in 10.8.
-It could be that this is taken care of automatically when you put
-everything in $VIRTUAL_ENV.
+are. This is not needed in 10.7, however it is necessary in 10.8.
 
 > export DYLD_LIBRARY_PATH=$VIRTUAL_ENV/lib 
 
@@ -206,20 +205,20 @@ It appears as if --build, --disable-octave and --disable-fftw are necessary.
 
 And you should be good to go!
 
-*How then, does this compile under 10.8?* After spending an entire day
- of trying to compile everything as listed above on my MacBook Air
- (running 10.8) and getting further and deeper into darkness, I had
- the idea of simply copying ~/.virtualenvs/self_dot from my 10.7
- machine to my 10.8 machine. Somewhat miraculously, this worked. Now
- it becomes clear what an added bonus it is to install software into
- $VIRTUAL_ENV - the programs are also copied, and with the
- DYLD_LIBRARY_PATH set, this is a _very_ smooth transition. Only
- tested for 10.7 -> 10.8 though. It will be interesting to see if this
- is robust across several cats (I'm not betting my savings on it,
- no). However, it is evident that 10.7 is a *lot* more mature for
- compiling code than 10.8. What about 10.9, you say? Well, by now it
- should be obvious why I won't be upgrading _anytime soon_, since I
- have some colleagues who have. They wish they hadn't.
+*10.8* I managed to install everything but matplotlib, where it was
+ complaining about libpng. It would install fine, but crash upon
+ usage. I gave up, and just copied the self_dot folder that I had
+ compiled under 10.7. Important note: you must add the
+ DYLD_LIBRARY_PATH in order to use the 10.7 virtualenv. This works
+ since everything is installed within the virtualenv. In addition, I
+ had to replace /usr/bin/xcrun with the following script:
+
+```
+#!/bin/bash
+$@
+```
+
+This allowed the usage of gcc and so on, even though everything is centered around clang on 10.8
 
 ## Ubuntu on VirtualBox 
 

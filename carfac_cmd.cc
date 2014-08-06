@@ -77,9 +77,9 @@ int main(int argc, char *argv[])
   bool open_loop_;
   std::string fname = argv[1];
   int num_samples = atoi(argv[2]);
-  int num_ears = 1;
-  int num_channels = 71;
-  FPType sample_rate = 22050.0;
+  int num_ears = atoi(argv[3]); // 1
+  int num_channels = atoi(argv[4]); //71
+  FPType sample_rate = atoi(argv[5]); //22050
   ArrayXX sound_data = LoadAudio(fname + "-audio.txt", num_samples, num_ears);
   CARFAC carfac(num_ears, sample_rate, car_params_, ihc_params_, agc_params_);
   CARFACOutput output(true, true, false, false);
