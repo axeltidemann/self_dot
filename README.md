@@ -282,6 +282,5 @@ cmake ../csound
 make 
 sudo make install
 sudo ldconfig
-
 ```
 

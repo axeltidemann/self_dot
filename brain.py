@@ -167,18 +167,17 @@ def classifier_brain(host):
                         audio_recognizer = svm.LinearSVC()
                         audio_recognizer.fit(resampled_flattened_memories, range(len(NAPs)))
 
-                    audio_segment = np.array(list(audio))
                     video_segment = np.array(list(video))
-                    scaler = pp.MinMaxScaler()
-                    scaled_audio = scaler.fit_transform(audio_segment)
-
-                    audio_producer.append(train_network(scaled_audio[:-1], scaled_audio[1:]))
-
-                    stride = scaled_audio.shape[0]/video_segment.shape[0]
-
-                    x = scaled_audio[scaled_audio.shape[0] - stride*video_segment.shape[0]::stride]
-                    y = video_segment
-                    video_producer.append(train_network(x,y))
+                    NAP_len = NAPs[-1].shape[0]
+                    video_len = video_segment.shape[0]
+                    stride = int(max(1,np.floor(float(NAP_len)/video_len)))
+                    x = NAPs[-1][:NAP_len - np.mod(NAP_len, stride*video_len):stride]
+                    y = video_segment[:x.shape[0]]
+                    
+                    print 'SHAPES', stride, NAP_len, video_len, x.shape, y.shape
+                    tarantino = train_network(x,y)
+                    tarantino.stride = stride
+                    video_producer.append(tarantino)
 
                     print 'Lessons learned in {} seconds'.format(time.time() - start_time)
 
@@ -197,31 +196,20 @@ def classifier_brain(host):
 
                 try:
                     utils.wait_for_wav(pushbutton['wavfile'])
-                    test = cochlear(pushbutton['wavfile'])
+                    NAP = cochlear(pushbutton['wavfile'])
 
                     plt.figure()
-                    plt.imshow(test.T, aspect='auto')
+                    plt.imshow(NAP.T, aspect='auto')
                     plt.draw()
 
-                    test = resample(test, float(maxlen)/test.shape[0], 'sinc_best')
-                    winner = audio_recognizer.predict(np.ndarray.flatten(test))[0]
+                    NAP_resampled = resample(NAP, float(maxlen)/NAP.shape[0], 'sinc_best')
+                    winner = audio_recognizer.predict(np.ndarray.flatten(NAP_resampled))[0]
                     sender.send_json('playfile {}'.format(wavs[winner]))
 
-                    video_segment = np.array(list(video))
-                    audio_segment = np.array(list(audio))
-                    scaler = pp.MinMaxScaler()
-                    scaled_audio = scaler.fit_transform(audio_segment)
-                    sound = audio_producer[winner](scaled_audio)
-
-                    stride = audio_segment.shape[0]/video_segment.shape[0]
-
-                    projection = video_producer[winner](audio_segment[audio_segment.shape[0] - stride*video_segment.shape[0]::stride])
+                    projection = video_producer[winner](NAP[::video_producer[winner].stride])
 
                     for row in projection:
                         utils.send_array(projector, row)
-
-                    for row in scaler.inverse_transform(sound):
-                        utils.send_array(speaker, row)
 
                 except Exception, e:
                     print e, 'Response aborted.'
