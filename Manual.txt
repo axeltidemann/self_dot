@@ -21,6 +21,7 @@ The reset mode mutes for 1 second, then unmutes
 python communication.py csinstr [string]
 Send generic Csound instrument event
 Can be used to set any chn value, via instrument 22 ('i 22 0 1 \"name\" value')
+On Linux the quotes should not be escaped (don't use \ before " in the string)
 
 python communication.py calibrateAudio
 Sense signal level (keep relatively quiet for maximum range), set a soft knee noise gate. Also analyze background noise print.
