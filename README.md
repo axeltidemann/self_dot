@@ -238,6 +238,9 @@ To install numpy and scipy:
 
 Note how we do not use virtualenvwrapper - this virtual machine will not be used for anything else, and there is a lot of precompiled libraries for Ubuntu, so we are taking the easy route here.
 
+Getting libc++ to work on Ubuntu, otherwise installation of Lyon's cochlear model won't work:
+
+> sudo apt-get install libc++-dev
 
 OpenCV:
 
@@ -282,6 +285,3 @@ sudo ldconfig
 
 ```
 
-Getting libc++ to work on Ubuntu, otherwise installation of Lyon's cochlear model won't work:
-
-> sudo apt-get install libc++-dev

@@ -152,12 +152,11 @@ def classifier_brain(host):
                     wait_for_wav(pushbutton['wavfile'])
                     start_time = time.time()
                     NAP_memories.append(cochlear(pushbutton['wavfile']))
+                    print 'Calculating cochlear neural activation patterns took {} seconds'.format(time.time() - start_time)
+
                     plt.figure()
                     plt.imshow(NAP_memories[-1].T, aspect='auto')
                     plt.draw()
-                    print 'Calculating cochlear neural activation patterns took {} seconds'.format(time.time() - start_time)
-
-                    
 
                     wavs.append(pushbutton['wavfile'])
 
