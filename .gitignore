@@ -6,4 +6,6 @@ myCsoundAudioOptions.py
 testsounds/*
 memory_recordings/*
 carfac-cmd
+test.wav
+test.txt
 .DS_Store
