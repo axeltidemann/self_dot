@@ -83,7 +83,7 @@
 	instr 17
 	a1		chnget "in1"
 	krms		rms a1
-	krms		= krms * 1.7
+	krms		= krms * 1.9
 	kgate		table krms, giNoiseFloor, 1
 	a1		= a1 * kgate
 			chnset a1, "in1"

@@ -2,6 +2,7 @@
 	instr 98
 	a1	chnget "MasterOut1"
 	a2	= 0
+/*
 	ifna	= gifnaSelf
 	ifnf	= gifnfSelf
 #include "audio_analyze.inc"
@@ -24,7 +25,7 @@
 			chnset kepochSig, "myEpochSig1"
 			chnset kepochRms, "myEpochRms1"
 			chnset kepochZCcps, "myEpochZCcps1"
-
+*/
 	endin
 
 ; ******************************

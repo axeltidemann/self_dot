@@ -26,12 +26,12 @@ def bytes2human(n, format="%(value)i%(symbol)s"):
     return format % dict(symbol=symbols[0], value=n)
 
 def csv_to_array(filename, delimiter=' '):
-    with open(filename, 'r') as csvfile:
+    with open(filename, 'rb') as csvfile:
         reader = csv.reader(csvfile, delimiter=delimiter)
         return np.array([ [ float(r) for r in row ] for row in reader ])
 
 def array_to_csv(filename, data, delimiter=' '):
-    with open(filename, 'w') as csvfile:
+    with open(filename, 'wb') as csvfile:
         writer = csv.writer(csvfile, delimiter=delimiter)
         if len(data.shape) == 1:
             data.shape = (data.shape[0],1)

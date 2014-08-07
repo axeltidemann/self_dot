@@ -60,7 +60,7 @@ rireturn
 	kstatusTrigOn	trigger kstatus, 0.5, 0
 	kstatusTrigOff	trigger kstatus, 0.5, 1
 	kstatusTrig	= kstatusTrigOn-kstatusTrigOff	; pulse 1 at start, pulse -1 at end of segment
-
+/*
 ; ***************
 ; epoch filtering
 	a20		butterbp a1, 20, 5
@@ -170,7 +170,7 @@ endif
 	krmsA			sumarray kArrA
 	krmsAprev		sumarray kArrAprev
 	kautocorr		divz kautocorr*2, (krmsA*krmsAprev) , 0
-
+*/
 ; ***************
 /*
 ;analyze centroid transients
@@ -191,6 +191,8 @@ endif
 
 	kctrig1, kcdiff	TransientDetect kFolCentro, icresponse, kctthresh, kclowThresh, kcdecThresh, icdoubleLimit
 */
+
+/*
 ; ***************
 ; dump fft to python
          	;pvsout  fftin1, 0 			; write signal to pvs out bus channel 0
@@ -236,4 +238,5 @@ endif
 	kcpsBoth	= kepochZCcps+kcps1p
 	kpzgate		= (kcentroid > 6000 ? 0 : 1)
 	kepochZCcps	samphold kepochZCcps, kpzgate
+*/
 

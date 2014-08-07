@@ -11,7 +11,6 @@
 
 ; ***************
 ; write to chn
-			chnset kflag, "pvsinflag"
 
 	Stest		sprintfk "input audio status %i, trig status %i, dbstart %f", kstatus, kstatusTrig, kdBStart
 			puts Stest, 2+(kstatus + kstatusTrig)
@@ -19,6 +18,8 @@
 			chnset kstatus, "audioStatus"
 			chnset kstatusTrig, "audioStatusTrig"
 			chnset ktrig1, "transient"
+/*
+			chnset kflag, "pvsinflag"
 			chnset krms1, "level1"
 			chnset kcps1, "pitch1ptrack"
 			chnset kcps1p, "pitch1pll"
@@ -37,7 +38,7 @@
 
         ; for internal use
 			chnset krms1gated, "level1gated"
-
+*/
         ; send audio to memory recording
 	arec            delay a1, 0.02  ; delay to sync with transient detection (and then add some to capture a bit of potential soft starts like 'h')
                         chnset arec, "rec_in1"
@@ -46,7 +47,7 @@
 	kinputMonitor	chnget "inputMonitor"
 			chnmix a1*kinputMonitor, "MasterOut1"
 			chnmix a1*kinputMonitor, "MasterOut2"
-
+/*
 ; *** test write analysis output
 iwritetest	= 0
 if iwritetest > 0 then
@@ -88,6 +89,6 @@ if iwritetest > 0 then
 					aepochRms,\
 					aepochZCcps
 endif
-
+*/
 	endin
 
