@@ -1,8 +1,9 @@
 *.pyc
-*.py~
+*~
 *.sfk
 myCsoundAudioOptions.py
-test.wav
-test.txt
 *.npy
 testsounds/*
+memory_recordings/*
+carfac-cmd
+.DS_Store
