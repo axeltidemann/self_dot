@@ -14,10 +14,9 @@ import time
 import zmq
 from zmq.utils.jsonapi import dumps
 
-from AI import learn
-from IO import audio, video, STATE, EXTERNAL, SNAPSHOT, EVENT
-from utils import wav_duration
-from brain import classifier_brain
+import IO
+import utils
+import brain
 
 class Controller:
     def __init__(self, init_state):
@@ -27,18 +26,18 @@ class Controller:
         self.state = init_state
         context = zmq.Context()
         self.publisher = context.socket(zmq.PUB)
-        self.publisher.bind('tcp://*:{}'.format(STATE))
+        self.publisher.bind('tcp://*:{}'.format(IO.STATE))
         
         self.event = context.socket(zmq.PUB)
-        self.event.bind('tcp://*:{}'.format(EVENT))
+        self.event.bind('tcp://*:{}'.format(IO.EVENT))
 
         subscriber = context.socket(zmq.PULL)
-        subscriber.bind('tcp://*:{}'.format(EXTERNAL))
+        subscriber.bind('tcp://*:{}'.format(IO.EXTERNAL))
 
         snapshot = context.socket(zmq.ROUTER)
-        snapshot.bind('tcp://*:{}'.format(SNAPSHOT))
+        snapshot.bind('tcp://*:{}'.format(IO.SNAPSHOT))
 
-        print 'Communication channel listening on port {}'.format(EXTERNAL)
+        print 'Communication channel listening on port {}'.format(IO.EXTERNAL)
 
         poller = zmq.Poller()
         poller.register(subscriber, zmq.POLLIN)
@@ -114,7 +113,7 @@ class Controller:
             if 'playfile' in message:
                 self.event.send_json({ 'inputLevel': 'mute' }) # A bit ugly - Csound should mute itself, maybe?
                 self.event.send_json({ 'playfile': message[9:] })
-                time.sleep(wav_duration(message[9:]))
+                time.sleep(utils.wav_duration(message[9:]))
                 self.event.send_json({ 'inputLevel': 'unmute' })
 
             if 'selfvoice' in message:
@@ -137,15 +136,13 @@ if __name__ == '__main__':
     persistent_states = {'autolearn': False,
                          'autorespond': False,
                          'brains': {},
-                         'nets': [],
-                         'RMSEs': {},
                          'record': False,
                          'memoryRecording': False}
 
-    mp.Process(target=audio, name='AUDIO').start() 
-    mp.Process(target=video, name='VIDEO').start()
+    mp.Process(target=IO.audio, name='AUDIO').start() 
+    mp.Process(target=IO.video, name='VIDEO').start()
     mp.Process(target=Controller, args=(persistent_states,), name='CONTROLLER').start()
-    mp.Process(target=classifier_brain, args=('localhost',)).start()
+    mp.Process(target=brain.classifier_brain, args=('localhost',)).start()
 
     try:
         raw_input('')
