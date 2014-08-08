@@ -5,8 +5,10 @@
 	endin
 
         instr 34
-        ; We write the sound file in Csound, and the text file in Python,
+        ; We write the sound file in Csound, and the text file in Python
         Swavname        strget p4
+	print p1, p2, p3	
+	puts Swavname, 1
         a1              chnget "rec_in1"
                 	fout Swavname, 14, a1
                         
@@ -18,6 +20,36 @@
         krelease        release
         kactive         = 1-krelease
                         chnset kactive, "memRecActive"          ; tell Python that we're recording
-               
+
+	; trigger instr events to record subsegments
+	kcount		init 0
+	kmetro		metro 2
+	kcount		= kcount + kmetro
+	Sinstr		sprintfk "i 35 0 0.5 %i", kcount
+	if kmetro > 0 then 
+	reinit makestring
+	endif
+	igoto end
+	makestring:
+	Sevent		strcat Sinstr, "\""
+	Sevent		strcat Sevent, Swavname
+	Sevent		strcat Sevent, "\""
+			scoreline_i Sevent
+	end:
         endin
+
+	instr 35
+        ; write subsegments of the sound file, to speed up classification/analysis
+	icount		= p4
+        Swavname        strget p5
+	Ssegment	sprintf "segment_%i_", icount
+	Spath		= "./memory_recordings/"	
+	ilenpath	strlen Spath
+	Sfile		strsub 	Swavname, ilenpath, -1
+	Spath		strcat Spath, Ssegment
+	Spath		strcat Spath, Sfile
+        a1              chnget "rec_in1"
+                	fout Spath, 14, a1
+
+	endin
         

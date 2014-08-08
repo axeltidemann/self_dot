@@ -37,6 +37,15 @@
 	endin
 
 ;******************************
+; test tone
+	instr 6
+print p1, p2, p3, p4
+	a1	oscili p4, 440, giSine
+		chnmix a1, "MasterOut1"
+		chnmix a1, "MasterOut2"
+	endin
+
+;******************************
 ; find stereo position and merge mic 1 and 2
 	instr 11
 #include "panalyzer.inc"
@@ -65,6 +74,7 @@
 ;******************************
 ; get audio input noise floor (after noiseprint suppression if it is enabled)
 	instr 15
+print p1, p2, p3
 #include "getAudioNoiseFloor.inc"
 	endin
 
@@ -83,7 +93,7 @@
 	instr 17
 	a1		chnget "in1"
 	krms		rms a1
-	krms		= krms * 1.9
+	krms		= krms * 1.7
 	kgate		table krms, giNoiseFloor, 1
 	a1		= a1 * kgate
 			chnset a1, "in1"
@@ -102,5 +112,13 @@
 	Schan	strget p4
 	ival	= p5
 		chnset ival, Schan 
+	endin
+
+;******************************
+; print chn value
+	instr 23
+	Schan	strget p4
+	ival	chnget Schan
+	print ival 
 	endin
 

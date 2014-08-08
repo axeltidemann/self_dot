@@ -170,13 +170,13 @@ def audio():
             if (transient > 0) & (memRecActive > 0):
                 segments += '%.3f \n'%memRecTimeMarker
             if (audioStatusTrig < 0) & (memRecActive > 0):
-                cs.InputMessage('i -34 0 1 %s'%wavfile)
+                cs.InputMessage('i -34 0 1')
                 markerfile.write(segments)
                 markerfile.write('Total duration: %f'%memRecTimeMarker)
                 print 'stopping memoryRec'
 
         if not state['memoryRecording'] and memRecActive:
-            cs.InputMessage('i -34 0 1 %s'%wavfile)
+            cs.InputMessage('i -34 0 1')
             markerfile.write(segments)
             markerfile.write('Total duration: %f'%memRecTimeMarker)
             print 'stopping memoryRec'
