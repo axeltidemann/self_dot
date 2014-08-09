@@ -245,6 +245,16 @@ def audio():
                 print '[self.] wants to play {}'.format(pushbutton['playfile'])
                 cs.InputMessage('i3 0 0 "%s"'%'{}'.format(pushbutton['playfile']))
 
+            if 'playfile_input' in pushbutton:
+                print '[self.] wants to play {}'.format(pushbutton['playfile'])
+                cs.InputMessage('i3 0 0 "%s"'%'{}'.format(pushbutton['playfile']))
+            if 'playfile_primary' in pushbutton:
+                print '[self.] wants to play {}'.format(pushbutton['playfile'])
+                cs.InputMessage('i50 0 0 "%s"'%'{}'.format(pushbutton['playfile']))
+            if 'playfile_secondary' in pushbutton:
+                print '[self.] wants to play {}'.format(pushbutton['playfile'])
+                cs.InputMessage('i74 0 0 "%s"'%'{}'.format(pushbutton['playfile']))
+
         # send_array(publisher, np.array([cGet("level1"), 
         #                                 cGet("pitch1ptrack"), 
         #                                 cGet("pitch1pll"), 

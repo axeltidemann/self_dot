@@ -59,11 +59,21 @@ loadAudioAndMarkers(testname)
 ; ******************************
 ; straight playback of audio segments
         instr 74
+        itab            = 0
+/*
         itab            = p4
                         tableiw 1, itab, giTablesInUseSecondary ; indicate that the table is in use
         idur            = nsamp(itab)/sr
         p3              = idur
         a1              loscil3 1, 1, itab, 1
+*/
+	Ssound	strget p4
+        ilen    filelen Ssound
+        if p3 == 0 then
+        p3 = ilen
+        endif
+	a1	soundin Ssound
+	a2	= 0
 
 #include "synth_secondary_out_and_release.inc"
         endin

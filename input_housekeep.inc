@@ -15,6 +15,9 @@
 	instr 3
 
 	Ssound	strget p4
+	Smess	= "Playing back sound file at (microphone) input, the file plyed is: "
+	Smess	strcat Smess, Ssound
+		puts Smess, 1
 ;	Spath	="testsounds/"
 ;	S1	strcat Spath, Ssound
         ilen    filelen Ssound
@@ -23,7 +26,7 @@
         endif
 	a1	soundin Ssound
 	a2	= 0
-		outs a1, a2
+		;outs a1*0.1, a2*0.1 ; monitor the file playback so we know it has been played
 		chnmix a1, "in1"
 		chnmix a2, "in2"
 	endin

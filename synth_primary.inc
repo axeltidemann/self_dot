@@ -1,7 +1,7 @@
 
 ;******************************
 ; audio file input 
-	instr 3
+	instr 50
 
 	Ssound	strget p4
         ilen    filelen Ssound
