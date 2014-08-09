@@ -242,8 +242,7 @@ def audio():
                 zeroChannelsOnNoBrain = int('{}'.format(pushbutton['zerochannels']))
 
             if 'playfile' in pushbutton:
-                print '[self.] wants to play {}'.format(pushbutton['playfile'])
-                cs.InputMessage('i3 0 0 "%s"'%'{}'.format(pushbutton['playfile']))
+                print 'deprecated, use playfile_input, playfile_primary or playfile_secondary'
 
             if 'playfile_input' in pushbutton:
                 print '[self.] wants to play {}'.format(pushbutton['playfile'])
