@@ -34,7 +34,7 @@
 #include "channel_mapping.inc"
 
 ; ******************************
-; instr 51-59
+; instr 50-59
 ; primary synth, resynthesis/imitation
 #include "synth_primary.inc"
 

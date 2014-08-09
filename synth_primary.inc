@@ -1,4 +1,19 @@
 
+;******************************
+; audio file input 
+	instr 3
+
+	Ssound	strget p4
+        ilen    filelen Ssound
+        if p3 == 0 then
+        p3 = ilen
+        endif
+	a1	soundin Ssound
+	a2	= 0
+		chnmix a1, "MasterOut1"
+	endin
+
+
 ; ******************************
 ; basic subtractive harmonic synth
 	instr 51			
@@ -29,7 +44,6 @@
 	aout		butterbp asum*5+(anoise*0.01), kcentro1, kcentro1*0.2
 	aout		= aout*krms1*10
 			chnmix aout, "MasterOut1"
-			chnmix aout, "MasterOut2"
 /*
 	acps		upsamp kcps1/2000
 	acentro		upsamp kcentro1/2000
@@ -48,7 +62,6 @@
 #include "partikkel_chn.inc"
 #include "partikkel_self.inc"
 			chnmix a1, "MasterOut1"
-			chnmix a2, "MasterOut2"
 	endin
 
 ; ******************************
@@ -63,5 +76,4 @@
 			pvsftr	fsin,gifnaResyn,gifnfResyn		;read modified data back to fsrc
 	aout		pvsynth	fsin				;and resynth
 			chnmix aout, "MasterOut1"
-			chnmix aout, "MasterOut2"
 	endin
