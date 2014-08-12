@@ -15,6 +15,9 @@
 	instr 3
 
 	Ssound	strget p4
+	Smess	= "Playing back sound file at (microphone) input, the file plyed is: "
+	Smess	strcat Smess, Ssound
+		puts Smess, 1
 ;	Spath	="testsounds/"
 ;	S1	strcat Spath, Ssound
         ilen    filelen Ssound
@@ -23,7 +26,7 @@
         endif
 	a1	soundin Ssound
 	a2	= 0
-		outs a1, a2
+		;outs a1*0.1, a2*0.1 ; monitor the file playback so we know it has been played
 		chnmix a1, "in1"
 		chnmix a2, "in2"
 	endin
@@ -34,6 +37,15 @@
 	a1,a2	inch 1,2
 		chnmix a1, "in1"
 		chnmix a2, "in2"
+	endin
+
+;******************************
+; test tone
+	instr 6
+print p1, p2, p3, p4
+	a1	oscili p4, 440, giSine
+		chnmix a1, "MasterOut1"
+		chnmix a1, "MasterOut2"
 	endin
 
 ;******************************
@@ -65,6 +77,7 @@
 ;******************************
 ; get audio input noise floor (after noiseprint suppression if it is enabled)
 	instr 15
+print p1, p2, p3
 #include "getAudioNoiseFloor.inc"
 	endin
 
@@ -102,5 +115,13 @@
 	Schan	strget p4
 	ival	= p5
 		chnset ival, Schan 
+	endin
+
+;******************************
+; print chn value
+	instr 23
+	Schan	strget p4
+	ival	chnget Schan
+	print ival 
 	endin
 

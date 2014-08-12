@@ -170,13 +170,13 @@ def audio():
             if (transient > 0) & (memRecActive > 0):
                 segments += '%.3f \n'%memRecTimeMarker
             if (audioStatusTrig < 0) & (memRecActive > 0):
-                cs.InputMessage('i -34 0 1 %s'%wavfile)
+                cs.InputMessage('i -34 0 1')
                 markerfile.write(segments)
                 markerfile.write('Total duration: %f'%memRecTimeMarker)
                 print 'stopping memoryRec'
 
         if not state['memoryRecording'] and memRecActive:
-            cs.InputMessage('i -34 0 1 %s'%wavfile)
+            cs.InputMessage('i -34 0 1')
             markerfile.write(segments)
             markerfile.write('Total duration: %f'%memRecTimeMarker)
             print 'stopping memoryRec'
@@ -228,7 +228,7 @@ def audio():
                 cs.InputMessage('i -17 0 1') # turn off old noise gate
                 cs.InputMessage('i 12 0 4') # measure roundtrip latency
                 cs.InputMessage('i 13 4 2') # get audio input noise print
-                cs.InputMessage('i 14 6 -1 5') # enable noiseprint and self-output suppression
+                cs.InputMessage('i 14 6 -1 5 1') # enable noiseprint and self-output suppression
                 cs.InputMessage('i 15 6.2 2') # get noise floor level 
                 cs.InputMessage('i 16 8.3 0.1') # set noise gate shape
                 cs.InputMessage('i 17 8.5 -1') # turn on new noise gate
@@ -242,8 +242,17 @@ def audio():
                 zeroChannelsOnNoBrain = int('{}'.format(pushbutton['zerochannels']))
 
             if 'playfile' in pushbutton:
+                print 'deprecated, use playfile_input, playfile_primary or playfile_secondary'
+
+            if 'playfile_input' in pushbutton:
                 print '[self.] wants to play {}'.format(pushbutton['playfile'])
                 cs.InputMessage('i3 0 0 "%s"'%'{}'.format(pushbutton['playfile']))
+            if 'playfile_primary' in pushbutton:
+                print '[self.] wants to play {}'.format(pushbutton['playfile'])
+                cs.InputMessage('i50 0 0 "%s"'%'{}'.format(pushbutton['playfile']))
+            if 'playfile_secondary' in pushbutton:
+                print '[self.] wants to play {}'.format(pushbutton['playfile'])
+                cs.InputMessage('i74 0 0 "%s"'%'{}'.format(pushbutton['playfile']))
 
         # send_array(publisher, np.array([cGet("level1"), 
         #                                 cGet("pitch1ptrack"), 

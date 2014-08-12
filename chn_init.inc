@@ -12,5 +12,5 @@
         chnset 0.94, "SecondaryReverbFeed"
 	chnset 7000, "SecondaryReverbFiltFq"
 
-	chnset 400, "SecondaryMasterLoCut"       ; cut LF on master out for secondary associations synth
-	chnset -6, "SecondaryMasterLevel"       ; in dB
+	chnset 700, "SecondaryMasterLoCut"       ; cut LF on master out for secondary associations synth
+	chnset -1, "SecondaryMasterLevel"       ; in dB
