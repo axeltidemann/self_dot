@@ -149,9 +149,9 @@ def classifier_brain(host):
                     NAPs.append(cochlear(pushbutton['wavfile']))
                     print 'Calculating cochlear neural activation patterns took {} seconds'.format(time.time() - start_time)
 
-                    plt.figure()
-                    plt.imshow(NAPs[-1].T, aspect='auto')
-                    plt.draw()
+                    #plt.figure()
+                    #plt.imshow(NAPs[-1].T, aspect='auto')
+                    #plt.draw()
 
                     wavs.append(pushbutton['wavfile'])
 
@@ -194,9 +194,9 @@ def classifier_brain(host):
                     utils.wait_for_wav(pushbutton['wavfile'])
                     NAP = cochlear(pushbutton['wavfile'])
 
-                    plt.figure()
-                    plt.imshow(NAP.T, aspect='auto')
-                    plt.draw()
+                    #plt.figure()
+                    #plt.imshow(NAP.T, aspect='auto')
+                    #plt.draw()
 
                     NAP_resampled = resample(NAP, float(maxlen)/NAP.shape[0], 'sinc_best')
                     winner = audio_recognizer.predict(np.ndarray.flatten(NAP_resampled))[0]
