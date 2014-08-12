@@ -144,11 +144,6 @@ On Mac 10.7.5, CMake was required before installing OpenCV:
 http://www.cmake.org/cmake/resources/software.html and you must also
 install numpy and scipy beforehand. 
 
-_YET ANOTHER TEST NOTE_: With the use of GCC 4.9.1 I'm not sure if
-clang really is needed anymore. Try it without first, and see what
-happens. If something barfs, try to install clang as per these
-instructions.
-
 For 10.8.5 you can just download the Command Line Tools from Apple,
 and you'll get clang 3.4.
 
@@ -166,11 +161,11 @@ cmake -D CMAKE_INSTALL_PREFIX=$VIRTUAL_ENV -DCMAKE\_BUILD\_TYPE=Release -G "Unix
 make -j
 make install
 ```
-On 10.7.5 and 10.8.5 this had to be set prior to installation of scipy and scikit-learn.
+On 10.7.5 and 10.8.5 this had to be set prior to installation of numpy, scipy and scikit-learn.
 
 ```
 export CC=clang
-export CXX=clang
+export CXX=clang++
 ```
 
 _Important:_ in order to install OpenCV specific to the virtualenv you
