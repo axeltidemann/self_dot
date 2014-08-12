@@ -9,6 +9,7 @@ import glob
 import cPickle as pickle
 from subprocess import call
 import time
+import ctypes
 
 import numpy as np
 import zmq
@@ -47,7 +48,6 @@ def train_network(x, y, output_dim=100, leak_rate=.9, bias_scaling=.2, reset_sta
     net.train(x,y)
 
     return net
-
         
 def cochlear(filename, db=-40, stride=441, threshold=.025, new_rate=22050, ears=1, channels=71):
     rate, data = wavfile.read(filename)
@@ -56,12 +56,9 @@ def cochlear(filename, db=-40, stride=441, threshold=.025, new_rate=22050, ears=
     data = resample(utils.trim(data, threshold=threshold), float(new_rate)/rate, 'sinc_best')
     data = data*10**(db/20)
     utils.array_to_csv('{}-audio.txt'.format(filename), data)
-    call(['./carfac-cmd', filename, str(len(data)), str(ears), str(channels), str(new_rate)])
-    carfac = utils.csv_to_array('{}-output.txt'.format(filename))
-    smooth = filtfilt([1], [1, -.995], carfac, axis=0)
-    decim = smooth[::stride]
-    return np.sqrt(np.maximum(0, decim)/np.max(decim))
-
+    call(['./carfac-cmd', filename, str(len(data)), str(ears), str(channels), str(new_rate), str(stride)])
+    naps = utils.csv_to_array('{}-output.txt'.format(filename))
+    return np.sqrt(np.maximum(0, naps)/np.max(naps))
 
 def classifier_brain(host):
     me = mp.current_process()
@@ -174,12 +171,11 @@ def classifier_brain(host):
                     x = NAPs[-1][:NAP_len - np.mod(NAP_len, stride*video_len):stride]
                     y = video_segment[:x.shape[0]]
                     
-                    print 'SHAPES', stride, NAP_len, video_len, x.shape, y.shape
                     tarantino = train_network(x,y)
                     tarantino.stride = stride
                     video_producer.append(tarantino)
 
-                    print 'Lessons learned in {} seconds'.format(time.time() - start_time)
+                    print 'Learning classifier and video network in {} seconds'.format(time.time() - start_time)
 
                 except Exception, e:
                     print e, 'Learning aborted.'

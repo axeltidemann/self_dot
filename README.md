@@ -52,23 +52,54 @@ These are some notes on getting the C++ version of the CARFAC library working.
 
 SCons: http://www.scons.org/
 
-Clang 3.3 (or better) in order to compile the code with SCons: http://clang.llvm.org/
+You need GCC 4.9.1 to optimize the CARFAC library, since it allows for
+optimizing the Eigen Matrix Library with OpenMP. This will have a
+_massive_ impact on performance, and is well worth the time for
+compiling and installing. On Ubuntu, you most likely can do a sudo
+apt-get install g++-4.9, and can skip the following steps to get GCC
+4.9.1 running.
 
+GCC 4.9.1: ftp://ftp.mpi-sb.mpg.de/pub/gnu/mirror/gcc.gnu.org/pub/gcc/releases/gcc-4.9.1/
+
+You need three libraries in order to compile GCC 4.9.1. These are:
+
+GMP: ftp://ftp.mpi-sb.mpg.de/pub/gnu/mirror/gcc.gnu.org/pub/gcc/infrastructure/gmp-4.3.2.tar.bz2
+
+MPC: ftp://ftp.mpi-sb.mpg.de/pub/gnu/mirror/gcc.gnu.org/pub/gcc/infrastructure/mpc-0.8.1.tar.gz
+
+MPFR: ftp://ftp.mpi-sb.mpg.de/pub/gnu/mirror/gcc.gnu.org/pub/gcc/infrastructure/mpfr-2.4.2.tar.bz2
+
+Unpack these. If you move these into your GCC source code folder
+(without version names - this is described in the GCC installation
+manual), they will be automatically compiled. If you downloaded and
+unpacked everything to a common folder (e.g. ~/Downloads), this is
+what you would have to do. This takes a couple of hours.
+
+```
+cd ~/Downloads
+cd gcc-4.9.1
+mv ../gmp-4.3.2 gmp
+mv ../mpfr-2.4.2 mpfr
+mv ../mpc-0.8.1 mpc
+./configure --prefix=$VIRTUAL_ENV
+make
+make install
+```
 The Eigen library: http://eigen.tuxfamily.org/ and set the EIGEN_PATH to where the Eigen folder is (note: NOT the Eigen folder itself, but the folder underneath). 
 
 > export EIGEN_PATH=/path/to/eigen/
 
-The SConstruct file in carfac/cpp should look like this, the result of STRESS, SWEAT & TEARS (big up to Boye). Note: change the path to clang, of course. 
+The SConstruct in the carfac/cpp should be changed to the following. Remember to change the path to the GCC 4.9.1. 
 
 ```
 import commands
 import os
 
-env = Environment(CPPPATH = [os.environ['EIGEN_PATH']])
-env['CC'] = '/Users/tidemann/.virtualenvs/self_dot/bin/clang'
-env['CXX'] = '/Users/tidemann/.virtualenvs/self_dot/bin/clang++'
+env = Environment(CPPPATH = [os.environ['EIGEN_PATH']], OMP_NUM_THREADS = [os.environ['OMP_NUM_THREADS']])
+env['CC'] = '/Users/tidemann/.virtualenvs/self_dot/bin/gcc'
+env['CXX'] = '/Users/tidemann/.virtualenvs/self_dot/bin/g++'
 
-env.MergeFlags(['-std=c++11 -stdlib=libc++ -v'])
+env.MergeFlags(['-std=c++11 -O3 -DNDEBUG -fopenmp'])
 carfac_sources = [
     'binaural_sai.cc',
     'carfac.cc',
@@ -79,11 +110,23 @@ carfac_sources = [
 carfac = env.Library(target = 'carfac', source = carfac_sources)
 Default(carfac)
 
-axel_sources = carfac_sources + ['carfac_cmd.cc']
-axel = env.Program(target = 'carfac-cmd',
-                    source = axel_sources,
-                    LINKFLAGS = '-std=c++11 -stdlib=libc++ -v')
+self_dot_sources = carfac_sources + ['carfac_cmd.cc'] 
+env.Program(target = 'carfac-cmd',
+            source = self_dot_sources,
+            LINKFLAGS = '-std=c++11 -O3 -DNDEBUG -fopenmp')
 ```
+
+*Important:* You are now harnessing the power of OpenMP in
+Eigen. You must set the number of threads that OpenMP will use. This
+should be set to the number of *physical* cores of your CPU. Many CPUs
+report _logical_ cores as the double of physical cores, since
+they use Hyper Threading (or some other technique). This could
+actually hamper performance, since Eigen has an optimized data/memory
+flow, and would run on full blast on a physical core, and most likely
+waste time waiting for a logical core. On my 8-core MacBook Pro there
+are only 4 physical cores, so I set this accordingly:
+
+> export OMP_NUM_THREADS=4
 
 The file carfac_cmd.cc must be in the /path/to/carfac/cpp folder, move it from your self_dot home to this location.
 
@@ -93,29 +136,21 @@ To compile it, run
 
 Afterwards, you must move the carfac-cmd executable to your self_dot home, since python is calling it from brain.py.
 
-If you want to install Octave, e.g. the C++ version is too troublesome, follow these steps:
-
-Octave: http://www.gnu.org/software/octave/
-
-> pip install oct2py
-
-Start Octave, navigate to path/to/carfac/matlab and add the path to Octave, e.g.
-
-```
-addpath(pwd)
-savepath
-```
-
-However, in production mode we must run the C++-version as it is a lot faster than the Octave counterpart. 
-
 ## Specific Mac OS X stuff:
 
 These are some experiences found when installing the software under 10.7.5 and 10.8.5.
 
 On Mac 10.7.5, CMake was required before installing OpenCV:
 http://www.cmake.org/cmake/resources/software.html and you must also
-install numpy and scipy beforehand. You might just as well install
-clang 3.4 right now, since you'll be needing it for SCons. However, for 10.8.5 you can just download the Command Line Tools from Apple, and you'll get clang 3.4.
+install numpy and scipy beforehand. 
+
+_YET ANOTHER TEST NOTE_: With the use of GCC 4.9.1 I'm not sure if
+clang really is needed anymore. Try it without first, and see what
+happens. If something barfs, try to install clang as per these
+instructions.
+
+For 10.8.5 you can just download the Command Line Tools from Apple,
+and you'll get clang 3.4.
 
 To install clang 3.4: 
 
@@ -145,11 +180,12 @@ below. This has the advantage that OpenCV will be installed locally
 specified this way, it will use the system Python instead, which is
 sure to cause massive headaches and the death of many adorable kittens
 in the future. A source of __immensive__ frustration when trying to
-reinstall OpenCV on 10.7 was that you must *not* set CC and CXX to clang, as
-you do before installing virtually every other package (ØMQ being a
-notable exception, where you must include clang to install pyzmq
-again). So if you just did, close that window and start anew. A bit
-baffling, and this took me quite som hours to figure out. However, on 10.8.5 you need not unset clang.
+reinstall OpenCV on 10.7 was that you must *not* set CC and CXX to
+clang, as you do before installing virtually every other package (ØMQ
+being a notable exception, where you must include clang to install
+pyzmq again). So if you just did, close that window and start anew. A
+bit baffling, and this took me quite som hours to figure out. However,
+on 10.8.5 you need not unset clang.
 
 ```
 cd opencv*
@@ -211,14 +247,15 @@ And you should be good to go!
  compiled under 10.7. Important note: you must add the
  DYLD_LIBRARY_PATH in order to use the 10.7 virtualenv. This works
  since everything is installed within the virtualenv. In addition, I
- had to replace /usr/bin/xcrun with the following script:
+ had to replace /usr/bin/xcrun with the following script in 10.8 to
+ compile the aforementioned stuff:
 
 ```
 #!/bin/bash
 $@
 ```
 
-This allowed the usage of gcc and so on, even though everything is centered around clang on 10.8
+This allowed the usage of gcc and so on, even though everything is centered around clang on 10.8. Ugly hack, I know.
 
 ## Ubuntu on VirtualBox 
 

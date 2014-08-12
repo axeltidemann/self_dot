@@ -16,12 +16,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Mangled by Axel Tidemann and Boye Annfelt Høverstad.
+// Mangled by Axel Tidemann and Boye Annfelt Hoverstad.
 
 #include "carfac.h"
 
 #include <string>
 #include <fstream>
+#include <iostream>
 
 #include <Eigen/Core>
 
@@ -45,13 +46,62 @@ ArrayXX LoadMatrix(const std::string& filename, int rows, int columns) {
   return output;
 }
 
-void WriteMatrix(const std::string& filename, const ArrayXX& matrix) {
+void _filterloop(const ArrayX &b, const ArrayX &a, const ArrayXX& input, ArrayXX& output) {
+  int order = b.rows();
+  int rows = input.rows();
+  int cols = input.cols();
+  
+  for(int i = 0; i < cols; i++)
+    {
+      ArrayX x = input.col(i);
+      ArrayX y(rows);
+      y(0) = b(0)*x(0);
+      
+      for(int k = order; k < rows; k++)
+	y(k) = (b * x.segment(k - order + 1, order)).sum() - (a * y.segment(k - order, order)).sum();
+
+      output.col(i) = y;
+    }
+
+}
+
+void filter(const ArrayX &beta, const ArrayX &alpha, const ArrayXX& input, ArrayXX& output) {
+
+  float a0 = alpha(0);
+
+  // For convenience with multiplication, we reverse the coefficients.
+  ArrayX a = alpha.segment(1, alpha.rows() - 1).reverse() / a0;
+  ArrayX b = beta.reverse() / a0;
+
+  _filterloop(b, a, input, output);
+
+  output.reverse();
+
+  _filterloop(b, a, input, output);
+
+  output.reverse();
+}
+
+void WriteMatrix(const std::string& filename, const ArrayXX& matrix, int stride) {
+  ArrayX b(1);
+  b << 1.;
+  ArrayX a(2);
+  a <<  1., -0.995;
+  
+  ArrayXX filtered(matrix.rows(), matrix.cols());
+  filter(b, a, matrix, filtered);
+  //Eigen::Map<ArrayXX, 0, Eigen::OuterStride<441>> mongo(filtered.data(), filtered.rows()/441, filtered.cols());
+  ArrayXX decimated(filtered.rows()/stride, filtered.cols());
+  
+  for(int i = 0; i < filtered.rows()/stride; i++)
+    decimated.row(i) = filtered.row(i*stride);
+
   std::ofstream ofile(filename.c_str());
   const int kPrecision = 9;
   ofile.precision(kPrecision);
   if (ofile.is_open()) {
     Eigen::IOFormat ioformat(kPrecision, Eigen::DontAlignCols);
-    ofile << matrix.format(ioformat) << std::endl;
+    ofile << decimated.format(ioformat) << std::endl;
   }
   ofile.close();
 }
@@ -65,8 +115,8 @@ ArrayXX LoadAudio(const std::string& filename, int num_samples, int num_ears) {
 
 // Writes the CARFAC NAP output to a text file.
 void WriteNAPOutput(const CARFACOutput& output, const std::string& filename,
-                    int ear) {
-  WriteMatrix(filename, output.nap()[ear].transpose());
+                    int ear, int stride) {
+  WriteMatrix(filename, output.nap()[ear].transpose(), stride);
 }
 
 int main(int argc, char *argv[])
@@ -80,9 +130,11 @@ int main(int argc, char *argv[])
   int num_ears = atoi(argv[3]); // 1
   int num_channels = atoi(argv[4]); //71
   FPType sample_rate = atoi(argv[5]); //22050
+  int stride = atoi(argv[6]); //441, which is about ~20ms of audio at 22.05kHz
   ArrayXX sound_data = LoadAudio(fname + "-audio.txt", num_samples, num_ears);
   CARFAC carfac(num_ears, sample_rate, car_params_, ihc_params_, agc_params_);
   CARFACOutput output(true, true, false, false);
   carfac.RunSegment(sound_data, open_loop_, &output);
-  WriteNAPOutput(output, fname + "-output.txt", 0);
+  //If you need more ears, this is where to loop it. Change the output filename accordingly.
+  WriteNAPOutput(output, fname + "-output.txt", 0, stride); 
 }
