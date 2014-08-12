@@ -88,7 +88,7 @@ void WriteMatrix(const std::string& filename, const ArrayXX& matrix, int stride)
   
   ArrayXX filtered = ArrayXX::Zero(matrix.rows() + b.rows(), matrix.cols());
   filter(b, a, matrix, filtered);
-  Eigen::Map<ArrayXX, 0, Eigen::OuterStride<441>> mongo(filtered.data(), filtered.rows()/441, filtered.cols());
+  //Eigen::Map<ArrayXX, 0, Eigen::OuterStride<441>> mongo(filtered.data(), filtered.rows()/441, filtered.cols());
 
   ArrayXX decimated(filtered.rows()/stride, filtered.cols());
   
@@ -100,7 +100,7 @@ void WriteMatrix(const std::string& filename, const ArrayXX& matrix, int stride)
   ofile.precision(kPrecision);
   if (ofile.is_open()) {
     Eigen::IOFormat ioformat(kPrecision, Eigen::DontAlignCols);
-    ofile << mongo.format(ioformat) << std::endl;
+    ofile << decimated.format(ioformat) << std::endl;
   }
   ofile.close();
 }
