@@ -245,14 +245,14 @@ def audio():
                 print 'deprecated, use playfile_input, playfile_primary or playfile_secondary'
 
             if 'playfile_input' in pushbutton:
-                print '[self.] wants to play {}'.format(pushbutton['playfile'])
-                cs.InputMessage('i3 0 0 "%s"'%'{}'.format(pushbutton['playfile']))
+                print '[self.] wants to play {}'.format(pushbutton['playfile_input'])
+                cs.InputMessage('i3 0 0 "%s"'%'{}'.format(pushbutton['playfile_input']))
             if 'playfile_primary' in pushbutton:
-                print '[self.] wants to play {}'.format(pushbutton['playfile'])
-                cs.InputMessage('i50 0 0 "%s"'%'{}'.format(pushbutton['playfile']))
+                print '[self.] wants to play {}'.format(pushbutton['playfile_primary'])
+                cs.InputMessage('i50 0 0 "%s"'%'{}'.format(pushbutton['playfile_primary']))
             if 'playfile_secondary' in pushbutton:
-                print '[self.] wants to play {}'.format(pushbutton['playfile'])
-                cs.InputMessage('i74 0 0 "%s"'%'{}'.format(pushbutton['playfile']))
+                print '[self.] wants to play {}'.format(pushbutton['playfile_secondary'])
+                cs.InputMessage('i74 0 0 "%s"'%'{}'.format(pushbutton['playfile_secondary']))
 
         # send_array(publisher, np.array([cGet("level1"), 
         #                                 cGet("pitch1ptrack"), 
