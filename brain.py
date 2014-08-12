@@ -187,7 +187,7 @@ def classifier_brain(host):
                 print 'Respond to', pushbutton['wavfile']
 
                 if len(NAPs) == 1:
-                    sender.send_json('playfile {}'.format(wavs[-1]))
+                    sender.send_json('playfile_primary {}'.format(wavs[-1]))
                     continue
 
                 try:

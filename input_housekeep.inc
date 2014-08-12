@@ -26,7 +26,7 @@
         endif
 	a1	soundin Ssound
 	a2	= 0
-		;outs a1*0.1, a2*0.1 ; monitor the file playback so we know it has been played
+		;outs a1, a2 ; monitor the file playback so we know it has been played
 		chnmix a1, "in1"
 		chnmix a2, "in2"
 	endin

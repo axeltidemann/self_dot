@@ -110,15 +110,19 @@ class Controller:
             if 'zerochannels' in message:
                 self.event.send_json({ 'zerochannels': message[13:] })
 
-            # if 'playfile' in message:
-            #     self.event.send_json({ 'inputLevel': 'mute' }) # A bit ugly - Csound should mute itself, maybe?
-            #     self.event.send_json({ 'playfile': message[9:] })
-            #     time.sleep(utils.wav_duration(message[9:]))
-            #     self.event.send_json({ 'inputLevel': 'unmute' })
-
+            '''
             if 'playfile' in message:
-                mode, wavfile = message.split()
-                self.event.send_json({ mode: wavfile })
+                self.event.send_json({ 'inputLevel': 'mute' }) # A bit ugly - Csound should mute itself, maybe?
+                self.event.send_json({ 'playfile': message[9:] })
+                time.sleep(utils.wav_duration(message[9:]))
+                self.event.send_json({ 'inputLevel': 'unmute' })
+            '''
+            if 'playfile_input' in message:
+                self.event.send_json({ 'playfile_input': message[15:] })
+            if 'playfile_primary' in message:
+                self.event.send_json({ 'playfile_primary': message[17:] })
+            if 'playfile_secondary' in message:
+                self.event.send_json({ 'playfile_secondary': message[19:] })
 
             if 'selfvoice' in message:
                 self.event.send_json({ 'selfvoice': message[10:] })
