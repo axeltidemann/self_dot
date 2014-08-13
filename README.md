@@ -106,8 +106,10 @@ You must also specify where the carfac source files are:
 
 Finally, you must specify to use the newly installed gcc and g++. This ensures that they will be used:
 
-> export CC=$VIRTUAL_ENV/bin/gcc
-> export CXX=$VIRTUAL_ENV/bin/g++
+```
+export CC=$VIRTUAL_ENV/bin/gcc
+export CXX=$VIRTUAL_ENV/bin/g++
+```
 
 To compile the CARFAC library, simply run
 

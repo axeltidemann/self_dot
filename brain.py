@@ -149,15 +149,23 @@ def classifier_brain(host):
                     NAPs.append(cochlear(pushbutton['wavfile']))
                     print 'Calculating cochlear neural activation patterns took {} seconds'.format(time.time() - start_time)
 
-                    plt.figure()
-                    plt.imshow(NAPs[-1].T, aspect='auto')
-                    plt.draw()
+                    # plt.figure()
+                    # plt.imshow(NAPs[-1].T, aspect='auto')
+                    # plt.draw()
 
                     wavs.append(pushbutton['wavfile'])
 
                     start_time = time.time()
                     maxlen = max([ memory.shape[0] for memory in NAPs ])
                     resampled_memories = [ resample(memory, float(maxlen)/memory.shape[0], 'sinc_best') for memory in NAPs ]
+
+                    if len(np.unique([ m.shape[0] for m in resampled_memories ])) > 1:
+                        print 'Resampling yielded different lengths. Correcting by zero-padding the matrix.', [ m.shape[0] for m in resampled_memories ]
+                        maxlen = max([ m.shape[0] for m in resampled_memories ])
+                        for i, m in enumerate(resampled_memories):
+                            if m.shape[0] < maxlen:
+                                resampled_memories[i] = np.vstack(( m, np.zeros(( maxlen - m.shape[0], m.shape[1])) ))
+
                     resampled_flattened_memories = [ np.ndarray.flatten(memory) for memory in resampled_memories ]
 
                     if len(NAPs) > 1:
@@ -170,7 +178,7 @@ def classifier_brain(host):
                     stride = int(max(1,np.floor(float(NAP_len)/video_len)))
                     x = NAPs[-1][:NAP_len - np.mod(NAP_len, stride*video_len):stride]
                     y = video_segment[:x.shape[0]]
-                    
+
                     tarantino = train_network(x,y)
                     tarantino.stride = stride
                     video_producer.append(tarantino)
@@ -178,8 +186,12 @@ def classifier_brain(host):
                     print 'Learning classifier and video network in {} seconds'.format(time.time() - start_time)
 
                 except Exception, e:
+                    
                     print e, 'Learning aborted.'
-                    continue
+                    memories = min([ len(wavs), len(NAPs), len(video_producer) ])
+                    wavs = wavs[:memories]
+                    NAPs = NAPs[:memories]
+                    video_producer = video_producer[:memories]
 
                 pushbutton['reset'] = True
 
@@ -194,9 +206,9 @@ def classifier_brain(host):
                     utils.wait_for_wav(pushbutton['wavfile'])
                     NAP = cochlear(pushbutton['wavfile'])
 
-                    plt.figure()
-                    plt.imshow(NAP.T, aspect='auto')
-                    plt.draw()
+                    # plt.figure()
+                    # plt.imshow(NAP.T, aspect='auto')
+                    # plt.draw()
 
                     NAP_resampled = resample(NAP, float(maxlen)/NAP.shape[0], 'sinc_best')
                     winner = audio_recognizer.predict(np.ndarray.flatten(NAP_resampled))[0]
