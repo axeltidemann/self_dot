@@ -88,7 +88,7 @@ print p1, p2, p3
 	irms		= ampdbfs(irms_dB)
 	isize		= 8192
 	iknee		= isize*0.1
-	giNoiseFloor	ftgen 0, 0, isize, 7, 0, (isize*irms), 0, iknee, 1, (isize*(1-irms))-iknee, 1
+	giNoiseFloor	ftgen 0, 0, isize, 7, 0, (isize*irms), 0, iknee, 1, (isize*(1-irms))-iknee, 1, 2, 1
 	endin
 
 ;******************************

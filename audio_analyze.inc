@@ -1,10 +1,24 @@
 
 ; ***************
+; pre-emphasis EQ for transient detection,
+; allowing better sensitivity to utterances starting with a sibliant.
+	ktd_HiShelfFq	chnget "td_HiShelfFq"
+	ktd_HiShelfGain	chnget "td_HiShelfGain"
+	ktd_LoShelfFq	chnget "td_LoShelfFq"
+	ktd_LoShelfGain	chnget "td_LoShelfGain"
+	ktd_AmpAdjust	chnget "td_AmpAdjust"
+	
+	atd_input	pareq a1, ktd_HiShelfFq, ampdb(ktd_HiShelfGain), 0.7,  2
+        atd_input	pareq atd_input, ktd_HiShelfFq, ampdb(ktd_LoShelfGain), 0.7,  1
+	atd_input	= atd_input*ampdb(ktd_AmpAdjust)
+
+
+; ***************
 ; amplitude tracking
-	krms1		rms a1				; simple level measure
+	krms1		rms atd_input			; simple level measure
 	kAttack		= 0.001				; envelope follower attack
 	kRelease	= 0.3 				; envelope follower release
-	aFollow1	follow2	a1, kAttack, kRelease	; envelope follower
+	aFollow1	follow2	atd_input, kAttack, kRelease	; envelope follower
 	kFollow1	downsamp aFollow1	
 	kFollowdb1	= dbfsamp(kFollow1)		; convert to dB
 
@@ -61,6 +75,7 @@ rireturn
 	kstatusTrigOff	trigger kstatus, 0.5, 1
 	kstatusTrig	= kstatusTrigOn-kstatusTrigOff	; pulse 1 at start, pulse -1 at end of segment
 /*
+
 ; ***************
 ; epoch filtering
 	a20		butterbp a1, 20, 5
