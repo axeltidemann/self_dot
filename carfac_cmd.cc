@@ -88,7 +88,7 @@ void WriteMatrix(const std::string& filename, const ArrayXX& matrix, int stride)
   ArrayXX decimated(matrix.rows()/stride, matrix.cols());
   
   for(int i = 0; i < decimated.rows(); i++)
-    decimated.row(i) = filtered.row(i*stride + b.rows());
+    decimated.row(i) = filtered.row(i*stride);
 
   std::ofstream ofile(filename.c_str());
   const int kPrecision = 9;
