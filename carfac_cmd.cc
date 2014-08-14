@@ -50,19 +50,17 @@ void _filterloop(const ArrayX &b, const ArrayX &a, const ArrayXX& input, ArrayXX
   int order = b.rows();
   int rows = input.rows();
   int cols = input.cols();
-  
+
   for(int i = 0; i < cols; i++)
     {
       ArrayX x = input.col(i);
-      ArrayX y(rows);
-      y(0) = b(0)*x(0);
-      
-      for(int k = order; k < rows; k++)
-	y(k) = (b * x.segment(k - order + 1, order)).sum() - (a * y.segment(k - order, order)).sum();
+      ArrayX y = output.col(i);
+
+      for(int k = 0; k < rows; k++)
+	y(k+1) = (b * x.segment(k - order + 1, order)).sum() - (a * y.segment(k - order, order)).sum();
 
       output.col(i) = y;
     }
-
 }
 
 void filter(const ArrayX &beta, const ArrayX &alpha, const ArrayXX& input, ArrayXX& output) {
@@ -74,27 +72,23 @@ void filter(const ArrayX &beta, const ArrayX &alpha, const ArrayXX& input, Array
   ArrayX b = beta.reverse() / a0;
 
   _filterloop(b, a, input, output);
-
-  output.reverse();
-
-  _filterloop(b, a, input, output);
-
-  output.reverse();
+  output = output.colwise().reverse().eval();
+  _filterloop(b, a, input.colwise().reverse().eval(), output);
+  output = output.colwise().reverse().eval();
 }
 
 void WriteMatrix(const std::string& filename, const ArrayXX& matrix, int stride) {
   ArrayX b(1);
   b << 1.;
   ArrayX a(2);
-  a <<  1., -0.995;
-  
-  ArrayXX filtered(matrix.rows(), matrix.cols());
+  a <<  1., -0.995; //If you extend this vector, pad the matrix with N-2 zeros.
+
+  ArrayXX filtered = ArrayXX::Zero(matrix.rows() + b.rows(), matrix.cols());
   filter(b, a, matrix, filtered);
-  //Eigen::Map<ArrayXX, 0, Eigen::OuterStride<441>> mongo(filtered.data(), filtered.rows()/441, filtered.cols());
-  ArrayXX decimated(filtered.rows()/stride, filtered.cols());
+  ArrayXX decimated(matrix.rows()/stride, matrix.cols());
   
-  for(int i = 0; i < filtered.rows()/stride; i++)
-    decimated.row(i) = filtered.row(i*stride);
+  for(int i = 0; i < decimated.rows(); i++)
+    decimated.row(i) = filtered.row(i*stride + b.rows());
 
   std::ofstream ofile(filename.c_str());
   const int kPrecision = 9;

@@ -117,10 +117,15 @@ class Controller:
                 time.sleep(utils.wav_duration(message[9:]))
                 self.event.send_json({ 'inputLevel': 'unmute' })
             '''
+
             if 'playfile_input' in message:
                 self.event.send_json({ 'playfile_input': message[15:] })
             if 'playfile_primary' in message:
+                self.event.send_json({ 'inputLevel': 'mute' }) # A bit ugly - Csound should mute itself, maybe?
                 self.event.send_json({ 'playfile_primary': message[17:] })
+                time.sleep(utils.wav_duration(message[17:]))
+                self.event.send_json({ 'inputLevel': 'unmute' })
+
             if 'playfile_secondary' in message:
                 self.event.send_json({ 'playfile_secondary': message[19:] })
 

@@ -76,8 +76,7 @@ unpacked everything to a common folder (e.g. ~/Downloads), this is
 what you would have to do. This takes a couple of hours.
 
 ```
-cd ~/Downloads
-cd gcc-4.9.1
+cd ~/Downloads/gcc-4.9.1
 mv ../gmp-4.3.2 gmp
 mv ../mpfr-2.4.2 mpfr
 mv ../mpc-0.8.1 mpc
@@ -88,33 +87,6 @@ make install
 The Eigen library: http://eigen.tuxfamily.org/ and set the EIGEN_PATH to where the Eigen folder is (note: NOT the Eigen folder itself, but the folder underneath). 
 
 > export EIGEN_PATH=/path/to/eigen/
-
-The SConstruct in the carfac/cpp should be changed to the following. Remember to change the path to the GCC 4.9.1. 
-
-```
-import commands
-import os
-
-env = Environment(CPPPATH = [os.environ['EIGEN_PATH']], OMP_NUM_THREADS = [os.environ['OMP_NUM_THREADS']])
-env['CC'] = '/Users/tidemann/.virtualenvs/self_dot/bin/gcc'
-env['CXX'] = '/Users/tidemann/.virtualenvs/self_dot/bin/g++'
-
-env.MergeFlags(['-std=c++11 -O3 -DNDEBUG -fopenmp'])
-carfac_sources = [
-    'binaural_sai.cc',
-    'carfac.cc',
-    'ear.cc',
-    'sai.cc'
-    ]
-
-carfac = env.Library(target = 'carfac', source = carfac_sources)
-Default(carfac)
-
-self_dot_sources = carfac_sources + ['carfac_cmd.cc'] 
-env.Program(target = 'carfac-cmd',
-            source = self_dot_sources,
-            LINKFLAGS = '-std=c++11 -O3 -DNDEBUG -fopenmp')
-```
 
 *Important:* You are now harnessing the power of OpenMP in
 Eigen. You must set the number of threads that OpenMP will use. This
@@ -128,13 +100,20 @@ are only 4 physical cores, so I set this accordingly:
 
 > export OMP_NUM_THREADS=4
 
-The file carfac_cmd.cc must be in the /path/to/carfac/cpp folder, move it from your self_dot home to this location.
+You must also specify where the carfac source files are:
 
-To compile it, run 
+> export CARFAC_PATH=/path/to/carfac/
 
-> scons carfac-cmd
+Finally, you must specify to use the newly installed gcc and g++. This ensures that they will be used:
 
-Afterwards, you must move the carfac-cmd executable to your self_dot home, since python is calling it from brain.py.
+```
+export CC=$VIRTUAL_ENV/bin/gcc
+export CXX=$VIRTUAL_ENV/bin/g++
+```
+
+To compile the CARFAC library, simply run
+
+> scons
 
 ## Specific Mac OS X stuff:
 
@@ -143,11 +122,6 @@ These are some experiences found when installing the software under 10.7.5 and 1
 On Mac 10.7.5, CMake was required before installing OpenCV:
 http://www.cmake.org/cmake/resources/software.html and you must also
 install numpy and scipy beforehand. 
-
-_YET ANOTHER TEST NOTE_: With the use of GCC 4.9.1 I'm not sure if
-clang really is needed anymore. Try it without first, and see what
-happens. If something barfs, try to install clang as per these
-instructions.
 
 For 10.8.5 you can just download the Command Line Tools from Apple,
 and you'll get clang 3.4.
@@ -166,11 +140,15 @@ cmake -D CMAKE_INSTALL_PREFIX=$VIRTUAL_ENV -DCMAKE\_BUILD\_TYPE=Release -G "Unix
 make -j
 make install
 ```
-On 10.7.5 and 10.8.5 this had to be set prior to installation of scipy and scikit-learn.
+
+On 10.7.5 and 10.8.5 this had to be set prior to installation of
+numpy, scipy and scikit-learn. It seems unnecessary to have both clang
+and gcc-4.9, but this unfortunately seems to be the case. clang does
+not have support for OpenMP, so we need gcc-4.9 as well.
 
 ```
 export CC=clang
-export CXX=clang
+export CXX=clang++
 ```
 
 _Important:_ in order to install OpenCV specific to the virtualenv you
