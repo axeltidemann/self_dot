@@ -20,7 +20,7 @@
         krelease        release
         kactive         = 1-krelease
                         chnset kactive, "memRecActive"          ; tell Python that we're recording
-
+/*
 	; trigger instr events to record subsegments
 	kcount		init 0
 	kmetro		metro 2
@@ -36,6 +36,7 @@
 	Sevent		strcat Sevent, "\""
 			scoreline_i Sevent
 	end:
+*/
         endin
 
 	instr 35
