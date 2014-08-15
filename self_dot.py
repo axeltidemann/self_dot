@@ -77,17 +77,31 @@ class Controller:
                 _, name = message.split()
                 self.state['brains'][name] -= 1
                 print '{} has now {} available slots'.format(name, self.state['brains'][name])
-                
+
+            # If we are in a state to segment stuff, override the learnwav and send a 'setmarker' signal.
+            # In the brain, you then use the first segment to train the classifier. Also save the wavfile - this
+            # must be sent with the setmarker command! I.e. setmarker <wavfile> 
+
+            if 'associate' in message:
+                _, state = message.split()
+                self.state['associate'] = state in ['True', '1']
+                self.state['associate_learn'] = False
+                                            
             if 'learnwav' in message:
-                d = self.state['brains']
-                winner = max(d, key=d.get)
-                _, wavfile = message.split()
-                print '{} chosen to learn, has {} available slots'.format(winner, self.state['brains'][winner])
-                self.event.send_json({ 'learn': winner, 'wavfile': wavfile })
+                _, filename = message.split()
+                if self.state['associate'] and not self.state['associate_learn']:
+                    self.event.send_json({ 'setmarker': filename })
+                    self.state['associate_learn'] = True
+                else: 
+                    d = self.state['brains']
+                    winner = max(d, key=d.get)
+                    print '{} chosen to learn, has {} available slots'.format(winner, self.state['brains'][winner])
+                    self.event.send_json({ 'learn': winner, 'filename': filename })
+                    self.state['associate_learn'] = False
 
             if 'respondwav' in message:
-                _, wavfile = message.split()
-                self.event.send_json({ 'respond': True, 'wavfile': wavfile })
+                _, filename = message.split()
+                self.event.send_json({ 'respond': True, 'filename': filename })
 
             if message == 'setmarker':
                 self.event.send_json({ 'setmarker': True })
@@ -150,7 +164,9 @@ if __name__ == '__main__':
                          'autorespond': False,
                          'brains': {},
                          'record': False,
-                         'memoryRecording': False}
+                         'memoryRecording': False,
+                         'associate': False,
+                         'associate_learn': False}
 
     mp.Process(target=IO.audio, name='AUDIO').start() 
     mp.Process(target=IO.video, name='VIDEO').start()

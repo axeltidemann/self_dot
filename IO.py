@@ -130,7 +130,7 @@ def audio():
     fftin_amplist = [0]*ffttabsize
     fftin_freqlist = [0]*ffttabsize
 
-    wavfile = []
+    filename = []
         
     while not stopflag:
         stopflag = perfKsmps()
@@ -162,8 +162,8 @@ def audio():
             if audioStatusTrig > 0:
                 print 'starting memoryRec'
                 timestamp = t('%Y_%m_%d_%H_%M_%S')
-                wavfile = memRecPath+timestamp+'.wav'
-                cs.InputMessage('i 34 0 -1 "%s"'%wavfile)
+                filename = memRecPath+timestamp+'.wav'
+                cs.InputMessage('i 34 0 -1 "%s"'%filename)
                 markerfile = open(memRecPath+timestamp+'.txt', 'w')
                 markerfile.write('Self. audio clip perceived at %s\n'%timestamp)
                 segments = 'Sub segment start times: \n0.000 \n'
@@ -186,16 +186,16 @@ def audio():
                 send('startrec', context)
             if audioStatusTrig < 0:
                 send('stoprec', context)
-                if wavfile:
-                    send('learnwav {}'.format(os.path.abspath(wavfile)), context)
+                if filename:
+                    send('learnwav {}'.format(os.path.abspath(filename)), context)
 
         if state['autorespond']:
             if audioStatusTrig > 0:
                 send('startrec', context)
             if audioStatusTrig < 0:
                 send('stoprec', context)
-                if wavfile:
-                    send('respondwav {}'.format(os.path.abspath(wavfile)), context) 
+                if filename:
+                    send('respondwav {}'.format(os.path.abspath(filename)), context) 
 
         if eventQ in events:
             pushbutton = eventQ.recv_json()
