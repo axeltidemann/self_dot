@@ -22,16 +22,6 @@ from scipy.signal import filtfilt
 import utils
 import IO
             
-def load_cns(prefix, brain_name):
-    for filename in glob.glob(prefix+'*'):
-        audio_recognizer, audio_producer, audio2video, scaler, host = pickle.load(file(filename, 'r'))
-        name = filename[filename.rfind('.')+1:]
-        mp.Process(target = AI.live, 
-                   args = (audio_recognizer, audio_producer, audio2video, scaler, host),
-                   name = name).start()
-        print 'Network loaded from file {} ({})'.format(filename, utils.filesize(filename))
-        IO.send('decrement {}'.format(brain_name))
-
 def train_network(x, y, output_dim=100, leak_rate=.9, bias_scaling=.2, reset_states=True, use_pinv=True):
     import Oger
     import mdp
@@ -178,7 +168,7 @@ def classifier_brain(host):
                         audio_recognizer = svm.LinearSVC()
                         audio_recognizer.fit(resampled_flattened_memories, range(len(NAPs)))
 
-                    video_segment = video_first_segment if len(video_first_segment) else np.array(list(video))
+                    video_segment = np.array(list(video))
                     NAP_len = NAPs[-1].shape[0]
                     video_len = video_segment.shape[0]
                     stride = int(max(1,np.floor(float(NAP_len)/video_len)))
@@ -247,13 +237,14 @@ def classifier_brain(host):
                 video.clear()
 
             if 'load' in pushbutton:
-                load_cns(pushbutton['load'], me.name)
+                filename = pushbutton['load']
+                audio_recognizer, audio_producer, video_producer, NAPs, wavs, maxlen = pickle.load(file(filename, 'r'))
+                print 'Brain loaded from file {} ({})'.format(filename, utils.filesize(filename))
 
             if 'save' in pushbutton:
                 filename = '{}.{}'.format(pushbutton['save'], me.name)
-                pickle.dump((audio_recognizer, audio_producer, audio2video, scaler, host), file(filename, 'w'))
-                print '{} saved as file {} ({})'.format(me.name, filename, filesize(filename))
-
+                pickle.dump((audio_recognizer, audio_producer, video_producer, NAPs, wavs, maxlen), file(filename, 'w'))
+                print '{} saved as file {} ({})'.format(me.name, filename, utils.filesize(filename))
                 
                         
 if __name__ == '__main__':
