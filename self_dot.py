@@ -78,10 +78,6 @@ class Controller:
                 self.state['brains'][name] -= 1
                 print '{} has now {} available slots'.format(name, self.state['brains'][name])
 
-            # If we are in a state to segment stuff, override the learnwav and send a 'setmarker' signal.
-            # In the brain, you then use the first segment to train the classifier. Also save the wavfile - this
-            # must be sent with the setmarker command! I.e. setmarker <wavfile> 
-
             if 'associate' in message:
                 _, state = message.split()
                 self.state['associate'] = state in ['True', '1']
@@ -170,6 +166,7 @@ if __name__ == '__main__':
 
     mp.Process(target=IO.audio, name='AUDIO').start() 
     mp.Process(target=IO.video, name='VIDEO').start()
+    mp.Process(target=IO.eye, name='EYE').start()
     mp.Process(target=Controller, args=(persistent_states,), name='CONTROLLER').start()
     mp.Process(target=brain.classifier_brain, args=('localhost',)).start()
 
