@@ -32,19 +32,39 @@ def eye():
 
     camera = cv2.VideoCapture(0)
     storage = cv2.cv.CreateMemStorage()
-    cascade = cv2.cv.Load(FACE_HAAR_CASCADE_PATH)
+    eye_cascade = cv2.cv.Load(EYE_HAAR_CASCADE_PATH)
+    face_cascade = cv2.cv.Load(FACE_HAAR_CASCADE_PATH)
+
+    rows, cols = (640,360)
 
     while True:
         _, frame = camera.read()
 
-        frame = cv2.resize(frame, (640, 360)) # 16:9 aspect ratio of Logitech USB camera
+        frame = cv2.resize(frame, (rows, cols)) # 16:9 aspect ratio of Logitech USB camera
  
         # Change min size if you want to track eyes.
         # Also, look into http://cmp.felk.cvut.cz/~uricamic/flandmark/ - it seems to work better, albeit more complex to set up.
-        faces = [ (x,y,w,h) for (x,y,w,h),n in cv2.cv.HaarDetectObjects(cv2.cv.fromarray(frame), cascade, storage, 1.2, 2, cv2.cv.CV_HAAR_DO_CANNY_PRUNING, (50,50)) ] 
+        eyes = [ (x,y,w,h) for (x,y,w,h),n in cv2.cv.HaarDetectObjects(cv2.cv.fromarray(frame), eye_cascade, storage, 1.2, 2, cv2.cv.CV_HAAR_DO_CANNY_PRUNING, (20,20)) ] 
 
-        for (x,y,w,h) in faces: 
+        for (x,y,w,h) in eyes:
             cv2.rectangle(frame, (x,y), (x+w,y+h), (0, 0, 255), 2)
+
+        faces = [ (x,y,w,h) for (x,y,w,h),n in cv2.cv.HaarDetectObjects(cv2.cv.fromarray(frame), face_cascade, storage, 1.2, 2, cv2.cv.CV_HAAR_DO_CANNY_PRUNING, (50,50)) ] 
+
+        for (x,y,w,h) in faces:
+            cv2.rectangle(frame, (x,y), (x+w,y+h), (255, 0, 0), 2)
+
+        if len(eyes) == 2:
+            x, y, _, _ = eyes[0]
+            x_, y_, _, _ = eyes[1]
+            angle = np.rad2deg(np.arctan( float((y_ - y))/(x_ - x) ))
+            rotation = cv2.getRotationMatrix2D((rows/2, cols/2), angle,1)
+            frame = cv2.warpAffine(frame, rotation, (rows,cols))
+
+            faces = [ (x,y,w,h) for (x,y,w,h),n in cv2.cv.HaarDetectObjects(cv2.cv.fromarray(frame), face_cascade, storage, 1.2, 2, cv2.cv.CV_HAAR_DO_CANNY_PRUNING, (50,50)) ] 
+
+            for (x,y,w,h) in faces:
+                cv2.rectangle(frame, (x,y), (x+w,y+h), (0, 0, 255), 2)
 
         cv2.imshow("Input", frame)
         cv2.waitKey(100)

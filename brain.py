@@ -105,6 +105,7 @@ def classifier_brain(host):
     wavs = []
 
     audio_recognizer = []
+    video_recognizer = []
     audio_producer = []
     video_producer = []
 
