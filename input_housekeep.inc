@@ -26,7 +26,7 @@
         endif
 	a1	soundin Ssound
 	a2	= 0
-		;outs a1*0.1, a2*0.1 ; monitor the file playback so we know it has been played
+		;outs a1, a2 ; monitor the file playback so we know it has been played
 		chnmix a1, "in1"
 		chnmix a2, "in2"
 	endin
@@ -88,7 +88,7 @@ print p1, p2, p3
 	irms		= ampdbfs(irms_dB)
 	isize		= 8192
 	iknee		= isize*0.1
-	giNoiseFloor	ftgen 0, 0, isize, 7, 0, (isize*irms), 0, iknee, 1, (isize*(1-irms))-iknee, 1
+	giNoiseFloor	ftgen 0, 0, isize, 7, 0, (isize*irms), 0, iknee, 1, (isize*(1-irms))-iknee, 1, 2, 1
 	endin
 
 ;******************************

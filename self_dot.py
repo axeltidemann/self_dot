@@ -77,17 +77,27 @@ class Controller:
                 _, name = message.split()
                 self.state['brains'][name] -= 1
                 print '{} has now {} available slots'.format(name, self.state['brains'][name])
-                
+
+            if 'associate' in message:
+                _, state = message.split()
+                self.state['associate'] = state in ['True', '1']
+                self.state['associate_learn'] = False
+                                            
             if 'learnwav' in message:
-                d = self.state['brains']
-                winner = max(d, key=d.get)
-                _, wavfile = message.split()
-                print '{} chosen to learn, has {} available slots'.format(winner, self.state['brains'][winner])
-                self.event.send_json({ 'learn': winner, 'wavfile': wavfile })
+                _, filename = message.split()
+                if self.state['associate'] and not self.state['associate_learn']:
+                    self.event.send_json({ 'setmarker': filename })
+                    self.state['associate_learn'] = True
+                else: 
+                    d = self.state['brains']
+                    winner = max(d, key=d.get)
+                    print '{} chosen to learn, has {} available slots'.format(winner, self.state['brains'][winner])
+                    self.event.send_json({ 'learn': winner, 'filename': filename })
+                    self.state['associate_learn'] = False
 
             if 'respondwav' in message:
-                _, wavfile = message.split()
-                self.event.send_json({ 'respond': True, 'wavfile': wavfile })
+                _, filename = message.split()
+                self.event.send_json({ 'respond': True, 'filename': filename })
 
             if message == 'setmarker':
                 self.event.send_json({ 'setmarker': True })
@@ -110,11 +120,24 @@ class Controller:
             if 'zerochannels' in message:
                 self.event.send_json({ 'zerochannels': message[13:] })
 
+            '''
             if 'playfile' in message:
                 self.event.send_json({ 'inputLevel': 'mute' }) # A bit ugly - Csound should mute itself, maybe?
                 self.event.send_json({ 'playfile': message[9:] })
                 time.sleep(utils.wav_duration(message[9:]))
                 self.event.send_json({ 'inputLevel': 'unmute' })
+            '''
+
+            if 'playfile_input' in message:
+                self.event.send_json({ 'playfile_input': message[15:] })
+            if 'playfile_primary' in message:
+                self.event.send_json({ 'inputLevel': 'mute' }) # A bit ugly - Csound should mute itself, maybe?
+                self.event.send_json({ 'playfile_primary': message[17:] })
+                time.sleep(utils.wav_duration(message[17:]))
+                self.event.send_json({ 'inputLevel': 'unmute' })
+
+            if 'playfile_secondary' in message:
+                self.event.send_json({ 'playfile_secondary': message[19:] })
 
             if 'selfvoice' in message:
                 self.event.send_json({ 'selfvoice': message[10:] })
@@ -137,10 +160,13 @@ if __name__ == '__main__':
                          'autorespond': False,
                          'brains': {},
                          'record': False,
-                         'memoryRecording': False}
+                         'memoryRecording': False,
+                         'associate': False,
+                         'associate_learn': False}
 
     mp.Process(target=IO.audio, name='AUDIO').start() 
     mp.Process(target=IO.video, name='VIDEO').start()
+    mp.Process(target=IO.eye, name='EYE').start()
     mp.Process(target=Controller, args=(persistent_states,), name='CONTROLLER').start()
     mp.Process(target=brain.classifier_brain, args=('localhost',)).start()
 

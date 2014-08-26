@@ -1,6 +1,12 @@
 
 ; init chn values for various purposes
 
+	chnset 1000, "td_HiShelfFq"	; pre emphasis for transient detection of sibliants
+	chnset 20, "td_HiShelfGain"	; in dB
+	chnset 200, "td_LoShelfFq"
+	chnset -20, "td_LoShelfGain"
+	chnset -15, "td_AmpAdjust"	; approximate amp compensation for EQ
+
 	chnset -5, "SecondaryDryLevel"          ; in dB
 	chnset -18, "SecondaryDelaySendLevel"    ; in dB
 	chnset -24, "SecondaryReverbSendLevel"   ; in dB

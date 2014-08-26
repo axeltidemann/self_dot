@@ -87,3 +87,7 @@ optional arguments [time, mode, filename] are:
 - time: set period in seconds for learning or responding, default 5
 - mode: learn, respond, both, (should be self explanatory), ... filelearn, filerespond (use sound file as input)
 - filename: name of sound file for input to learn or respond
+
+Learning associations:
+python communication.py associate 1/0
+This makes self associate sound1 -> sound2, i.e. it will listen for two sounds, and will respond with latter based on the former. 

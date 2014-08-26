@@ -21,6 +21,54 @@ EXTERNAL = 5566
 SNAPSHOT = 5567
 EVENT = 5568
 
+FACE_HAAR_CASCADE_PATH = os.environ['VIRTUAL_ENV'] + '/share/OpenCV/haarcascades/haarcascade_frontalface_default.xml'
+EYE_HAAR_CASCADE_PATH = os.environ['VIRTUAL_ENV'] + '/share/OpenCV/haarcascades/haarcascade_eye_tree_eyeglasses.xml'
+
+def eye():
+    me = mp.current_process()
+    print me.name, 'PID', me.pid
+    
+    cv2.namedWindow('Input', cv2.WINDOW_NORMAL)
+
+    camera = cv2.VideoCapture(0)
+    storage = cv2.cv.CreateMemStorage()
+    eye_cascade = cv2.cv.Load(EYE_HAAR_CASCADE_PATH)
+    face_cascade = cv2.cv.Load(FACE_HAAR_CASCADE_PATH)
+
+    rows, cols = (640,360)
+
+    while True:
+        _, frame = camera.read()
+
+        frame = cv2.resize(frame, (rows, cols)) # 16:9 aspect ratio of Logitech USB camera
+ 
+        # Change min size if you want to track eyes.
+        # Also, look into http://cmp.felk.cvut.cz/~uricamic/flandmark/ - it seems to work better, albeit more complex to set up.
+        eyes = [ (x,y,w,h) for (x,y,w,h),n in cv2.cv.HaarDetectObjects(cv2.cv.fromarray(frame), eye_cascade, storage, 1.2, 2, cv2.cv.CV_HAAR_DO_CANNY_PRUNING, (20,20)) ] 
+
+        for (x,y,w,h) in eyes:
+            cv2.rectangle(frame, (x,y), (x+w,y+h), (0, 0, 255), 2)
+
+        faces = [ (x,y,w,h) for (x,y,w,h),n in cv2.cv.HaarDetectObjects(cv2.cv.fromarray(frame), face_cascade, storage, 1.2, 2, cv2.cv.CV_HAAR_DO_CANNY_PRUNING, (50,50)) ] 
+
+        for (x,y,w,h) in faces:
+            cv2.rectangle(frame, (x,y), (x+w,y+h), (255, 0, 0), 2)
+
+        if len(eyes) == 2:
+            x, y, _, _ = eyes[0]
+            x_, y_, _, _ = eyes[1]
+            angle = np.rad2deg(np.arctan( float((y_ - y))/(x_ - x) ))
+            rotation = cv2.getRotationMatrix2D((rows/2, cols/2), angle,1)
+            frame = cv2.warpAffine(frame, rotation, (rows,cols))
+
+            faces = [ (x,y,w,h) for (x,y,w,h),n in cv2.cv.HaarDetectObjects(cv2.cv.fromarray(frame), face_cascade, storage, 1.2, 2, cv2.cv.CV_HAAR_DO_CANNY_PRUNING, (50,50)) ] 
+
+            for (x,y,w,h) in faces:
+                cv2.rectangle(frame, (x,y), (x+w,y+h), (0, 0, 255), 2)
+
+        cv2.imshow("Input", frame)
+        cv2.waitKey(100)
+
 def video():
     me = mp.current_process()
     print me.name, 'PID', me.pid
@@ -49,7 +97,7 @@ def video():
                            np.resize(recv_array(subscriber, flags=zmq.DONTWAIT), (90,160)),
                            (640,360)))
         except:
-            cv2.imshow('Output', np.random.rand(360, 640))
+            cv2.imshow('Output', np.zeros((360, 640)))
 
         cv2.waitKey(100)
 
@@ -130,7 +178,7 @@ def audio():
     fftin_amplist = [0]*ffttabsize
     fftin_freqlist = [0]*ffttabsize
 
-    wavfile = []
+    filename = []
         
     while not stopflag:
         stopflag = perfKsmps()
@@ -162,8 +210,8 @@ def audio():
             if audioStatusTrig > 0:
                 print 'starting memoryRec'
                 timestamp = t('%Y_%m_%d_%H_%M_%S')
-                wavfile = memRecPath+timestamp+'.wav'
-                cs.InputMessage('i 34 0 -1 "%s"'%wavfile)
+                filename = memRecPath+timestamp+'.wav'
+                cs.InputMessage('i 34 0 -1 "%s"'%filename)
                 markerfile = open(memRecPath+timestamp+'.txt', 'w')
                 markerfile.write('Self. audio clip perceived at %s\n'%timestamp)
                 segments = 'Sub segment start times: \n0.000 \n'
@@ -186,16 +234,16 @@ def audio():
                 send('startrec', context)
             if audioStatusTrig < 0:
                 send('stoprec', context)
-                if wavfile:
-                    send('learnwav {}'.format(os.path.abspath(wavfile)), context)
+                if filename:
+                    send('learnwav {}'.format(os.path.abspath(filename)), context)
 
         if state['autorespond']:
             if audioStatusTrig > 0:
                 send('startrec', context)
             if audioStatusTrig < 0:
                 send('stoprec', context)
-                if wavfile:
-                    send('respondwav {}'.format(os.path.abspath(wavfile)), context) 
+                if filename:
+                    send('respondwav {}'.format(os.path.abspath(filename)), context) 
 
         if eventQ in events:
             pushbutton = eventQ.recv_json()
@@ -228,7 +276,7 @@ def audio():
                 cs.InputMessage('i -17 0 1') # turn off old noise gate
                 cs.InputMessage('i 12 0 4') # measure roundtrip latency
                 cs.InputMessage('i 13 4 2') # get audio input noise print
-                cs.InputMessage('i 14 6 -1 5 1') # enable noiseprint and self-output suppression
+                cs.InputMessage('i 14 6 -1 0.6 1') # enable noiseprint and self-output suppression
                 cs.InputMessage('i 15 6.2 2') # get noise floor level 
                 cs.InputMessage('i 16 8.3 0.1') # set noise gate shape
                 cs.InputMessage('i 17 8.5 -1') # turn on new noise gate
@@ -245,14 +293,14 @@ def audio():
                 print 'deprecated, use playfile_input, playfile_primary or playfile_secondary'
 
             if 'playfile_input' in pushbutton:
-                print '[self.] wants to play {}'.format(pushbutton['playfile'])
-                cs.InputMessage('i3 0 0 "%s"'%'{}'.format(pushbutton['playfile']))
+                print '[self.] wants to play {}'.format(pushbutton['playfile_input'])
+                cs.InputMessage('i3 0 0 "%s"'%'{}'.format(pushbutton['playfile_input']))
             if 'playfile_primary' in pushbutton:
-                print '[self.] wants to play {}'.format(pushbutton['playfile'])
-                cs.InputMessage('i50 0 0 "%s"'%'{}'.format(pushbutton['playfile']))
+                print '[self.] wants to play {}'.format(pushbutton['playfile_primary'])
+                cs.InputMessage('i50 0 0 "%s"'%'{}'.format(pushbutton['playfile_primary']))
             if 'playfile_secondary' in pushbutton:
-                print '[self.] wants to play {}'.format(pushbutton['playfile'])
-                cs.InputMessage('i74 0 0 "%s"'%'{}'.format(pushbutton['playfile']))
+                print '[self.] wants to play {}'.format(pushbutton['playfile_secondary'])
+                cs.InputMessage('i74 0 0 "%s"'%'{}'.format(pushbutton['playfile_secondary']))
 
         # send_array(publisher, np.array([cGet("level1"), 
         #                                 cGet("pitch1ptrack"), 
