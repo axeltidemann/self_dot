@@ -121,6 +121,7 @@ def generateRuleDict(rules):
 
 def generate(predicate, ruleDict):
     pred = frozenset(predicate)
+    #print 'generate, predicate:', pred
     n = None
     if pred in ruleDict.keys():
         n = random.choice(ruleDict[pred][0])
@@ -130,15 +131,16 @@ def generate(predicate, ruleDict):
             pred = frozenset(predicate)
             if pred in ruleDict.keys():
                 n = random.choice(ruleDict[pred][0])
-                print 'throw away part of predicate to try to find match', pred
+                print '\t throw away part of predicate to try to find match', pred
                 break
     if n == None:
         n = random.choice(ruleDict.keys())
-        print 'nonexxistent key for association, starting over with random item', n
-        sentence = [n]
+        print '\t nonexxistent key for association, starting over with random item', n
+        association = list(n)
+        n = association[-1]
     else:
-        sentence = predicate
-        sentence.append(n)
-    return sentence, n
+        association = predicate
+        association.append(n)
+    return association, n
     
      

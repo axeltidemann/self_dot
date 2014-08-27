@@ -31,19 +31,23 @@ rules = apriori.generateRules(L, support_data, min_confidence=0.7)
 #print 'rules', rules
 
 ruleDict = apriori.generateRuleDict(rules)
+
+'''
 print 'ruleDict', ruleDict
 print '*** *** ***'
 print 'keys', ruleDict.keys()
 print '*** *** ***'
+'''
 
 ## testing
 if __name__ == '__main__':
+    #print '\n\n***\n'
     predicate = random.choice(ruleDict.keys())
-    sentence = list(predicate)[0]
-    print 'predicate:', sentence
+    sentence = list(predicate)
+    association = list(predicate)
+    print 'predicate:', predicate, sentence
     for i in range(4):
-        sentence, predicate = apriori.generate(sentence, ruleDict)
-        sentence.append(predicate)    
-        print 'next item:', predicate
+        association, predicate = apriori.generate(association, ruleDict)  
+        print '\t predicate, association:', predicate, association
+        sentence.append(predicate)
         print 'the current sentence is:', sentence
-        
