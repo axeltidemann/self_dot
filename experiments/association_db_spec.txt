@@ -1,0 +1,14 @@
+
+We want to be able to associate:
+- words uttered within the same sentence
+- words uttered by the same person
+- words uttered within a specific time (context), may be dynamic for each query
+- words uttered within the same session/conversation (continuous talk with one person)
+- similar words (similar sound), for text, we might just count the longest sequence of common letters
+
+The query for generating new sentences will commonly be 
+getNextWord()
+
+This function may have arguments to set the scope for association
+(sentence, person, timeContext, conversation, similarWord)
+The arguments may be optional, and if not secified allow the widest possible search space
