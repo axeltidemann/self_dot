@@ -42,8 +42,6 @@ def eye():
 
         frame = cv2.resize(frame, (rows, cols)) # 16:9 aspect ratio of Logitech USB camera
  
-        # Change min size if you want to track eyes.
-        # Also, look into http://cmp.felk.cvut.cz/~uricamic/flandmark/ - it seems to work better, albeit more complex to set up.
         eyes = [ (x,y,w,h) for (x,y,w,h),n in cv2.cv.HaarDetectObjects(cv2.cv.fromarray(frame), eye_cascade, storage, 1.2, 2, cv2.cv.CV_HAAR_DO_CANNY_PRUNING, (20,20)) ] 
 
         for (x,y,w,h) in eyes:
@@ -66,6 +64,10 @@ def eye():
             for (x,y,w,h) in faces:
                 cv2.rectangle(frame, (x,y), (x+w,y+h), (0, 0, 255), 2)
 
+            rotation = cv2.getRotationMatrix2D((rows/2, cols/2), -angle,1)
+            frame = cv2.warpAffine(frame, rotation, (rows,cols))
+            
+                
         cv2.imshow("Input", frame)
         cv2.waitKey(100)
 
