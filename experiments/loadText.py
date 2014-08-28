@@ -33,6 +33,21 @@ def organizeData(sentence):
         persons.setdefault(name, []).append(word)
         times.append((curTime, word))
 
+neighbors = {}
+def findNeighbors(sentence):    
+    for i in range(len(sentence)):
+        if len(sentence) == 1:
+            pass
+        elif i == 0: 
+            #neighbors.setdefault(sentence[i], []).append('start')
+            neighbors.setdefault(sentence[i], []).append(sentence[i+1])
+        elif i == len(sentence)-1: 
+            neighbors.setdefault(sentence[i], []).append(sentence[i-1])
+            #neighbors.setdefault(sentence[i], []).append('stop')
+        else:
+            neighbors.setdefault(sentence[i], []).append(sentence[i-1])
+            neighbors.setdefault(sentence[i], []).append(sentence[i+1])
+
 def importFromFile(filename):
     f = open(filename, 'r')
     for line in f:
@@ -46,6 +61,7 @@ def importFromFile(filename):
         if len(sentence) > 0:
             rawPriori.append(sentence)
             organizeData(sentence)
+            findNeighbors(sentence)
 
 if __name__ == '__main__':
     importFromFile('association_test_db_short.txt')
