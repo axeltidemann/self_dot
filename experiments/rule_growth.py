@@ -63,7 +63,7 @@ def invert(inputfile, dictionary):
 if __name__ == '__main__':
     dictionary, outfile = convert('association_test_db_short.txt')
     rulefile = outfile + '-rules'
-    call(['java', '-jar', 'spmf.jar', 'run', 'RuleGrowth', outfile, rulefile, '10\%', '50\%'])
+    call(['java', '-jar', 'spmf.jar', 'run', 'RuleGrowth', outfile, rulefile, '10%', '50%'])
     invert(rulefile, dictionary)
 
     
