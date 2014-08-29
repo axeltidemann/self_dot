@@ -9,8 +9,8 @@ import apriori
 import random
 import loadText
 
-support = 0.03
-loadText.importFromFile('association_test_db_full.txt')
+support = 0.4
+loadText.importFromFile('spanish_db.txt')
 dataset = loadText.rawPriori
 #print dataset
 C1 = apriori.createC1(dataset)
@@ -35,9 +35,10 @@ ruleDict = apriori.generateRuleDict(rules)
 '''
 print 'ruleDict', ruleDict
 print '*** *** ***'
+'''
 print 'keys', ruleDict.keys()
 print '*** *** ***'
-'''
+
 
 ## testing
 if __name__ == '__main__':
@@ -51,3 +52,4 @@ if __name__ == '__main__':
         print '\t predicate, association:', predicate, association
         sentence.append(predicate)
         print 'the current sentence is:', sentence
+        
