@@ -10,6 +10,8 @@ i think it is fun with self generating networks
 word follow word
 instability may lead to interesting behaviour
 the network knows nothing about gas
+gas is in the song
+the network is not gas
 
 *mick*: 
 i was born in a crossfire hurricane 
