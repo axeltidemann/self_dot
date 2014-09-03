@@ -1,0 +1,247 @@
+
+*curtis*:
+The composition of music has evolved into an interactive process of directly sculpting sound morphologies on multiple time scales
+A prime example is the electroacoustic music of Horacio Vaggione
+This music’s complexity and subtlety challenges mere textual description  posing formidable problems of discourse
+This article traces the aesthetic and technical path followed by the composer during his career  and in so doing begins the task of developing a new analytical vocabulary
+Fortunately  Professor Vaggione has written a considerable amount about his aesthetic approach
+For this article  I have relied on Vaggione’s texts as well as his extensive comments on a draft of this article
+The composition of music has evolved into an interactive process of directly sculpting sound morphologies on multiple time scales
+A prime example is the electroacoustic music of Horacio Vaggione  whose music’s complexity and subtlety challenges mere textual description  posing formidable problems of discourse
+This study traces the aesthetic and technical path followed by the composer during his career
+In so doing it begins the task of developing a new analytical vocabulary
+Fortunately  Professor Vaggione has written a considerable amount about his aesthetic approach
+For this article  I have relied on these texts as well as his extensive comments on a draft of this article
+At an early stage of his career  Vaggione recognized the pertinence to composition of emerging digital technology
+Computers capable of generating sound were very rare in the 1960s
+It required unusual persistence to gain the necessary programming expertise as well as access to such facilities
+At the age of 23  Vaggione had the opportunity to visit the University of Illinois  where Lejaren Hiller and Herbert Bruhn first showed him how computers could be applied to music composition
+He studied the stochastic composition algorithms used in Hiller’s Computer Cantata as well as the coding language of the CSX-1 Music Machine  the first program to produce digital sound at Illinois
+Later he became acquainted with the programs that Hiller wrote to produce the piece HPSCHD in collaboration with John Cage
+Hiller gave Vaggione the source code of these programs written in the Fortran language and introduced him to the Music N series of sound synthesis programs written by Max Mathews and his colleagues
+Vaggione began his own experiments with computer-generated sound in 1970 at the Computer Research Center of the University of Madrid 
+From the start  he explored a musical aesthetic based on a fabric of short duration events scattered in time
+This approach  which Vaggione refers to as an ‘aesthetic of discontinuity’  is equally present in his instrumental music of the same period
+In the compositions Modelos de Universo and Movimiento continuo the composer used a digital sound synthesis program called ‘Papova’ running on a large IBM 7090 mainframe computer  to generate upto 20 sounds per second in each of four voices
+He had followed a similar procedure—worked out manually—in composing a Triadas for orchestra  the last piece realized by Vaggione before leaving his native Argentina
+In these early pieces  Vaggione was already extending his compositional discourse into the microtime scale  and the power of the computer became essential for the full development of his musical ideas
+The score of Modelos de Universo IV provides an early example of the principle of micromontage—the assembly of many short sounds in high densities
+A collection of musical figures was generated in common music notation  using several strategies  going from simple algorithms to direct handwriting  and then assembled in diverse patterns which were in turn agglutinated so as to form finite sequences
+Each measure of the score had a duration from one to two seconds
+I wanted  through high density sequences of discrete steps  to produce continuous sound phenomena arising at the edge between corpuscular and ondulatory representations  including transient intermodulations  differential sounds  foldovers and so on
+Hence  as I realized later  I was already dealing through macroscopic notation  with the micro-time domain
+The score sheets were translated into machine language in order to be entered as data into the computer which produced the sound synthesis
+The first version was realized on punched cards 
+The reason I began by writing a score in music notation derived from the inherent noninteractivity of the system  and the necessity of developing a strategy to produce the wanted sounds before entering the data for synthesis
+Vaggione’s output in the 1980s can be seen as a consistent development of these initial explorations
+Examples from the 1980s involving microsonic techniques and multi-scale perspectives using computer languages for synthesis and transformation include several pieces realized in Paris at IRCAM: Octuor Fractal A Fractal C Thema and later at the Technische Universitat Berlin Elektronisches Studio: Tar and Scor
+To these we must add Ash realized in Paris at INA/GRM using the SYTER sound processor
+Octuor was composed with the Music-10 programming language developed at Stanford University’s Artificial Intelligence Laboratory  which ran on IRCAM’s DECPDP-10 mainframe computer
+The work  which won the first prize at the NEWCOMP competition in Cambridge  Massachusetts is well documented in an article written by the composer for Computer Music Journal
+The main compositional goal was to produce a musical work of considerable timbre complexity out of a limited set of sound source materials
+The process began with the generation of five synthesized files  employing additive synthesis and frequency modulation algorithms
+Once this collection of sound files was completed  the next step was to analyze  reshape  multiply and combine its elements through relatively simple software manipulations  using the program S as the main analytical tool  SHAPE for control of the overall amplitude envelopes MIX as a means for blending sound objects into complex timbre entities and KEYS for immediate random-access playback
+With the help of these programs  the sound files were segmented into small portions  regrouped into several pattern and timbre families  processed  and mixed into medium and large sound textures
+The product of these compositional procedures was stored as a set of new sound-object files
+Then  using the KEYS program  these files were organized and finally played automatically in eight channel polyphony according to a score that specified the overall form of the piece
+The interaction between formal algorithmically control and direct intervention is a hallmark of Vaggione’s compositional strategy
+Specifically  he combines both algorithmic procedures and purely manual  interactive operations  the latter realized on the products of the first
+The philosophy behind manual intervention on algorithmically produced morphologies was affirmed by Vaggione in these terms A composer knows how to generate true singular events  and how to articulate them in the larger sets without losing the sense and control of these singularities
+This is why purely global causal formulas are problematic in musical composition if their automation is not compensated by other levels of articulation  notably unique compositional choices  as much global as local  as much relational as functional  thus being integrated explicitly in a compositional strategy
+Vaggione’s description of one of the source sounds used in Octuor illustrates his preoccupation with the micro time scale The durations were  in general  very short
+Silences of different lengths were placed between events
+The density or speed of succession was very high: more than 20 events per second
+This rate exceeds the limit of applicability of the Poisson law  which is valid to control sound distributions whose density is lower than10–20 events per second
+Beyond 20 events per second  one is no longer dealing with sounds as individual entities
+However  the goal in building this linear structure by combining high density of sounds with highly contrasted parametric values was to create a texture showing a kind of kaleidoscopic ‘internal’ behaviour
+Another work realized at IRCAM  Fractal A   is one of the few pure algorithmic compositions that Vaggione ever realized
+The theoretical model was Cantor’s triadic set  a set of points obtained on a given interval by throwing out the middle third and iterating this operation on the remaining intervals
+The composer’s goal was to create a multilayered tapestry of microsounds
+He wrote code in the programming language AWK a subset of the well known C language to generate scripts that acted as sound granulators
+A sound granulator chops a continuous sound into tiny sound particles
+The result was a systematic ‘powdering’ of the sound material
+Taking the simplest solution  one could make each of Cantor’s segments correspond  determined by the temporal size  to a window or grain of sound
+To each step of iteration will correspond an increasingly contracted window;  hence one obtains and increasingly sparse object  comprising if one suitably regulates amplitudes of the different strata of iteration a particular flutter presenting itself like a particle of sonic dust: granular textures which  even if the density tends towards the infinite  will never arrive at any laminar state  but to a space saturated of void
+The paradox here is that Cantor’s set  of an infinitely divisible appearance  is only this in the grains  and not in the space that surrounds them
+Thus this process generate flows of grains of different sizes  flows with are at the same time irregular and intermittent
+According to whether it is closer to one edge than to another  there will be denser granulations  figural or turbulent  or sparser  at the same time emptier and more homogenous
+It is thus a criterion which can be applied to the generation of granular textures and figures with precise quantitative descriptions that can be driven by strict algorithmic means
+In his next piece Fractal C Vaggione returned to the approach of Octuor combining pure algorithmic methods with manual or direct interventions  using the interactive tools of the CARL system—a software package for sound synthesis and sound processing originally developed at the University of California  San Diego
+Using a DEC VAX-11/780 mainframe computer at IRCAM  the composer stipulated UNIX commands such as pipes to enchain a series of musical processes
+Another feature of the CARL system used in Fractal C was a ‘fast interactive mode’ a set of commands that the composer used to select portions of a sound file and create new files containing only these selected portions
+According to the composer  this kind of selection and subdividing technique was from this point on a typical feature of his compositional strategy
+In these early works and continuing to the present day  the technique of micromontage is an essential component of the Vaggione style
+In micromontage the composer extracts particles from sound files and rearranges them in time and space
+The term ‘montage’ derives from the world of cinema where it refers to cutting  splicing  dissolving and other film editing operations
+The term ‘micro’ refers to the manner in which a composer can position each sound particle precisely on the canvas of time
+‘Digital micromontage’ refers to operations dealing with small sound particles  belonging to the micro-time domain 
+In this detailed manner of working  we have the musical equivalent of the Pointillist painter
+It is notable that in music  the term ‘Pointillism’ has long been associated with the sparse serial style of Webern and his followers
+Ironically  the technique of the Pointillist master Georges Seurat was anything but sparse
+His canvases present a dense sea of thousands of meticulously organized brush strokes 
+Granulation techniques share many similarities with micromontage 
+Perhaps the best way to draw a distinction between granulation and micromontage is to observe that granulation is inevitably an automatic process: the composer’s brush becomes a refined spray jet of sound color
+By contrast  a sound artist can realize micromontage by working directly in the manner of a Pointillist painter: particle by particle
+It therefore demands unusual patience
+Of course  micromontage and granulation techniques can be seamlessly intermingled
+Thema for bass saxophone and tape and Tar for bass clarinet and tape are early examples of micromontage
+Thema features streams of microsounds such as resonant bass saxophone breath-bursts  scattered in both synchronous and asynchronous patterns along the time line
+Once again  the composer used the CARL software in the realization  writing Cmusic instruments and scores in the form of alphanumerical texts
+The construction of Thema by script meant that the material could be organized on an unprecedented level of micro detail
+Figure 2 shows an excerpt of the code for Tar  in which the composer defined operations dealing with micromontage
+In particular figure 2c shows an excerpt of the note list that functioned as a script for micromontage
+In realizing Tar  the composer developed what he called ‘object-based’ composition methods—that is  by means of the scripting language built into the CARL system  the composer was able to create subclasses of a specific sound object through transformations such as time-stretching or pitch-shifting
+The transformed sounds inherit the morphology of the original sound
+The composer has written extensively about this approach An important transition took place with the spread of personal computers in themid-1980s
+By 1988  inexpensive personal computers had become powerful enough to support high-quality audio recording and synthesis
+Experiments on the microtime scale—granular or particle synthesis—became more feasible 
+My book Microsound traces the history of particle synthesis from the theories of Gabor and Xenakis to the first implementations on digital computers
+In addition  two essential software tools became available in this period: the graphical sound editor and the graphical timeline audio mixing program
+It is difficult to overestimate the significance of these advances that are so commonplace today
+The simple ability to align multiple sounds along a timeline  to zoom in and out  and jump across time scales with the click of a button changed the nature of electroacoustic composition
+As Vaggione has observed  composition on multiple time scales involves no distinction between music structure and sound materials: ‘I assume that there is no difference of nature between structure and sound materials; we are just confronting different operating levels  corresponding to different time scales to compose’
+With the new interactive sound tools  suddenly it was possible to apply directly any kind of sound transformation  on any time scale
+The sound material itself became a composed structure
+Vaggione’s Till for piano and tape signals the emergence of a new direction
+As personal computers replaced shared mainframe computers  Vaggione and others began to use graphical sound editors furthering the dialectic between algorithmic and direct operations  which in turn influenced his way of dealing with the micro-time domain
+In Till  what begins as a spiky  sharp-angled piano etude  by 8 minutes and 21 seconds starts to melt into a dense cloud of sound energy  driven by the torrential flow of thousands of tiny sound particles
+This new direction crystallized in his 1994 electroacoustic composition Schall
+In the rest of this article  I would like to focus my attention on this piece and the subsequent compositions Nodal Agon Preludes Suspendus and 24 Variations
+The raw material of Schall consists of thousands of sound particles derived from sampled piano  which are granulated and transformed by such operations as convolution  wave shaping and the phase vocoder
+The work plays essentially with tiny textures of feeble intensity  composed of multiple strata  which contrast with some stronger objects of different sizes  in a kind of dialog between the near and the far—as an expression of a concern with a detailed articulation of sound objects at different time scales
+A fascinating aspect of style in Schall  Nodal  Agon  Preludes Suspendus and24Variations is the use of continuously dithering or scintillating textures  composed of more or less dense agglomerations of short-duration grains
+These sometimes crackling  frying or creaking textures serve as a stationary element in the mesostructure of the pieces  holding the listener’s attention
+By keeping these grainy textures low in amplitude usually over 10 dB down from the foreground peaks and resonances their background or ‘far’ role is evident
+The composer sustains these low-level  textures for up to 20 seconds or more at a time  keeping the listener engaged while he prepares the next explosive release 
+Like any highly detailed background pattern  their intricate design emerges into the foreground only when there is nothing else superimposed upon them for several seconds
+Schall is an outstanding example of the use of creative micromontage
+The sound material consists of thousands of sound particles distributed on multiple layers of time
+The music is focused on a limited collection of objects of different sizes  which appear in diverse perspectives
+The work plays essentially with contrasts between textures composed of multiple strata  as an expression of a concern with a detailed articulation of sound objects at different time scales
+What makes Schall unique is its brilliant use of the notion of switching between different time scales: from the microsonic up to the soundobject level and down again into the microsonic
+The laws of physics dictate that the shorter the particles  the more broadband their spectrum  as in the noisy section between 2:10 and 2:28  or the final 30 seconds of the work
+Thus the interplay is not just between durations  but also between pitch and noise
+In Schall  the micromontage was mediated through interactive sound editing and mixing software
+Considering the hand-crafted side  this is the way I worked on Schall along with algorithmic generation and manipulation of sound materials: making a frame of 7minutes and 30 seconds and filling it by ‘replacing’ silence with objects progressively enriching the texture by adding here and there different instances of the same basic material
+Here each microsound in a track is a kind of sonic brush stroke
+As in a painting  it may take thousands of strokes to fill out the piece
+Graphical sound editing and mixing programs offer a multiscale perspective
+One can view the intimate details of sonic material  permitting microsurgery on individual sample points
+Zooming out to the time scale of objects  one can edit the envelope of a sound until it has just the right weight and shape within a phrase
+Zooming out still further  one can shape large sound blocks and rearrange macrostructure
+The availability of dozens of tracks lets the composer work extremely precisely on every time scale
+In 1997  at his studio on the Ile-Saint-Louis in Paris  Maestro Vaggione demonstrated to me some of the micromontage techniques used to make Schall
+These involved arranging microsounds using a sound mixing program with a graphical time-line interface
+He loaded a catalog of previously edited microsounds into the program’s library
+Then he would select items in the library and paste them onto a track at specific points on the time line running from left to right across the screen
+By pasting a single particle multiple times in succession  the particles fused into a sound object on a higher temporal order
+Each paste operation was like a stroke of a brush in a painting  adding a touch more color
+The collection of microsounds in the library was the palette of colors
+Since the program allowed the user to zoom in time  the composer could paste and edit on different time scales
+The number of simultaneous tracks was essentially unlimited  which permitted a rich interplay of events  even if they were not rendered in real time
+With Nodal the composer elaborated the materials used in Schall several steps further  while also opening up the sound palette to a range of sampled percussion instruments
+The identity of these instruments is not always clear  however  since they articulate in tiny particles
+The composition lasts 13:06
+For the purpose of this discussion  I divide it into three parts: Part I Part II and Part III 
+These three sections are separated by silences that are clearly visible in a sound editor
+The strong opening attack establishes immediately the potential force of the sound energy and sets up a dramatic tension
+Although the continuously granulating texture that follows is often quiet in amplitude  one realizes that the floodgates could burst at any moment
+This effect is highly enhanced by ‘creaking’ sounds that give the impression of reins being strained
+Part II begins with a warm fluttering texture that turns into a chaotic noise
+While the ear tracks this low-frequency rumbling  at 6:18 a distinct mid-high crotales  ‘roll’ with a sharp resonance at 1600 Hz sweeps across
+The overall texture becomes unpredictably turgid and chaotic  until at 7:11 the composer introduces an element of stasis: a rapidly repeating piano-like sound during which the granulation background briefly lets up
+This leads to a section of tactile noise  soft like a wet snowstorm
+At 8:46 another wood-tapping pattern appears
+This part cadences on an incongruous major chord from what sounds like a toy piano
+According to the composer  this sound was the product of a variable time-stretching function applied to a short percussive sound  manipulated in time and frequency with a phase vocoder algorithm Part III introduces a ‘drum-gong’ sound deformed by means of a waveshaping technique
+Waveshaping selectively bends sound waveforms according to a user-specified shaping function
+As a result of this deformation  the waveform’s timbre changes 
+The background texture in Part III is high in frequency  sounding like rain on a thin roof
+Its density gradually builds  as new bursts and resonances sweep into view
+The background texture ebbs at 11:35  letting up until 12:09
+The closing texture a low-frequency rumbling that also concludes Agon is a long 39-second fade out
+This texture continues at a low amplitude for several seconds after the final gesture of the piece—a concluding three-event percussive tag ending
+Agon refines the processes and materials heard in Nodal
+This virtuoso composition opens with a continuously fluttering band of sound in the range between 6 kHz and 16 kHz
+The rate of the fluttering modulation is between 10 Hz and 20 Hz
+The continuity of the high-frequency band is broken up by various and sundry colored explosions at key moments
+It is as if different percussive sounds are being dropped into a gigantic granulator to be instantaneously mulched into bits of microsound
+On first hearing  Agon appears to present a continuous stream of new material
+Repeated listening reveals that the work recycles sound material in an efficient manner
+For example  the penultimate gesture of the work—a turgid swirling mid-low frequency band—is already heard in the first 35 seconds
+The final gesture of the work  a triple stroke ‘tom-click-hiss’  appears first at 2:59 and again at 3:08
+Certain of the recycled sounds in Agon are strange mutations of other sounds  while others are drawn by hand in a graphical sound editor and derive from no original source
+Consider the sound first heard 40 seconds into the piece that seems like a small metal bell
+According to the composer  the origin of this sound was not a bell  but was the result of a convolution cross-synthesis procedure
+The bell-like sound first appears with a resonance at 750 Hz  then 59 seconds it shifts up to 1080 Hz 
+Another frequently recycled sound is like a tom-tom stroke
+According to the composer  it was actually a hand-drawn waveform
+The tom-tom like sound is first heard in a burst of strokes at 34 seconds
+Both the ‘bell’ and the ‘tom-tom’ reappear at many points in Agon
+A shimmering cymbal-like sound interweaves throughout the work—a component of the high-frequency band that streams through most of the piece
+A ‘piano tone cluster’  which originated according to the composer as a mutation of a percussion sound  first appears at 2:01
+It then signals the end of a quiet zone at 5:54  and marks a turning point of the finale at 8:10
+Preludes Suspendus dedicated to Jean-Claude Risset  is well worth analysis
+In concert especially when diffused by the composer its impression is one of almost overwhelming power and dynamic energy
+By contrast  in the controlled environment of the studio  we can carefully study the pattern of its intricately embroidered design
+Beneath the dramatic rhetorical flourishes is a delicate arrangement of elements
+I recommend listening at moderate amplitude to catch the details
+While Schall was limited to highly processed sampled piano tones  Preludes Suspendus incorporates coloristic resources from Nodal and Agon such as percussion samples  as well as adding new ensemble samples of brass instruments sometimes used in sweeping arpeggiated figures
+At other times  these samples are radically mutated by analysis-resynthesis techniques
+In these techniques  a given sound is analyzed  the analysis data can be altered and a mutation of the original sound is then resynthesized from the altered data
+Jean-Claude Risset was a pioneer in analysis resynthesis as Vaggione pointed out in the program notes of the piece
+Preludes Suspendus is an electroacoustic work using as basic material some instrumental sampled sounds  which were processed and transformed by means of analysis-resynthesis procedures
+In designing these procedures I was often inspired by Risset’s pioneering work on ‘analysis by synthesis’  especially regarding brass sound modeling  including detailed spectral and phrasing articulations
+Thus the musical figures  sometimes assembled additively as to form virtual ‘symphonic’ images  were written at several time scales  including note-by-note articulation  by means of these synthesis procedures
+It is not surprising  given Vaggione’s predilections for mutating sounds  that only some of the sound objects used in the work retain the gestural or morphological features of the original sources
+Certain sounds in the Preludes are detached from any perceivable source
+The work opens violently with a series of 21 forceful attacks—some of which smear together—in the first 22 seconds
+The characteristic mesostructural syntax of Preludes is based on long sections of background scintillation interjected with swells of low frequency energy that emerge from the background
+A prime example is the swell that begins at 46 seconds and lasts until the climax at 59 seconds
+Another example is the relentless series of eight successive swells that carry the energy through the peak of the piece  which transpires in the section between 6 minutes and 7 minutes 35 seconds
+The articulation of two specific sound objects stand out in Preludes  and deserve further commentary for their symbolic and structural roles
+One is a deep resonant sound  like a cross between a bass drum and a gong  with a slight downward pitch bend
+It is one of Vaggione’s signature sounds  appearing for example in the opening of Part III of Nodal
+When this drum-gong sound first appears at 6:34  it comes as a foreboding surprise  like the unexpected toll of a funeral bell
+It tolls four more times in the next minute
+It only reappears once more: as the final sound in the piece at 9:40
+The other object is a brass flourish ascending melodically  reaching a peak  and then either sustaining  trilling or arpeggiating downward
+It first appears 11 seconds into the piece  and reappears many times  never quite the same
+The flourishes standout because they launch and release major swells of energy in the piece
+Vaggione’s deployment of these melodic flourishes is quite clever
+First  they emerge out of an ongoing texture
+Second  their ending is always ambiguous; he inevitably superimposes other sounds at the peak of the flourish so the pitch trajectory simply merges with the ongoing texture
+In effect  pitched melodies coalesce and disintegrate as a natural part of the flux and flow of the noise
+24 variations was composed in 2001
+If Preludes suspendus is Dionysian in its raucous energy 24 variations is the cool and restrained Apollonian
+This is  to me  the most gracefully poetic of Vaggione’s electroacoustic compositions
+In order to appreciate this  I also recommend listening at a moderate volume in order to savor its subtleties
+One is drawn in not by the expectation of spectacular climaxes  but by the originality and virtuosity of the articulations as they pass by
+The narrative of24 variations unfolds deliberately  as the composer parsimoniously scatters dabs of energy over a ubiquitous background stream
+Much of the sonic material has been distilled down to timbral residues: residue of piano  cymbal  tomtom  maracas and so on
+The raucous horns of Preludes are absent
+Other objects stand out as electronic artefacts: jagged clicks and sinusoid-infused residues of radical spectral mutations
+The odd percussive resonance at 1 minute 52 seconds is an example of the latter
+This is a hollow shell of a concrete sound  perhaps the remains of a convolution
+The sound lexicon features the classic Vaggione foreground versus background contrast
+In the foreground are attack-resonances pops  claps  up and down sweeps
+The rhetoric of24 variations is dominated by interjection
+Instead of grand swells and accumulations  the foreground and background dance together
+Each foreground gesture eventually dissolves into the background  while the masked background emerges into the foreground
+It is in the arrangement of the carefully chosen elements repeating at just the right moments that this work stands out
+A prime example is the constant-pitch asynchronous grain stream  which sounds like a kind of Morse code tapping in the texture between 4 minutes 40 seconds and 4 minutes 50 seconds returning again and again
+Another subtle touch is the triple dose of silent intervals inserted between 6 minutes 30 seconds and 6 minutes 55 seconds
+As in all of Vaggione’s electroacoustic compositions considered here  the work concludes with a characteristic ending tag or flourish  as if the composer were closing the door on a virtual world
+I am interested in investigating further the relationship between meter and rhythm and this is not only at the level of macrotime  but at the most microscopic level reachable with our present tools
+Horacio Vaggione’s path to composition has been particularly focused
+Early in his career  he recognized the pertinence of combining computer technology with the technique of micromontage
+Like Xenakis  he also recognized the need for a balance between algorithmic composition and direct intervention: ‘To articulate a highly stratified musical flux by statistical means is unthinkable
+On the contrary  it depends on singularities: discontinuities  figures  contrasts and details’ 
+Through their strategies  certain high talents have a baffling ability to make fine art look like an easy game
+The elements are well defined  the structure is clear  the technique is obvious
+Anyone should be able to make it! Of course  this is not so
+We do not really understand fully  and we eventually realize that there are deeper unaccounted for layers
+We will never comprehend the choice or the timing of singularities that break the symmetry  shatter expectation  and liberate the energy
+I am convinced that what we call ‘talent’ is a combination of aptitude with an intuitive sense of choosing the right problems to solve
+Horacio Vaggione consistently chooses the most pertinent problems
+In so doing  he sets the standard for the electroacoustic music of today
