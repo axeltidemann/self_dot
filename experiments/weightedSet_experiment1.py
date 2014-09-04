@@ -158,7 +158,7 @@ def generate(predicate, method):
     return nextWord
     
 def testSentence(method):
-    l.importFromFile('association_test_db_full.txt')#minimal_db.txt')#roads_articulation_db.txt')#
+    l.importFromFile('association_test_db_full.txt', 1)#minimal_db.txt')#roads_articulation_db.txt')#
     predicate = 'hurricane'#random.choice(list(l.words))
     print 'predicate', predicate
     sentence = [predicate]

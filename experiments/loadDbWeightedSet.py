@@ -16,6 +16,8 @@ import re
 import copy
 import time
 import difflib
+import cPickle as pickle
+import os.path
 
 n=re.compile(r"\*.*\*:") # find name
 w=re.compile(r"\b[0-9a-zA-Z']*\b") # find whole words
@@ -72,25 +74,46 @@ def updateNeighbors(sentence):
             if alreadyHere == 0:
                 v.append([sentence[n], 1])
             
-def importFromFile(filename):
-    f = open(filename, 'r')
-    for line in f:
-        sentence = []
-        if len(n.findall(line)) > 0:
-            name = w.findall(n.findall(line)[0])[0]
-        else:
-            wrds = w.findall(line)
-        for item in wrds: 
-            if item != '': sentence.append(item.lower())
-        if len(sentence) > 0:
-            words.update(sentence)
-            updateNeighbors(sentence)
-            updateWordsInSentence(sentence)
-            updateSimilarWords(sentence)
+def importFromFile(filename, useSavedAnalysis=0):
+    if useSavedAnalysis:
+        print 'using saved analysis'
+        loadFromFile(filename)
+    else:
+        print 'analyzing...'
+        f = open(filename, 'r')
+        for line in f:
+            sentence = []
+            if len(n.findall(line)) > 0:
+                name = w.findall(n.findall(line)[0])[0]
+            else:
+                wrds = w.findall(line)
+            for item in wrds: 
+                if item != '': sentence.append(item.lower())
+            if len(sentence) > 0:
+                words.update(sentence)
+                updateNeighbors(sentence)
+                updateWordsInSentence(sentence)
+                updateSimilarWords(sentence)
+        saveToFile(filename)
+
+def saveToFile(filename):
+    pickle.dump(words, open(filename+'1save_words', 'wb'))
+    pickle.dump(wordsInSentence, open(filename+'1save_wordsInSentence', 'wb'))
+    pickle.dump(similarWords, open(filename+'1save_similarWords', 'wb'))
+    pickle.dump(neighbors, open(filename+'1save_neighbors', 'wb'))
+
+def loadFromFile(filename):
+    global words, wordsInSentence, similarWords, neighbors
+    words = pickle.load(open(filename+'1save_words', 'rb'))
+    wordsInSentence = pickle.load(open(filename+'1save_wordsInSentence', 'rb'))
+    similarWords = pickle.load(open(filename+'1save_similarWords', 'rb'))
+    neighbors = pickle.load(open(filename+'1save_neighbors', 'rb'))
+    
+
             
 if __name__ == '__main__':
     timeThen = time.time()    
-    importFromFile('minimal_db.txt') #association_test_db_full.txt')#
+    importFromFile('minimal_db.txt', 1) #association_test_db_full.txt')#
     print 'processing time: %.1f ms'%((time.time()-timeThen)*1000)
     #for word in words:
     #    print word
