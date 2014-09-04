@@ -67,7 +67,8 @@ def defaultScale(x):
     For now, we use an empirical adjustment trying to achive values in a range that could be produced by a*b
     and also stay within approximately the same average range as random*random*0.5
     '''
-    return (math.sqrt(x*0.1)+math.pow(x*0.5, 2))*0.5
+    #return (math.sqrt(x*0.1)+math.pow(x*0.5, 2))*0.5
+    return x*0.25
     
 def weightedMultiply(a_, weightA_, b_, weightB_):
     '''
@@ -108,13 +109,14 @@ def weightedMultiply(a_, weightA_, b_, weightB_):
     return c
 
 def normalize(a):
+    return a
     if a != []:
         highest = float(max(a))
         if highest != 0:
             for i in range(len(a)):
                 a[i] /= highest
     return a
-        
+     
 def normScale(a, scale):
     a = normalize(a)
     a = list(numpy.array(a)*scale)
@@ -137,9 +139,9 @@ def generate(predicate, method):
     neighbors = l.neighbors[predicate]
     wordsInSentence = l.wordsInSentence[predicate]
     similarWords = l.similarWords[predicate]
-    neighborsWeight = 0.00000000000000001
-    wordsInSentenceWeight = 1.0
-    similarWordsWeight = 1.0
+    neighborsWeight = 0.000000000000000111022
+    wordsInSentenceWeight = 0#1#1.0
+    similarWordsWeight = 1#0.000000000000001
     #print 'lengths', len(neighbors), len(wordsInSentence), len(similarWords)
     if method == 'multiply':
         # multiply (soft intersection)
@@ -159,7 +161,7 @@ def generate(predicate, method):
     
 def testSentence(method):
     l.importFromFile('association_test_db_full.txt', 1)#minimal_db.txt')#roads_articulation_db.txt')#
-    predicate = 'hurricane'#random.choice(list(l.words))
+    predicate = random.choice(list(l.words))
     print 'predicate', predicate
     sentence = [predicate]
     for i in range(12):
@@ -168,16 +170,22 @@ def testSentence(method):
         print 'sentence', sentence
 
 def testMerge():
-    a = [['world', 0.7],['you', 0.5], ['there', 0.3]]
-    b = [['world', 0.3],['you', 0.5], ['there', 0.2],['here', 0.8],['nowhere',0.1]]
-    print '** sum **'
-    c = weightedSum(a,1,b,1)
-    for item in c:
+    a = [['world', 1.0],['you', 0.5], ['there', 0.3],['near', 0.5]] #near only exist in this set
+    b = [['world', 0.3],['you', 1.0], ['there', 0.2],['here', 0.8],['nowhere',0.1]] #here and nowhere only exist in this set
+    c = [['world', 1.0],['you', 0.5], ['were', 0.4]] #were only exist in this set, and here is not here
+    print '\n** sum **'
+    t = weightedSum(a,1,b,1)
+    t = weightedSum(c,1,t,1)
+    for item in t:
         print item
-    print '** multiply **'
-    c = weightedMultiply(a,1,b,1)
-    for item in c:
+    print 'select:', select(t, 'highest')
+    
+    print '\n** multiply **'
+    t = weightedMultiply(a,1,b,1)
+    t = weightedMultiply(c,1,t,1)
+    for item in t:
         print item
+    print 'select:', select(t, 'highest')
 
 ## testing
 if __name__ == '__main__':
