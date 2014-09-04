@@ -137,8 +137,8 @@ def generate(predicate, method):
     neighbors = l.neighbors[predicate]
     wordsInSentence = l.wordsInSentence[predicate]
     similarWords = l.similarWords[predicate]
-    neighborsWeight = 0.001
-    wordsInSentenceWeight = 0.0000001
+    neighborsWeight = 0.00000000000000001
+    wordsInSentenceWeight = 1.0
     similarWordsWeight = 1.0
     #print 'lengths', len(neighbors), len(wordsInSentence), len(similarWords)
     if method == 'multiply':
