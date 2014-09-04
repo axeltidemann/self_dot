@@ -74,8 +74,8 @@ def updateNeighbors(sentence):
             if alreadyHere == 0:
                 v.append([sentence[n], 1])
             
-def importFromFile(filename, useSavedAnalysis=0):
-    if useSavedAnalysis:
+def importFromFile(filename, useSavedAnalysis=1):
+    if useSavedAnalysis and (os.path.isfile(filename+'_1save_words')):
         print 'using saved analysis'
         loadFromFile(filename)
     else:
@@ -97,17 +97,17 @@ def importFromFile(filename, useSavedAnalysis=0):
         saveToFile(filename)
 
 def saveToFile(filename):
-    pickle.dump(words, open(filename+'1save_words', 'wb'))
-    pickle.dump(wordsInSentence, open(filename+'1save_wordsInSentence', 'wb'))
-    pickle.dump(similarWords, open(filename+'1save_similarWords', 'wb'))
-    pickle.dump(neighbors, open(filename+'1save_neighbors', 'wb'))
+    pickle.dump(words, open(filename+'_1save_words', 'wb'))
+    pickle.dump(wordsInSentence, open(filename+'_1save_wordsInSentence', 'wb'))
+    pickle.dump(similarWords, open(filename+'_1save_similarWords', 'wb'))
+    pickle.dump(neighbors, open(filename+'_1save_neighbors', 'wb'))
 
 def loadFromFile(filename):
     global words, wordsInSentence, similarWords, neighbors
-    words = pickle.load(open(filename+'1save_words', 'rb'))
-    wordsInSentence = pickle.load(open(filename+'1save_wordsInSentence', 'rb'))
-    similarWords = pickle.load(open(filename+'1save_similarWords', 'rb'))
-    neighbors = pickle.load(open(filename+'1save_neighbors', 'rb'))
+    words = pickle.load(open(filename+'_1save_words', 'rb'))
+    wordsInSentence = pickle.load(open(filename+'_1save_wordsInSentence', 'rb'))
+    similarWords = pickle.load(open(filename+'_1save_similarWords', 'rb'))
+    neighbors = pickle.load(open(filename+'_1save_neighbors', 'rb'))
     
 
             
