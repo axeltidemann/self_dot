@@ -22,7 +22,11 @@ import copy
 import loadDbWeightedSet as l
 
 
-def weightedIntersection(a_, b_, replacementValue):
+def weightedSum(a_, b_,):
+    '''
+    Add the score of items found in both sets,
+    use score as is for items found in only one of the sets.
+    '''
     c = []
     if len(a_) > len(b_):
         a = a_
@@ -39,18 +43,66 @@ def weightedIntersection(a_, b_, replacementValue):
         itemA = itemsA[i]
         if itemA in itemsB:
             j = itemsB.index(itemA)
-            c.append([itemsA[i], b[j][1] * a[i][1]])    # multiply scores and put item in c
+            c.append([itemsA[i], b[j][1] + a[i][1]])    # add scores and put item in c
             removeFromB.append(j)                       # removing used elements...
-        else:  
-            c.append([itemsA[i], replacementValue])     # replacementValue may get a smarter implementation
+        else:
+            c.append([itemsA[i], scoreA[i]])         
     removeFromB.sort()
     removeFromB.reverse()
     for i in removeFromB:
         b.remove(b[i])
-    for i in range(len(b)):
-        c.append([b[i][0], replacementValue])
+    if len(b) > 0:
+            c.append(b[i])
     return c
             
+def weightedMultiply(a_, b_, defaultScale='minimum'):
+    '''
+    Multiply the score of items found in both sets,
+    use a default replacement scaling value for items found in only one of the sets.
+    Using zero as the default scaler will remove items found only in one of the sets.
+    Instead of a value one can use the keyword 'minimum', or 'power'.
+    Using 'minimum' sets the default scaler equal to the minimum score found in the set,
+    'power' uses the value multiplied with itself.
+    '''
+    c = []
+    if len(a_) > len(b_):
+        a = a_
+        b = b_
+    else:
+        a = b_
+        b = a_
+    itemsA = [a[i][0] for i in range(len(a))]
+    itemsB = [b[i][0] for i in range(len(b))]
+    scoreA = normalize([a[i][1] for i in range(len(a))])
+    scoreB = normalize([b[i][1] for i in range(len(b))])
+    if type(defaultScale) is float:
+        defaultScaleVal = defaultScale
+    if defaultScale == 'minimum':
+        defaultScaleVal = min(scoreA)
+    removeFromB = []
+    for i in range(len(itemsA)):
+        itemA = itemsA[i]
+        if itemA in itemsB:
+            j = itemsB.index(itemA)
+            c.append([itemsA[i], b[j][1] * a[i][1]])    # multiply scores and put item in c
+            removeFromB.append(j)                       # removing used elements...
+        else:
+            if defaultScale == 'power':
+                defaultScaleVal =  scoreA[i]*scoreA[i]
+            c.append([itemsA[i], defaultScaleVal])   
+    removeFromB.sort()
+    removeFromB.reverse()
+    for i in removeFromB:
+        b.remove(b[i])
+    if len(b) > 0:
+        if defaultScale == 'minimum':
+            defaultScaleVal = min(scoreB)    
+        for i in range(len(b)):
+            if defaultScale == 'power':
+                defaultScaleVal =  b[i][1]*b[i][1]
+            c.append([b[i][0], defaultScaleVal])
+    return c
+
 def normalize(a):
     if a != []:
         highest = max(a)
@@ -75,24 +127,47 @@ def generate(predicate):
     neighbors = l.neighbors[predicate]
     wordsInSentence = l.wordsInSentence[predicate]
     similarWords = l.similarWords[predicate]
-    # intersection
-    temp = weightedIntersection(neighbors, wordsInSentence, 0)
-    temp = weightedIntersection(temp, similarWords, 0)
+    print 'lengths', len(neighbors), len(wordsInSentence), len(similarWords)
+    
+    # multiply (soft intersection)
+    temp = weightedMultiply(neighbors, wordsInSentence, 'power')
+    print 'templength', len(temp)
+    temp = weightedMultiply(temp, similarWords, 'power')
+    print 'templength', len(temp)
+    '''
+    # add (union)
+    temp = weightedSum(neighbors, wordsInSentence)
+    print 'templength', len(temp)
+    temp = weightedSum(temp, similarWords)
+    print 'templength', len(temp)
+    '''
     # select the one with the highest score
     nextWord = select(temp, 'highest')
     return nextWord
     
-## testing
-if __name__ == '__main__':
+def testSentence():
     l.importFromFile('association_test_db_full.txt')#minimal_db.txt')#roads_articulation_db.txt')#
-    predicate = random.choice(list(l.words))
+    predicate = 'hurricane'#random.choice(list(l.words))
     print 'predicate', predicate
     sentence = [predicate]
     for i in range(12):
         predicate = generate(predicate)
         sentence.append(predicate)
         print 'sentence', sentence
-    '''
-    predicate = generate(predicate)
-    print 'generator', predicate
-    '''        
+
+def testMerge():
+    a = [['world', 0.6],['you', 0.5], ['there', 0.3]]
+    b = [['world', 0.3],['you', 0.5], ['there', 0.2],['here', 0.8]]
+    print '** sum **'
+    c = weightedSum(a,b)
+    for item in c:
+        print item
+    print '** multiply **'
+    c = weightedMultiply(a,b, 0.1)
+    for item in c:
+        print item
+
+## testing
+if __name__ == '__main__':
+    #testSentence()
+    testMerge()
