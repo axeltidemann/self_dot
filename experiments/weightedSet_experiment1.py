@@ -55,14 +55,10 @@ def weightedSum(a_, b_,):
             c.append(b[i])
     return c
             
-def weightedMultiply(a_, b_, defaultScale='minimum'):
+def weightedMultiply(a_, b_):
     '''
     Multiply the score of items found in both sets,
-    use a default replacement scaling value for items found in only one of the sets.
-    Using zero as the default scaler will remove items found only in one of the sets.
-    Instead of a value one can use the keyword 'minimum', or 'power'.
-    Using 'minimum' sets the default scaler equal to the minimum score found in the set,
-    'power' uses the value multiplied with itself.
+    multiply score with itself for items found in only one of the sets.
     '''
     c = []
     if len(a_) > len(b_):
@@ -75,10 +71,6 @@ def weightedMultiply(a_, b_, defaultScale='minimum'):
     itemsB = [b[i][0] for i in range(len(b))]
     scoreA = normalize([a[i][1] for i in range(len(a))])
     scoreB = normalize([b[i][1] for i in range(len(b))])
-    if type(defaultScale) is float:
-        defaultScaleVal = defaultScale
-    if defaultScale == 'minimum':
-        defaultScaleVal = min(scoreA)
     removeFromB = []
     for i in range(len(itemsA)):
         itemA = itemsA[i]
@@ -87,20 +79,13 @@ def weightedMultiply(a_, b_, defaultScale='minimum'):
             c.append([itemsA[i], b[j][1] * a[i][1]])    # multiply scores and put item in c
             removeFromB.append(j)                       # removing used elements...
         else:
-            if defaultScale == 'power':
-                defaultScaleVal =  scoreA[i]*scoreA[i]
-            c.append([itemsA[i], defaultScaleVal])   
+            c.append([itemsA[i], scoreA[i]*scoreA[i]])   
     removeFromB.sort()
     removeFromB.reverse()
     for i in removeFromB:
         b.remove(b[i])
     if len(b) > 0:
-        if defaultScale == 'minimum':
-            defaultScaleVal = min(scoreB)    
-        for i in range(len(b)):
-            if defaultScale == 'power':
-                defaultScaleVal =  b[i][1]*b[i][1]
-            c.append([b[i][0], defaultScaleVal])
+        c.append([b[i][0], b[i][1]*b[i][1]])
     return c
 
 def normalize(a):
@@ -130,9 +115,9 @@ def generate(predicate):
     print 'lengths', len(neighbors), len(wordsInSentence), len(similarWords)
     
     # multiply (soft intersection)
-    temp = weightedMultiply(neighbors, wordsInSentence, 'power')
+    temp = weightedMultiply(neighbors, wordsInSentence)
     print 'templength', len(temp)
-    temp = weightedMultiply(temp, similarWords, 'power')
+    temp = weightedMultiply(temp, similarWords)
     print 'templength', len(temp)
     '''
     # add (union)
@@ -163,7 +148,7 @@ def testMerge():
     for item in c:
         print item
     print '** multiply **'
-    c = weightedMultiply(a,b, 0.1)
+    c = weightedMultiply(a,b)
     for item in c:
         print item
 
