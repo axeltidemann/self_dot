@@ -22,7 +22,6 @@ import os.path
 n=re.compile(r"\*.*\*:") # find name
 w=re.compile(r"\b[0-9a-zA-Z']*\b") # find whole words
 name = 'Anonymous'
-lettercount = 0
 words = set()
 
 wordsInSentence = {}
@@ -73,7 +72,32 @@ def updateNeighbors(sentence):
                     alreadyHere = 1
             if alreadyHere == 0:
                 v.append([sentence[n], 1])
-            
+
+neighborAfter = {}
+def updateNeighborAfter(sentence): 
+    if len(sentence) == 1:
+        return
+    for i in range(len(sentence)-1):
+        v = neighborAfter.setdefault(sentence[i], [])
+        if sentence[i+1] in [v[j][0] for j in range(len(v))]:
+            for word_score in v:
+                if sentence[i+1] == word_score[0]:
+                    word_score[1] += 1
+        else:
+            v.append([sentence[i+1], 1])
+
+
+lettercount = 0
+time_word = []
+wordTime = {}
+def updateTimeLists(sentence):
+    global lettercount
+    for word in sentence:
+        lettercount += len(word)
+        curTime = lettercount/20.0 # 20 letters per second "read speed"
+        time_word.append((curTime, word))
+        wordTime.setdefault(word, []).append(curTime)
+        
 def importFromFile(filename, useSavedAnalysis=1):
     if useSavedAnalysis and (os.path.isfile(filename+'_1save_words')):
         print 'using saved analysis'
@@ -92,8 +116,10 @@ def importFromFile(filename, useSavedAnalysis=1):
             if len(sentence) > 0:
                 words.update(sentence)
                 updateNeighbors(sentence)
+                updateNeighborAfter(sentence)
                 updateWordsInSentence(sentence)
                 updateSimilarWords(sentence)
+                updateTimeLists(sentence)
         saveToFile(filename)
 
 def saveToFile(filename):
@@ -101,24 +127,41 @@ def saveToFile(filename):
     pickle.dump(wordsInSentence, open(filename+'_1save_wordsInSentence', 'wb'))
     pickle.dump(similarWords, open(filename+'_1save_similarWords', 'wb'))
     pickle.dump(neighbors, open(filename+'_1save_neighbors', 'wb'))
+    pickle.dump(neighborAfter, open(filename+'_1save_neighborAfter', 'wb'))
+    pickle.dump(time_word, open(filename+'_1save_time_word', 'wb'))
+    pickle.dump(wordTime, open(filename+'_1save_wordTime', 'wb'))
 
 def loadFromFile(filename):
-    global words, wordsInSentence, similarWords, neighbors
+    global words, wordsInSentence, similarWords, neighbors, neighborAfter, time_word, wordTime
     words = pickle.load(open(filename+'_1save_words', 'rb'))
     wordsInSentence = pickle.load(open(filename+'_1save_wordsInSentence', 'rb'))
     similarWords = pickle.load(open(filename+'_1save_similarWords', 'rb'))
     neighbors = pickle.load(open(filename+'_1save_neighbors', 'rb'))
-    
-
+    neighborAfter = pickle.load(open(filename+'_1save_neighborAfter', 'rb'))
+    time_word = pickle.load(open(filename+'_1save_time_word', 'rb'))
+    wordTime = pickle.load(open(filename+'_1save_wordTime', 'rb'))
             
 if __name__ == '__main__':
     timeThen = time.time()    
-    importFromFile('minimal_db.txt', 1) #association_test_db_full.txt')#
+    importFromFile('association_test_db_short.txt', 0)#minimal_db.txt', 0) #association_test_db_full.txt')#
     print 'processing time: %.1f ms'%((time.time()-timeThen)*1000)
     #for word in words:
     #    print word
     #print wordsInSentence
-    #print neighbors
+    ''''
+    print '\nneighbors'
+    for k,v, in neighbors.iteritems():
+        print k,v
+    print '\nneighborAfter'
+    for k,v, in neighborAfter.iteritems():
+        print k,v
+    '''
+    print '\ntime_word'
+    for item in time_word:
+        print item
+    print '\nwordTime'
+    for k,v in wordTime.iteritems():
+        print k,v
     '''
     updateSimilarWords(words) # this should be run again as maintenance (dream state), as it is only partially complete in realtime
     print '*** again ***'
