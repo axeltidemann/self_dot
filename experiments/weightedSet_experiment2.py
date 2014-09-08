@@ -42,8 +42,8 @@ def weightedSum(a_, weightA_, b_, weightB_):
         weightB = weightA_        
     itemsA = [a[i][0] for i in range(len(a))]
     itemsB = [b[i][0] for i in range(len(b))]
-    scoreA = normScale([a[i][1] for i in range(len(a))],weightA)
-    scoreB = normScale([b[i][1] for i in range(len(b))],weightB)
+    scoreA = scale([a[i][1] for i in range(len(a))],weightA)
+    scoreB = scale([b[i][1] for i in range(len(b))],weightB)
     removeFromB = []
     for i in range(len(itemsA)):
         itemA = itemsA[i]
@@ -58,9 +58,51 @@ def weightedSum(a_, weightA_, b_, weightB_):
     for i in removeFromB:
         b.remove(b[i])
     if len(b) > 0:
+        for i in range(len(b)):
             c.append([b[i][0], b[i][1]*weightB])
     return c
           
+def boundedSum(a_, weightA_, b_, weightB_):
+    '''
+    Bounded sum, scores are clipped to the "weight" value.
+    Add the score of items found in both sets,
+    use score as is for items found in only one of the sets.
+    '''
+    c = []
+    if len(a_) > len(b_):
+        a = copy.copy(a_)
+        weightA = weightA_
+        b = copy.copy(b_)
+        weightB = weightB_
+    else:
+        a = copy.copy(b_)
+        weightA = weightB_
+        b = copy.copy(a_)
+        weightB = weightA_        
+    itemsA = [a[i][0] for i in range(len(a))]
+    itemsB = [b[i][0] for i in range(len(b))]
+    scoreA = clip([a[i][1] for i in range(len(a))],weightA)
+    scoreB = clip([b[i][1] for i in range(len(b))],weightB)
+    removeFromB = []
+    for i in range(len(itemsA)):
+        itemA = itemsA[i]
+        if itemA in itemsB:
+            j = itemsB.index(itemA)
+            c.append([itemsA[i], scoreB[j] + scoreA[i]])    # add scores and put item in c
+            removeFromB.append(j)                       # removing used elements...
+        else:
+            c.append([itemsA[i], scoreA[i]])         
+    removeFromB.sort()
+    removeFromB.reverse()
+    for i in removeFromB:
+        b.remove(b[i])
+    if len(b) > 0:
+        for i in range(len(b)):
+            bVal = b[i][1]
+            if bVal > weightB: bVal = weightB
+            c.append([b[i][0], bVal])
+    return c
+
 def defaultScale(x):
     '''
     For use in weightedMultiply.
@@ -89,8 +131,8 @@ def weightedMultiply(a_, weightA_, b_, weightB_):
         weightB = weightA_        
     itemsA = [a[i][0] for i in range(len(a))]
     itemsB = [b[i][0] for i in range(len(b))]
-    scoreA = normScale([a[i][1] for i in range(len(a))],weightA)
-    scoreB = normScale([b[i][1] for i in range(len(b))],weightB)
+    scoreA = scale([a[i][1] for i in range(len(a))],weightA)
+    scoreB = scale([b[i][1] for i in range(len(b))],weightB)
     removeFromB = []
     for i in range(len(itemsA)):
         itemA = itemsA[i]
@@ -105,7 +147,48 @@ def weightedMultiply(a_, weightA_, b_, weightB_):
     for i in removeFromB:
         b.remove(b[i])
     if len(b) > 0:
-        c.append([b[i][0], defaultScale(b[i][1]*weightB)])
+        for i in range(len(b)):
+            c.append([b[i][0], defaultScale(b[i][1]*weightB)])
+    return c
+
+def weightedMultiplySqrt(a_, weightA_, b_, weightB_):
+    '''
+    Multiply the score of items found in both sets.
+    To compensate for items found only in ome of the sets, 
+    we take the square of the multiplication for items found in both sets,
+    and divide by 2 for items found in only one of the sets. 
+    '''
+    c = []
+    if len(a_) > len(b_):
+        a = copy.copy(a_)
+        weightA = weightA_
+        b = copy.copy(b_)
+        weightB = weightB_
+    else:
+        a = copy.copy(b_)
+        weightA = weightB_
+        b = copy.copy(a_)
+        weightB = weightA_        
+    itemsA = [a[i][0] for i in range(len(a))]
+    itemsB = [b[i][0] for i in range(len(b))]
+    scoreA = scale([a[i][1] for i in range(len(a))],weightA)
+    scoreB = scale([b[i][1] for i in range(len(b))],weightB)
+    removeFromB = []
+    for i in range(len(itemsA)):
+        itemA = itemsA[i]
+        if itemA in itemsB:
+            j = itemsB.index(itemA)
+            c.append([itemsA[i], math.sqrt(scoreB[j] * scoreA[i])])    # multiply scores and put item in c
+            removeFromB.append(j)                                   # removing used elements...
+        else:
+            c.append([itemsA[i], scoreA[i]*0.5])   
+    removeFromB.sort()
+    removeFromB.reverse()
+    for i in removeFromB:
+        b.remove(b[i])
+    if len(b) > 0:
+        for i in range(len(b)):
+            c.append([b[i][0], b[i][1]*0.5])
     return c
 
 def normalize(a):
@@ -117,9 +200,12 @@ def normalize(a):
                 a[i] /= highest
     return a
      
-def normScale(a, scale):
-    a = normalize(a)
+def scale(a, scale):
     a = list(numpy.array(a)*scale)
+    return a
+
+def clip(a, clipVal):
+    a = list(numpy.scale(a), 0, clipVal)
     return a
 
 
