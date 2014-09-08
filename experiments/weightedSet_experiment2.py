@@ -42,8 +42,8 @@ def weightedSum(a_, weightA_, b_, weightB_):
         weightB = weightA_        
     itemsA = [a[i][0] for i in range(len(a))]
     itemsB = [b[i][0] for i in range(len(b))]
-    scoreA = scale([a[i][1] for i in range(len(a))],weightA)
-    scoreB = scale([b[i][1] for i in range(len(b))],weightB)
+    scoreA = scale([float(a[i][1]) for i in range(len(a))],weightA)
+    scoreB = scale([float(b[i][1]) for i in range(len(b))],weightB)
     removeFromB = []
     for i in range(len(itemsA)):
         itemA = itemsA[i]
@@ -81,8 +81,8 @@ def boundedSum(a_, weightA_, b_, weightB_):
         weightB = weightA_        
     itemsA = [a[i][0] for i in range(len(a))]
     itemsB = [b[i][0] for i in range(len(b))]
-    scoreA = clip([a[i][1] for i in range(len(a))],weightA)
-    scoreB = clip([b[i][1] for i in range(len(b))],weightB)
+    scoreA = clip([float(a[i][1]) for i in range(len(a))],weightA)
+    scoreB = clip([float(b[i][1]) for i in range(len(b))],weightB)
     removeFromB = []
     for i in range(len(itemsA)):
         itemA = itemsA[i]
@@ -131,8 +131,8 @@ def weightedMultiply(a_, weightA_, b_, weightB_):
         weightB = weightA_        
     itemsA = [a[i][0] for i in range(len(a))]
     itemsB = [b[i][0] for i in range(len(b))]
-    scoreA = scale([a[i][1] for i in range(len(a))],weightA)
-    scoreB = scale([b[i][1] for i in range(len(b))],weightB)
+    scoreA = scale([float(a[i][1]) for i in range(len(a))],weightA)
+    scoreB = scale([float(b[i][1]) for i in range(len(b))],weightB)
     removeFromB = []
     for i in range(len(itemsA)):
         itemA = itemsA[i]
@@ -171,8 +171,8 @@ def weightedMultiplySqrt(a_, weightA_, b_, weightB_):
         weightB = weightA_        
     itemsA = [a[i][0] for i in range(len(a))]
     itemsB = [b[i][0] for i in range(len(b))]
-    scoreA = scale([a[i][1] for i in range(len(a))],weightA)
-    scoreB = scale([b[i][1] for i in range(len(b))],weightB)
+    scoreA = scale([float(a[i][1]) for i in range(len(a))],weightA)
+    scoreB = scale([float(b[i][1]) for i in range(len(b))],weightB)
     removeFromB = []
     for i in range(len(itemsA)):
         itemA = itemsA[i]
@@ -205,13 +205,15 @@ def scale(a, scale):
     return a
 
 def clip(a, clipVal):
-    a = list(numpy.scale(a), 0, clipVal)
+    a = list(numpy.clip(a, 0, clipVal))
     return a
 
 
 def select(items, method):
     words = [items[i][0] for i in range(len(items))]
     scores = [items[i][1] for i in range(len(items))]
+    #print 'select', items
+    #print 'select item', scores.index(max(scores))
     if method == 'highest':
         return words[scores.index(max(scores))]
     elif method == 'lowest':
@@ -231,20 +233,32 @@ def getTimeContext(predicate, distance):
     '''
     pass
 
-def generate(predicate, method):
+def generate(predicate, method, nW, wW, sW):
     # get the lists we need
     neighbors = l.neighbors[predicate]
     wordsInSentence = l.wordsInSentence[predicate]
     similarWords = l.similarWords[predicate]
-    neighborsWeight = 0.000000000000000111022
-    wordsInSentenceWeight = 0#1#1.0
-    similarWordsWeight = 1#0.000000000000001
+    neighborsWeight = nW 
+    wordsInSentenceWeight = wW 
+    similarWordsWeight = sW 
     #print 'lengths', len(neighbors), len(wordsInSentence), len(similarWords)
     if method == 'multiply':
         # multiply (soft intersection)
+        #print 'neighbors'
+        #print neighbors
+        #print 'wordsInSentence'
+        #print wordsInSentence
         temp = weightedMultiply(neighbors, neighborsWeight, wordsInSentence, wordsInSentenceWeight)
         #print 'templength', len(temp)
+        #print 'temp1'
+        #print temp
         temp = weightedMultiply(temp, 1.0, similarWords, similarWordsWeight)
+        #print 'templength', len(temp)
+    if method == 'multiplySqrt':
+        # multiply (soft intersection)
+        temp = weightedMultiplySqrt(neighbors, neighborsWeight, wordsInSentence, wordsInSentenceWeight)
+        #print 'templength', len(temp)
+        temp = weightedMultiplySqrt(temp, 1.0, similarWords, similarWordsWeight)
         #print 'templength', len(temp)
     if method == 'add':
         # add (union)
@@ -252,19 +266,31 @@ def generate(predicate, method):
         #print 'templength', len(temp)
         temp = weightedSum(temp, 1.0, similarWords, similarWordsWeight)
         #print 'templength', len(temp)
+    if method == 'boundedAdd':
+        #print 'neighbors'
+        #print neighbors
+        #print 'wordsInSentence'
+        print wordsInSentence
+        # add (union)
+        temp = boundedSum(neighbors, neighborsWeight, wordsInSentence, wordsInSentenceWeight)
+        #print 'temp1'
+        #print temp
+        #print 'templength', len(temp)
+        temp = boundedSum(temp, 1.0, similarWords, similarWordsWeight)
+        #print 'templength', len(temp)
     # select the one with the highest score
     nextWord = select(temp, 'highest')
     return nextWord
     
-def testSentence(method):
+def testSentence(method, nW, wW, sW):
     l.importFromFile('association_test_db_full.txt', 1)#minimal_db.txt')#roads_articulation_db.txt')#
-    predicate = random.choice(list(l.words))
+    predicate = 'children'#random.choice(list(l.words))
     print 'predicate', predicate
     sentence = [predicate]
-    for i in range(12):
-        predicate = generate(predicate, method)
+    for i in range(8):
+        predicate = generate(predicate, method, nW, wW, sW)
         sentence.append(predicate)
-        print 'sentence', sentence
+    print 'sentence', sentence
 
 def testMerge():
     a = [['world', 1.0],['you', 0.5], ['there', 0.3],['near', 0.5]] #near only exist in this set
@@ -286,5 +312,27 @@ def testMerge():
 
 ## testing
 if __name__ == '__main__':
-    testSentence('add')
+    #neighborsWeight, wordsInSentenceWeight, similarWordsWeight)  
+    testSentence('add', 0.13, 0.05, 0.6) 
+    #testSentence('add', 0.0002, 0.00002, 0.00000000000000000001) 
+    
+    ## neighbors weight needs to be extremely small not to overrule all
+    ## DEBUG !!
+    #testSentence('boundedAdd', 0.0, 0.6, 0.3) #neighborsWeight, wordsInSentenceWeight, similarWordsWeight)  
+
+    ## wordsInSentence and similarWordsWeight weight needs to be extremely small not to overrule all
+    ## DEBUG !!
+    #testSentence('multiply', 0.9, 0.0, 0.000000000000001) 
+    
+    ## wordsInSentence and similarWordsWeight weight needs to be extremely small not to overrule all
+    #testSentence('multiplySqrt', 0.9, 0.000001, 0.0) #neighborsWeight, wordsInSentenceWeight, similarWordsWeight)  
+    
+    #testSentence('multiply', 1.0, 1.0, 0.0) #neighborsWeight, wordsInSentenceWeight, similarWordsWeight)  
+    
+    '''
+    neighborsWeight = 0.13
+    wordsInSentenceWeight = 0.05
+    similarWordsWeight = 0.6
+    testSentence('add', neighborsWeight, wordsInSentenceWeight, similarWordsWeight) 
+    '''
     #testMerge()
