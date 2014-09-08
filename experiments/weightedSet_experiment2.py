@@ -237,7 +237,7 @@ def generate(predicate, method, nW, wW, sW):
     # get the lists we need
     neighbors = l.neighbors[predicate]
     wordsInSentence = l.wordsInSentence[predicate]
-    similarWords = l.similarWords[predicate]
+    similarWords = normalize(copy.copy(l.similarWords[predicate]))
     neighborsWeight = nW 
     wordsInSentenceWeight = wW 
     similarWordsWeight = sW 
@@ -270,13 +270,17 @@ def generate(predicate, method, nW, wW, sW):
         #print 'neighbors'
         #print neighbors
         #print 'wordsInSentence'
-        print wordsInSentence
+        #print wordsInSentence
         # add (union)
         temp = boundedSum(neighbors, neighborsWeight, wordsInSentence, wordsInSentenceWeight)
         #print 'temp1'
         #print temp
         #print 'templength', len(temp)
+        #print 'similarWords'
+        #print similarWords
         temp = boundedSum(temp, 1.0, similarWords, similarWordsWeight)
+        #print 'temp2'
+        #print temp
         #print 'templength', len(temp)
     # select the one with the highest score
     nextWord = select(temp, 'highest')
@@ -284,7 +288,7 @@ def generate(predicate, method, nW, wW, sW):
     
 def testSentence(method, nW, wW, sW):
     l.importFromFile('association_test_db_full.txt', 1)#minimal_db.txt')#roads_articulation_db.txt')#
-    predicate = 'children'#random.choice(list(l.words))
+    predicate = 'parents'#random.choice(list(l.words))
     print 'predicate', predicate
     sentence = [predicate]
     for i in range(8):
@@ -313,13 +317,14 @@ def testMerge():
 ## testing
 if __name__ == '__main__':
     #neighborsWeight, wordsInSentenceWeight, similarWordsWeight)  
-    testSentence('add', 0.13, 0.05, 0.6) 
+    #testSentence('add', 0.13, 0.05, 0.6) 
     #testSentence('add', 0.0002, 0.00002, 0.00000000000000000001) 
     
     ## neighbors weight needs to be extremely small not to overrule all
     ## DEBUG !!
     #testSentence('boundedAdd', 0.0, 0.6, 0.3) #neighborsWeight, wordsInSentenceWeight, similarWordsWeight)  
-
+    testSentence('boundedAdd', 0.0000000000000000001, 0.5, 0.4) #neighborsWeight, wordsInSentenceWeight, similarWordsWeight)  
+    
     ## wordsInSentence and similarWordsWeight weight needs to be extremely small not to overrule all
     ## DEBUG !!
     #testSentence('multiply', 0.9, 0.0, 0.000000000000001) 
