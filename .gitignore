@@ -12,5 +12,5 @@ test.txt
 setpath_oeyvind.sh
 .sconsign.dblite
 carfac_cmd.o
-
+*.txt*save_*
 
