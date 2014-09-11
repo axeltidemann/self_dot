@@ -44,6 +44,7 @@ def weightedSum(a_, weightA_, b_, weightB_):
     itemsB = [b[i][0] for i in range(len(b))]
     scoreA = scale([float(a[i][1]) for i in range(len(a))],weightA)
     scoreB = scale([float(b[i][1]) for i in range(len(b))],weightB)
+    print 'weightedSum', min(scoreA), max(scoreA), min(scoreB), max(scoreB)
     removeFromB = set()
     for i in range(len(itemsA)):
         itemA = itemsA[i]
@@ -89,6 +90,7 @@ def boundedSum(a_, weightA_, b_, weightB_):
     itemsB = [b[i][0] for i in range(len(b))]
     scoreA = clip([float(a[i][1]) for i in range(len(a))],weightA)
     scoreB = clip([float(b[i][1]) for i in range(len(b))],weightB)
+    print 'boundedSum', min(scoreA), max(scoreA), min(scoreB), max(scoreB)
     removeFromB = set()
     for i in range(len(itemsA)):
         itemA = itemsA[i]
@@ -145,6 +147,7 @@ def weightedMultiply(a_, weightA_, b_, weightB_):
     itemsB = [b[i][0] for i in range(len(b))]
     scoreA = scale([float(a[i][1]) for i in range(len(a))],weightA)
     scoreB = scale([float(b[i][1]) for i in range(len(b))],weightB)
+    print 'weightedMultiply', min(scoreA), max(scoreA), min(scoreB), max(scoreB)
     removeFromB = set()
     for i in range(len(itemsA)):
         itemA = itemsA[i]
@@ -191,7 +194,7 @@ def weightedMultiplySqrt(a_, weightA_, b_, weightB_):
     itemsB = [b[i][0] for i in range(len(b))]
     scoreA = scale([float(a[i][1]) for i in range(len(a))],weightA)
     scoreB = scale([float(b[i][1]) for i in range(len(b))],weightB)
-
+    print 'wMultiplySqrt', min(scoreA), max(scoreA), min(scoreB), max(scoreB)
     removeFromB = set()
     for i in range(len(itemsA)):
         itemA = itemsA[i]
@@ -239,6 +242,7 @@ def select(items, method):
     scores = [items[i][1] for i in range(len(items))]
     #print 'select', items
     #print 'select item', scores.index(max(scores))
+    print 'select max:', max(scores), min(scores)
     if method == 'highest':
         return words[scores.index(max(scores))]
     elif method == 'lowest':
@@ -416,17 +420,21 @@ if __name__ == '__main__':
     #    testSentence('add', 0.3, 0.1, 0.2, 0.7, 0.0, 5.0) 
     #... and also (but differently) here
     #    testSentence('add', 0.8, 0.0, 0.0, 0.0, 0.1, 5.0) 
+
+    testSentence('add', 0.8, 0.1, 0.1, 0.1, 0.1, 5.0) 
     
     ## TEST BOUNDED ADD
     #neighborsWeight, wordsInSentenceWeight, similarWordsWeight, timeBeforeWeight, timeAfterWeight, timeDistance
-    #testSentence('boundedAdd', 0.0, 0.6, 0.3) 
+    #testSentence('boundedAdd', 0.0, 0.0, 0.1, 0.1, 0.0, 5.0) 
+    #testSentence('boundedAdd', 0.1, 0.1, 0.1, 0.1, 0.9, 5.0) 
     
     ## TEST MULTIPLY
     #neighborsWeight, wordsInSentenceWeight, similarWordsWeight, timeBeforeWeight, timeAfterWeight, timeDistance
-    #testSentence('multiply', 0.9, 0.0, 0.000000000000001) 
+    #testSentence('multiply', 0.1, 0.1, 0.1, 0.2, 0.5, 5.0) 
+    # overall, multiply produce less variation, more abrupt (crisp) changes
     
     ## TEST MULTIPLY SQRT
     #neighborsWeight, wordsInSentenceWeight, similarWordsWeight, timeBeforeWeight, timeAfterWeight, timeDistance
-    #testSentence('multiplySqrt', 0.9, 0.000001, 0.0) 
+    #testSentence('multiplySqrt', 0.1, 0.1, 0.1, 0.1, 0.1, 5.0) 
     
     #testMerge()
