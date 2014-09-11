@@ -261,6 +261,7 @@ def getTimeContext(predicate, distance):
     for how far in time from the predicate each word has occured.
     '''
     timeWhenUsed = l.wordTime[predicate]
+    #print '\ntimeWhenUsed', predicate, l.wordTime[predicate]
     quantize = 0.01
     iquantize = 1/quantize
     timeContextBefore = []
@@ -270,28 +271,31 @@ def getTimeContext(predicate, distance):
         endIndex = -1
         for i in range(len(l.time_word)):
             if (l.time_word[i][0] > (t-distance)) and (startIndex == -1):
+                #startTime = l.time_word[i][0] #debug
                 startIndex = i
             if (l.time_word[i][0] > (t+distance)):
+                #endTime = l.time_word[i][0] #debug
                 endIndex = i
                 break
-        #print 'start', startIndex, 'end', endIndex
+        #print '\nstart', startIndex, startTime, 'end', endIndex, endTime
         if startIndex == -1: startIndex = 0
         if endIndex == -1: endIndex = len(l.time_word)
         for j in range(startIndex, endIndex):
+            #print 'j in range', l.time_word[j], t
             if l.time_word[j][0]-t > 0 : # do not include the query word
                 timeContextAfter.append(((int(l.time_word[j][0]*iquantize)-int(t*iquantize)),l.time_word[j][1]))
             if l.time_word[j][0]-t < 0 : # do not include the query word
                 timeContextBefore.append((int(t*iquantize)-(int(l.time_word[j][0]*iquantize)),l.time_word[j][1]))
-        #print 'timeContext', timeContextBefore, '***', timeContextAfter
+        #print '\ngetTimeContext', timeContextAfter
     if len(timeContextBefore) > 0:
         s_timeContextBefore = set(timeContextBefore)
         l_timeContextBefore = list(s_timeContextBefore)
         l_timeContextBefore.sort()
-        maxvalBefore = l_timeContextBefore[-1][0]
+        #maxvalBefore = l_timeContextBefore[-1][0]
         #print 'maxvalBefore', maxvalBefore
         invertedTimeContextBefore = []
         for item in l_timeContextBefore:
-            invTime = (distance-item[0]*quantize)/float(distance*quantize)
+            invTime = (distance-item[0]*quantize)#/float(distance*quantize)
             #if invTime < 0: invTime = 0
             invertedTimeContextBefore.append([item[1], invTime])
     else: invertedTimeContextBefore = []
@@ -299,11 +303,12 @@ def getTimeContext(predicate, distance):
         s_timeContextAfter = set(timeContextAfter)
         l_timeContextAfter = list(s_timeContextAfter)
         l_timeContextAfter.sort()
-        maxvalAfter = l_timeContextAfter[-1][0]
+        #maxvalAfter = l_timeContextAfter[-1][0]
         #print 'maxvalAfter', maxvalAfter
         invertedTimeContextAfter = []
         for item in l_timeContextAfter:
-            invTime = (distance-item[0]*quantize)/float(distance*quantize)
+            invTime = (distance-item[0]*quantize)#/float(distance*quantize)
+            #print 'invTime', item, invTime
             #if invTime < 0: invTime = 0
             invertedTimeContextAfter.append([item[1], invTime])
     else: invertedTimeContextAfter = []
@@ -327,7 +332,9 @@ def generate(predicate, method, neighborsWeight, wordsInSentenceWeight, similarW
     similarWords = normalize(copy.copy(l.similarWords[predicate]))
     timeContextBefore, timeContextAfter = getTimeContext(predicate, timeDistance) 
     #print '\n\ncontextBefore', timeContextBefore
-    #print '\n\ncontextAfter', timeContextAfter
+    print '\n\ncontextAfter', 
+    for item in timeContextAfter:
+        print item
     if method == 'multiply':
         temp = weightedMultiply(neighbors, neighborsWeight, wordsInSentence, wordsInSentenceWeight)
         temp = weightedMultiply(temp, 1.0, similarWords, similarWordsWeight)
@@ -359,11 +366,11 @@ def generate(predicate, method, neighborsWeight, wordsInSentenceWeight, similarW
     return nextWord
     
 def testSentence(method, neighborsWeight, wordsInSentenceWeight, similarWordsWeight, timeBeforeWeight, timeAfterWeight, timeDistance):
-    l.importFromFile('association_test_db_full.txt', 1)#minimal_db.txt')#roads_articulation_db.txt')#
+    l.importFromFile('association_test_db_short.txt', 1)#association_test_db_full.txt', 1)#minimal_db.txt')#roads_articulation_db.txt')#
     predicate = 'to'#'parents'#random.choice(list(l.words))
     print 'predicate', predicate
     sentence = [predicate]
-    for i in range(8):
+    for i in range(1):
         predicate = generate(predicate, method, neighborsWeight, wordsInSentenceWeight, similarWordsWeight, timeBeforeWeight, timeAfterWeight, timeDistance)
         sentence.append(predicate)
     print 'sentence', sentence
