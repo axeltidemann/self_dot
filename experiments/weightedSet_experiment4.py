@@ -90,7 +90,7 @@ def boundedSum(a_, weightA_, b_, weightB_):
     itemsB = [b[i][0] for i in range(len(b))]
     scoreA = clip([float(a[i][1]) for i in range(len(a))],weightA)
     scoreB = clip([float(b[i][1]) for i in range(len(b))],weightB)
-    print 'boundedSum', min(scoreA), max(scoreA), min(scoreB), max(scoreB)
+    #print 'boundedSum', min(scoreA), max(scoreA), min(scoreB), max(scoreB)
     removeFromB = set()
     for i in range(len(itemsA)):
         itemA = itemsA[i]
@@ -147,7 +147,7 @@ def weightedMultiply(a_, weightA_, b_, weightB_):
     itemsB = [b[i][0] for i in range(len(b))]
     scoreA = scale([float(a[i][1]) for i in range(len(a))],weightA)
     scoreB = scale([float(b[i][1]) for i in range(len(b))],weightB)
-    print 'weightedMultiply', min(scoreA), max(scoreA), min(scoreB), max(scoreB)
+    #print 'weightedMultiply', min(scoreA), max(scoreA), min(scoreB), max(scoreB)
     removeFromB = set()
     for i in range(len(itemsA)):
         itemA = itemsA[i]
@@ -170,6 +170,7 @@ def weightedMultiply(a_, weightA_, b_, weightB_):
         gone = b.pop(i)
     for i in range(len(b)):
         c.append([b[i][0], defaultScale(b[i][1]*weightB)])
+    c = normalizeItemScore(c) # to avoid accumulatively less weight when merging more tthan two sets
     return c
 
 def weightedMultiplySqrt(a_, weightA_, b_, weightB_):
@@ -194,7 +195,7 @@ def weightedMultiplySqrt(a_, weightA_, b_, weightB_):
     itemsB = [b[i][0] for i in range(len(b))]
     scoreA = scale([float(a[i][1]) for i in range(len(a))],weightA)
     scoreB = scale([float(b[i][1]) for i in range(len(b))],weightB)
-    print 'wMultiplySqrt', min(scoreA), max(scoreA), min(scoreB), max(scoreB)
+    #print 'wMultiplySqrt', min(scoreA), max(scoreA), min(scoreB), max(scoreB)
     removeFromB = set()
     for i in range(len(itemsA)):
         itemA = itemsA[i]
@@ -217,6 +218,7 @@ def weightedMultiplySqrt(a_, weightA_, b_, weightB_):
         gone = b.pop(i)
     for i in range(len(b)):
         c.append([b[i][0], b[i][1]*0.5])
+    c = normalizeItemScore(c) # to avoid accumulatively less weight when merging more tthan two sets
     return c
 
 def normalize(a):
@@ -403,37 +405,30 @@ if __name__ == '__main__':
     '''
     ## TEST ADD
     #neighborsWeight, wordsInSentenceWeight, similarWordsWeight, timeBeforeWeight, timeAfterWeight, timeDistance
-    # timeAfterWeight needs to be higher (x2) than neighborsWeight to incluence equally
-    # wordsInSentenceWeight seems to rule when over 0.1
-    # similarWordsWeight does nothing useful in this context:
-    #    testSentence('add', 0.4, 0.1, 1.1, 0.0, 0.9, 5.0) 
-    #... but it contributes nicely here
-    #    testSentence('add', 0.0, 0.0, 0.8, 0.0, 0.4, 5.0) 
-    # timeBeforeWeight does nothing useful in this context:
-    #   testSentence('add', 0.4, 0.1, 0.0, 0.02, 0.9, 5.0) 
-    # wordsInSentenceWeight does nothing useful in this context:
-    #    testSentence('add', 0.0, 0.01, 0.4, 0.0, 0.2, 5.0) 
-    #... but it contributes nicely here
-    #    testSentence('add', 0.0, 0.1, 0.2, 0.7, 0.0, 5.0) 
-    # neighborsWeight does behave very stepwise in this context:
-    #    testSentence('add', 0.3, 0.1, 0.2, 0.7, 0.0, 5.0) 
-    #... and also (but differently) here
-    #    testSentence('add', 0.8, 0.0, 0.0, 0.0, 0.1, 5.0) 
-
-    testSentence('add', 0.1, 0.6, 0.2, 0.1, 0.8, 5.0) 
+    # OK example
+    #testSentence('add', 0.0, 0.0, 0.2, 0.0, 1.0, 5.0) 
+    # careful neighborsWeight must be quite low, or it will create repetitive output 
+    #testSentence('add', 0.1, 0.0, 0.2, 0.0, 1.0, 5.0) 
+    # the same, even more so, applies to wordsInSentenceWeight
+    #testSentence('add', 0.0, 0.1, 0.2, 0.0, 1.0, 5.0) 
+    # the same also applies to timeBeforeWeight
+    #testSentence('add', 0.0, 0.0, 0.2, 0.1, 1.0, 5.0) 
     
     ## TEST BOUNDED ADD
     #neighborsWeight, wordsInSentenceWeight, similarWordsWeight, timeBeforeWeight, timeAfterWeight, timeDistance
-    #testSentence('boundedAdd', 0.0, 0.0, 0.1, 0.1, 0.0, 5.0) 
+    #testSentence('boundedAdd', 0.0, 0.0, 0.1, 0.1, 0.0, 5.0) # moves backwards in time
     #testSentence('boundedAdd', 0.1, 0.1, 0.1, 0.1, 0.9, 5.0) 
+    #testSentence('boundedAdd', 0.4, 0.1, 0.1, 0.1, 0.9, 5.0) 
+    #testSentence('boundedAdd', 0.1, 0.4, 0.1, 0.1, 0.9, 5.0) 
     
     ## TEST MULTIPLY
     #neighborsWeight, wordsInSentenceWeight, similarWordsWeight, timeBeforeWeight, timeAfterWeight, timeDistance
-    #testSentence('multiply', 0.1, 0.1, 0.1, 0.2, 0.5, 5.0) 
-    # overall, multiply produce less variation, more abrupt (crisp) changes
+    #testSentence('multiply', 0.7, 0.2, 0.1, 0.0, 0.5, 5.0) 
+    # overall, multiply is more sensitive to specific weighting, more difficult, less intuitive weights
     
     ## TEST MULTIPLY SQRT
     #neighborsWeight, wordsInSentenceWeight, similarWordsWeight, timeBeforeWeight, timeAfterWeight, timeDistance
-    #testSentence('multiplySqrt', 0.1, 0.1, 0.1, 0.1, 0.1, 5.0) 
+    #testSentence('multiplySqrt', 0.1, 0.1, 0.7, 0.1, 0.5, 5.0) 
+    # overall, multiply is more sensitive to specific weighting, more difficult, less intuitive weights
     
     #testMerge()
