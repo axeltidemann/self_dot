@@ -261,7 +261,6 @@ def getTimeContext(predicate, distance):
     for how far in time from the predicate each word has occured.
     '''
     timeWhenUsed = l.wordTime[predicate]
-    #print '\ntimeWhenUsed', predicate, l.wordTime[predicate]
     quantize = 0.01
     iquantize = 1/quantize
     timeContextBefore = []
@@ -271,45 +270,33 @@ def getTimeContext(predicate, distance):
         endIndex = -1
         for i in range(len(l.time_word)):
             if (l.time_word[i][0] > (t-distance)) and (startIndex == -1):
-                #startTime = l.time_word[i][0] #debug
                 startIndex = i
             if (l.time_word[i][0] > (t+distance)):
-                #endTime = l.time_word[i][0] #debug
                 endIndex = i
                 break
-        #print '\nstart', startIndex, startTime, 'end', endIndex, endTime
         if startIndex == -1: startIndex = 0
         if endIndex == -1: endIndex = len(l.time_word)
         for j in range(startIndex, endIndex):
-            #print 'j in range', l.time_word[j], t
             if l.time_word[j][0]-t > 0 : # do not include the query word
                 timeContextAfter.append(((int(l.time_word[j][0]*iquantize)-int(t*iquantize)),l.time_word[j][1]))
             if l.time_word[j][0]-t < 0 : # do not include the query word
                 timeContextBefore.append((int(t*iquantize)-(int(l.time_word[j][0]*iquantize)),l.time_word[j][1]))
-        #print '\ngetTimeContext', timeContextAfter
     if len(timeContextBefore) > 0:
         s_timeContextBefore = set(timeContextBefore)
         l_timeContextBefore = list(s_timeContextBefore)
         l_timeContextBefore.sort()
-        #maxvalBefore = l_timeContextBefore[-1][0]
-        #print 'maxvalBefore', maxvalBefore
         invertedTimeContextBefore = []
         for item in l_timeContextBefore:
-            invTime = (distance-item[0]*quantize)#/float(distance*quantize)
-            #if invTime < 0: invTime = 0
+            invTime = (distance-item[0]*quantize)
             invertedTimeContextBefore.append([item[1], invTime])
     else: invertedTimeContextBefore = []
     if len(timeContextAfter) > 0:
         s_timeContextAfter = set(timeContextAfter)
         l_timeContextAfter = list(s_timeContextAfter)
         l_timeContextAfter.sort()
-        #maxvalAfter = l_timeContextAfter[-1][0]
-        #print 'maxvalAfter', maxvalAfter
         invertedTimeContextAfter = []
         for item in l_timeContextAfter:
-            invTime = (distance-item[0]*quantize)#/float(distance*quantize)
-            #print 'invTime', item, invTime
-            #if invTime < 0: invTime = 0
+            invTime = (distance-item[0]*quantize)
             invertedTimeContextAfter.append([item[1], invTime])
     else: invertedTimeContextAfter = []
     return invertedTimeContextBefore, invertedTimeContextAfter
