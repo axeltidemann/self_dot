@@ -243,9 +243,11 @@ def scale(a, scale):
     return a
 
 def clip(a, clipVal):
-    a = list(numpy.clip(a, 0, clipVal))
+    if clipVal >= 0:
+        a = list(numpy.clip(a, 0, clipVal))
+    else:
+        a = list(numpy.array(numpy.clip(a, 0, abs(clipVal)))*-1)
     return a
-
 
 def select(items, method):
     words = [items[i][0] for i in range(len(items))]
@@ -411,7 +413,6 @@ if __name__ == '__main__':
     #            0.0, 0.3, 5.0, 
     #            0.3, 0.0)     
     predicate = 'to'
-    
     ## TEST BOUNDED ADD
     print '\n***identical result (zeroing the time varying parameters)'
     testSentence(predicate, 8, 'boundedAdd', 0.04, 0.0, 0.3, 
@@ -441,14 +442,11 @@ if __name__ == '__main__':
                 'boundedAdd', 0.0, 0.0, 0.9, 
                 0.0, 0.0, 5.0, 
                 0.0, 0.0)     
-    
-    '''
-    # try to allow for negative weights too
-    testSentence(predicate, 2, 'boundedAdd', -0.1, 0.0, 0.0, 
-                0.0, 0.0, 5.0, 
+    print '\n*** think of something NOT similar'
+    testSentence(predicate, 8, 'boundedAdd', 0.2, 0.1, 0.1, 
+                0.0, 0.8, 5.0, 
                 0.0, 0.0,
-                'boundedAdd', -0.1, 0.0, 0.0, 
+                'boundedAdd', 0.0, 0.0, -0.9, 
                 0.0, 0.0, 5.0, 
                 0.0, 0.0)     
-    '''
     
