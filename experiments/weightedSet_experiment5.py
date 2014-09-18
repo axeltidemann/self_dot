@@ -22,6 +22,7 @@ import copy
 import numpy
 import math
 import loadDbWeightedSet as l
+import time
 
 
 def weightedSum(a_, weightA_, b_, weightB_):
@@ -310,7 +311,18 @@ def getTimeContext(predicate, distance):
     else: invertedTimeContextAfter = []
     return invertedTimeContextBefore, invertedTimeContextAfter
     
-
+def getCandidatesFromContext(context, position, width):
+    candidates = []
+    for item in context:
+        if item[0] < position-width:
+            continue
+        if item[0] <= position+width:
+            membership = 1-(abs(position-item[0])/float(width))
+            candidates.append([item[1], membership])
+        else:
+            break
+    return candidates
+        
 def testgenerate(predicate, method, neighborsWeight, wordsInSentenceWeight, similarWordsWeight, timeBeforeWeight, timeAfterWeight, timeDistance):
     # get the lists we need
     neighbors = l.neighbors[predicate]
@@ -321,7 +333,7 @@ def testgenerate(predicate, method, neighborsWeight, wordsInSentenceWeight, simi
     return temp
 
 
-def generate(predicate, method, neighborsWeight, wordsInSentenceWeight, similarWordsWeight, timeBeforeWeight, timeAfterWeight, timeDistance):
+def generate(predicate, method, neighborsWeight, wordsInSentenceWeight, similarWordsWeight, timeBeforeWeight, timeAfterWeight, timeDistance, posInSentenceWeight, durationWeight):
     # get the lists we need
     neighbors = normalizeItemScore(copy.copy(l.neighbors[predicate]))
     wordsInSentence = normalizeItemScore(copy.copy(l.wordsInSentence[predicate]))
@@ -329,53 +341,60 @@ def generate(predicate, method, neighborsWeight, wordsInSentenceWeight, similarW
     timeContextBefore, timeContextAfter = getTimeContext(predicate, timeDistance) 
     timeContextBefore = normalizeItemScore(timeContextBefore)
     timeContextAfter = normalizeItemScore(timeContextAfter)
-    if method == 'multiply':
-        temp = weightedMultiply(neighbors, neighborsWeight, wordsInSentence, wordsInSentenceWeight)
-        temp = weightedMultiply(temp, 1.0, similarWords, similarWordsWeight)
-        if len(timeContextBefore) > 0:
-            temp = weightedMultiply(temp, 1.0, timeContextBefore, timeBeforeWeight)
-        if len(timeContextAfter) > 0:
-            temp = weightedMultiply(temp, 1.0, timeContextAfter, timeAfterWeight)
-    if method == 'multiplySqrt':
-        temp = weightedMultiplySqrt(neighbors, neighborsWeight, wordsInSentence, wordsInSentenceWeight)
-        temp = weightedMultiplySqrt(temp, 1.0, similarWords, similarWordsWeight)
-        if len(timeContextBefore) > 0:
-            temp = weightedMultiplySqrt(temp, 1.0, timeContextBefore, timeBeforeWeight)
-        if len(timeContextAfter) > 0:
-            temp = weightedMultiplySqrt(temp, 1.0, timeContextAfter, timeAfterWeight)
+    posInSentence = 0.2
+    posInSentenceWidth = 0.3
+    posInSentenceContext = getCandidatesFromContext(l.sentencePosition_item, posInSentence, posInSentenceWidth)
+    preferredDuration = 4  
+    preferredDurationWidth = 2
+    durationContext = getCandidatesFromContext(l.duration_item, posInSentence, preferredDurationWidth)
     if method == 'add':
         temp = weightedSum(neighbors, neighborsWeight, wordsInSentence, wordsInSentenceWeight)
         temp = weightedSum(temp, 1.0, similarWords, similarWordsWeight)
         temp = weightedSum(temp, 1.0, timeContextBefore, timeBeforeWeight)
         temp = weightedSum(temp, 1.0, timeContextAfter, timeAfterWeight)
+        temp = weightedSum(temp, 1.0, posInSentenceContext, posInSentenceWeight)
+        temp = weightedSum(temp, 1.0, durationContext, durationWeight)
     if method == 'boundedAdd':
         temp = boundedSum(neighbors, neighborsWeight, wordsInSentence, wordsInSentenceWeight)
+        #print '\n*', temp
         temp = boundedSum(temp, 1.0, similarWords, similarWordsWeight)
+        #print '\n*', temp
         if len(timeContextBefore) > 0:
             temp = boundedSum(temp, 1.0, timeContextBefore, timeBeforeWeight)
+            #print '\n*', temp
         if len(timeContextAfter) > 0:
             temp = boundedSum(temp, 1.0, timeContextAfter, timeAfterWeight)
+            #print '\n*', temp
+        temp = boundedSum(temp, 1.0, posInSentenceContext, posInSentenceWeight)
+        #print '\n**pos', posInSentenceContext
+        #print '\n*', temp
+        temp = boundedSum(temp, 1.0, durationContext, durationWeight)
+        #print '\n**dur', durationContext
+        #print '\n*', temp
     # select the one with the highest score
     nextWord = select(temp, 'highest')
     return nextWord
     
-def testSentence(method, neighborsWeight, wordsInSentenceWeight, similarWordsWeight, timeBeforeWeight, timeAfterWeight, timeDistance):
+def testSentence(method, neighborsWeight, wordsInSentenceWeight, similarWordsWeight, timeBeforeWeight, timeAfterWeight, timeDistance, posInSentenceWeight, durationWeight):
     l.importFromFile('association_test_db_short.txt', 1)#association_test_db_full.txt', 1)#minimal_db.txt')#roads_articulation_db.txt')#
     predicate = 'to'#'parents'#random.choice(list(l.words))
     print 'predicate', predicate
     sentence = [predicate]
-    for i in range(8):
-        predicate = generate(predicate, method, neighborsWeight, wordsInSentenceWeight, similarWordsWeight, timeBeforeWeight, timeAfterWeight, timeDistance)
+    timeThen = time.time()
+    numWords = 8
+    for i in range(numWords):
+        predicate = generate(predicate, method, neighborsWeight, wordsInSentenceWeight, similarWordsWeight, timeBeforeWeight, timeAfterWeight, timeDistance, posInSentenceWeight, durationWeight)
         sentence.append(predicate)
     print 'sentence', sentence
+    print 'processing time for %i words: %f secs'%(numWords, time.time() - timeThen)
 
 def testMerge():
     a = [['world', 1.0],['you', 0.5], ['there', 0.3],['near', 0.5]] #near only exist in this set
     b = [['world', 0.3],['you', 1.0], ['there', 0.2],['here', 0.8],['nowhere',0.1]] #here and nowhere only exist in this set
     c = [['world', 1.0],['you', 0.5], ['were', 0.4]] #were only exist in this set, and here is not here
     d = [['world', 1.0],['you', 0.5], ['were', 0.4], ['world', 0.1]] #as c but with a duplicate 'world'
-    methods = [weightedSum, boundedSum, weightedMultiply, weightedMultiplySqrt]
-    labels = ['weightedSum', 'boundedSum', 'weightedMultiply', 'weightedMultiplySqrt']
+    methods = [weightedSum, boundedSum]
+    labels = ['weightedSum', 'boundedSum']
     weightA = 0.5
     weightB = 0.5
     weightC = 0.5
@@ -404,31 +423,34 @@ if __name__ == '__main__':
     print t
     '''
     ## TEST ADD
-    #neighborsWeight, wordsInSentenceWeight, similarWordsWeight, timeBeforeWeight, timeAfterWeight, timeDistance
+    #neighborsWeight, wordsInSentenceWeight, similarWordsWeight, timeBeforeWeight, timeAfterWeight, timeDistance, posInSentenceWeight, durationWeight
     # OK example
-    #testSentence('add', 0.0, 0.0, 0.2, 0.0, 1.0, 5.0) 
+    #testSentence('add', 0.0, 0.0, 0.2, 0.0, 1.0, 5.0, 0.0, 0.0) 
     # careful neighborsWeight must be quite low, or it will create repetitive output 
-    #testSentence('add', 0.1, 0.0, 0.2, 0.0, 1.0, 5.0) 
+    #testSentence('add', 0.1, 0.0, 0.2, 0.0, 1.0, 5.0, 0.0, 0.0) 
     # the same, even more so, applies to wordsInSentenceWeight
-    #testSentence('add', 0.0, 0.1, 0.2, 0.0, 1.0, 5.0) 
+    #testSentence('add', 0.0, 0.1, 0.2, 0.0, 1.0, 5.0, 0.0, 0.0) 
     # the same also applies to timeBeforeWeight
-    #testSentence('add', 0.0, 0.0, 0.2, 0.1, 1.0, 5.0) 
+    #testSentence('add', 0.0, 0.0, 0.2, 0.1, 1.0, 5.0, 0.0, 0.0) 
+    #testSentence('add', 0.1, 0.2, 0.0, 0.0, 0.7, 5.0, 0.1, 0.0) # posInSentenceWeight seems ok
+    testSentence('add', 0.0, 0.2, 0.2, 0.0, 0.7, 5.0, 0.0, 0.4) # # durationWeight seems ok
+
     
     ## TEST BOUNDED ADD
-    #neighborsWeight, wordsInSentenceWeight, similarWordsWeight, timeBeforeWeight, timeAfterWeight, timeDistance
-    #testSentence('boundedAdd', 0.0, 0.0, 0.1, 0.1, 0.0, 5.0) # moves backwards in time
-    #testSentence('boundedAdd', 0.1, 0.1, 0.1, 0.1, 0.9, 5.0) 
-    #testSentence('boundedAdd', 0.4, 0.1, 0.1, 0.1, 0.9, 5.0) 
-    testSentence('boundedAdd', 0.1, 0.4, 0.1, 0.1, 0.9, 5.0) 
-    
-    ## TEST MULTIPLY
-    #neighborsWeight, wordsInSentenceWeight, similarWordsWeight, timeBeforeWeight, timeAfterWeight, timeDistance
-    #testSentence('multiply', 0.7, 0.2, 0.1, 0.0, 0.5, 5.0) 
-    # overall, multiply is more sensitive to specific weighting, more difficult, less intuitive weights
-    
-    ## TEST MULTIPLY SQRT
-    #neighborsWeight, wordsInSentenceWeight, similarWordsWeight, timeBeforeWeight, timeAfterWeight, timeDistance
-    #testSentence('multiplySqrt', 0.1, 0.1, 0.7, 0.1, 0.5, 5.0) 
-    # overall, multiply is more sensitive to specific weighting, more difficult, less intuitive weights
+    #neighborsWeight, wordsInSentenceWeight, similarWordsWeight, timeBeforeWeight, timeAfterWeight, timeDistance, posInSentenceWeight, durationWeight
+    #testSentence('boundedAdd', 0.0, 0.0, 0.0, 0.0, 0.0, 5.0, 0.0, 0.0) 
+    #testSentence('boundedAdd', 0.0, 0.0, 0.1, 0.1, 0.0, 5.0, 0.0, 0.0) # moves backwards in time
+    #testSentence('boundedAdd', 0.1, 0.1, 0.1, 0.1, 0.9, 5.0, 0.0, 0.0) 
+    #testSentence('boundedAdd', 0.4, 0.1, 0.1, 0.1, 0.9, 5.0, 0.0, 0.0) 
+    #testSentence('boundedAdd', 0.1, 0.4, 0.1, 0.1, 0.9, 5.0, 0.0, 0.0) 
+    #testSentence('boundedAdd', 0.1, 0.1, 0.1, 0.1, 0.9, 5.0, 0.0, 0.000000000000001) # durationWeight seems overly sensitive, possibly interaction between different dimensions, (available choices)
+    #testSentence('boundedAdd', 0.1, 0.1, 0.1, 0.1, 0.9, 5.0, 0.05, 0.0) # posInSentenceWeight seems ok 
     
     #testMerge()
+    '''
+    l.importFromFile('minimal_db.txt', 0)#roads_articulation_db.txt')#
+    context = l.sentencePosition_item
+    print 'context', context
+    candidates = getCandidatesFromContext(context, 0.6, 0.4)
+    print 'candidates', candidates
+    '''

@@ -100,19 +100,39 @@ def updateTimeLists(sentence):
 
 
 duration_item = []
+#durationMembership = {}
+#durationTypes = [['very short',0.5,1.0],  ['short',2.0,2.0] , ['medium',5.0,3.0], ['long', 10.0, 4.0], ['very long', 15.0, 6.0]] 
+#durationTypes format: [type, duration for this type, width of this category]
+#for typ in [item[0] for item in durationTypes]:
+#    durationMembership[typ] = []
+
 def updateWordDur(sentence):
-    #global duration_item
+    global duration_item#, durationMembership
     for word in sentence:
         duration_item.append((len(word), word))
+    #print 'duration_item', duration_item
     duration_item = list(set(duration_item))
     duration_item.sort()
+    '''
+    for typ, center, width in durationTypes:
+        for dur,item in duration_item:    
+            if dur > (center+width): break
+            if abs(center-dur) > width: continue
+            membership = 1-(abs(center-dur)/float(width))
+            durationMembership[typ].append((membership,item))
+    for k,v in durationMembership.iteritems():
+        v1 = list(set(v))
+        v1.sort()
+        durationMembership[k]=v1
+    '''
     
 # give each word a score for how much it belongs in the beginning of a sentence or in the end of a sentence   
+# a  word may have high membership in both quality dimensions
 # The resulting list here just gives the position (= the score for belonging in the end of a sentence).
 # The score for membership in the beginning of a sentence is simply (1-endscore)
 sentencePosition_item = []
 def updatePositionMembership(sentence):
-    #global sentencePosition_item
+    global sentencePosition_item
     lenSent = len(sentence)
     for i in range(lenSent):
         position = int((i/float(lenSent-1))*10)/10.0
@@ -145,6 +165,9 @@ def importFromFile(filename, useSavedAnalysis=1):
                 updateTimeLists(sentence)
                 updateWordDur(sentence)
                 updatePositionMembership(sentence)
+                #print 'positionMembership', positionMembership_score_item
+                #print 'wordsInSentence', wordsInSentence
+                #print 'duration_item', duration_item
         saveToFile(filename)
 
 def saveToFile(filename):
@@ -156,10 +179,12 @@ def saveToFile(filename):
     pickle.dump(time_word, open(filename+'_1save_time_word.sav', 'wb'))
     pickle.dump(wordTime, open(filename+'_1save_wordTime.sav', 'wb'))
     pickle.dump(duration_item, open(filename+'_1save_duration_item.sav', 'wb'))
-    pickle.dump(sentencePosition_item, open(filename+'_1save_sentencePosition_item.sav', 'wb'))
+    pickle.dump(durationMembership, open(filename+'_1save_durationMembership.sav', 'wb'))
+    #pickle.dump(positionMembership, open(filename+'_1save_posMembership.sav', 'wb'))
+    pickle.dump(positionMembership_score_item, open(filename+'_1save_posMembership_s_i.sav', 'wb'))
 
 def loadFromFile(filename):
-    global words, wordsInSentence, similarWords, neighbors, neighborAfter, time_word, wordTime, duration_item,sentencePosition_item
+    global words, wordsInSentence, similarWords, neighbors, neighborAfter, time_word, wordTime
     words = pickle.load(open(filename+'_1save_words.sav', 'rb'))
     wordsInSentence = pickle.load(open(filename+'_1save_wordsInSentence.sav', 'rb'))
     similarWords = pickle.load(open(filename+'_1save_similarWords.sav', 'rb'))
@@ -168,12 +193,38 @@ def loadFromFile(filename):
     time_word = pickle.load(open(filename+'_1save_time_word.sav', 'rb'))
     wordTime = pickle.load(open(filename+'_1save_wordTime.sav', 'rb'))
     duration_item = pickle.load(open(filename+'_1save_duration_item.sav', 'rb'))
-    sentencePosition_item = pickle.load(open(filename+'_1save_sentencePosition_item.sav', 'rb'))
+    durationMembership = pickle.load(open(filename+'_1save_durationMembership.sav', 'rb'))
+    #positionMembership = pickle.load(open(filename+'_1save_posMembership.sav', 'rb'))
+    positionMembership_score_item = pickle.load(open(filename+'_1save_posMembership_s_i.sav', 'rb'))
 
             
 if __name__ == '__main__':
     timeThen = time.time()    
-    importFromFile('minimal_db.txt', 1)#association_test_db_short.txt', 0)#minimal_db.txt', 0) #association_test_db_full.txt')#
-    print sentencePosition_item
-    print time_word
+    importFromFile('minimal_db.txt', 0)#association_test_db_short.txt', 0)#minimal_db.txt', 0) #association_test_db_full.txt')#
     print 'processing time: %.1f ms'%((time.time()-timeThen)*1000)
+    #for word in words:
+    #    print word
+    #print wordsInSentence
+    ''''
+    print '\nneighbors'
+    for k,v, in neighbors.iteritems():
+        print k,v
+    print '\nneighborAfter'
+    for k,v, in neighborAfter.iteritems():
+        print k,v
+    '''
+    '''
+    print '\ntime_word'
+    for item in time_word:
+        print item
+    print '\nwordTime'
+    for k,v in wordTime.iteritems():
+        print k,v
+    '''
+    '''
+    updateSimilarWords(words) # this should be run again as maintenance (dream state), as it is only partially complete in realtime
+    print '*** again ***'
+    for k,v in similarWords.iteritems():
+        print '***'
+        print k,v
+    '''
