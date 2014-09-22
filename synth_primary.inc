@@ -77,3 +77,28 @@
 	aout		pvsynth	fsin				;and resynth
 			chnmix aout, "MasterOut1"
 	endin
+
+; ******************************
+; partikkel instr, file playback 
+	instr 55  
+
+	Ssound	strget p4
+        ilen    filelen Ssound
+        print ilen
+        if p3 == 0 then
+        p3 = ilen
+        endif
+        Sscoreline      sprintf "i 56 0 %f \"", p3
+        Sscoreline      strcat Sscoreline, Ssound
+        Sscoreline      strcat Sscoreline, "\""
+        puts Sscoreline, 1
+                        scoreline_i Sscoreline
+        endin
+        
+        instr 56
+	Ssound	strget p4
+        iSound  ftgentmp 0, 0, 0, 1, Ssound, 0,0,0
+#include "partikkel1_chn.inc"
+#include "partikkel1_self.inc"
+			chnmix a1, "MasterOut1"
+	endin

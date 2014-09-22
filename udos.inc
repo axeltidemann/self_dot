@@ -51,3 +51,21 @@
 	xout ktrig, kdiff
 	endop
 
+;***************************************************
+opcode FileToPvsBuf, iik, Siiii
+        ;; by joachim heintz 2009
+        ;;writes an audio file at the first k-cycle to a fft-buffer (via pvsbuffer)
+        Sfile, ifftsize, ioverlap, iwinsize, iwinshape xin
+        ktimek		timeinstk
+if ktimek == 1 then
+        ilen		filelen	Sfile
+        kcycles	        = ilen * kr; number of k-cycles to write the fft-buffer
+        kcount		init 0
+loop:
+        ain		soundin	Sfile
+        fftin		pvsanal	ain, ifftsize, ioverlap, iwinsize, iwinshape
+        ibuf, ktim	pvsbuffer fftin, ilen + (ifftsize / sr)
+	loop_lt	kcount, 1, kcycles, loop
+		        xout ibuf, ilen, ktim
+endif
+endop

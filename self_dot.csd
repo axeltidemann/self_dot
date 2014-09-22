@@ -39,6 +39,11 @@
 #include "synth_primary.inc"
 
 ; ******************************
+; instr 60-69
+; self's voice instruments
+#include "self_voices.inc"
+
+; ******************************
 ; instr 70-79
 ; Playback of secondary associations / memory images of heard sounds
 #include "synth_secondary.inc"
@@ -53,6 +58,7 @@
 <CsScore>
 ; run for N sec
 #define SCORELEN # 86400 #
+;#define SCORELEN # 5 #
 
 ;#include "testscore.inc"
 
@@ -77,6 +83,7 @@ i99 	0 $SCORELEN			; master out
 ;i2      4 1                             ; exit Csound
 ;i 70    1 1                             ; test read a segment from memoryRecording       
 ;i 74    2 1 800                         ; test play a loaded segment from memoryRecording       
+;i 55    2 0 "memory_recordings/2014_08_07_15_15_54.wav"   ; test play granular file playback
 </CsScore>
 
 </CsoundSynthesizer>
