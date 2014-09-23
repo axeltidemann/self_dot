@@ -21,8 +21,10 @@ EXTERNAL = 5566
 SNAPSHOT = 5567
 EVENT = 5568
 
-FACE_HAAR_CASCADE_PATH = os.environ['VIRTUAL_ENV'] + '/share/OpenCV/haarcascades/haarcascade_frontalface_default.xml'
-EYE_HAAR_CASCADE_PATH = os.environ['VIRTUAL_ENV'] + '/share/OpenCV/haarcascades/haarcascade_eye_tree_eyeglasses.xml'
+#FACE_HAAR_CASCADE_PATH = os.environ['VIRTUAL_ENV'] + '/share/OpenCV/haarcascades/haarcascade_frontalface_default.xml'
+#EYE_HAAR_CASCADE_PATH = os.environ['VIRTUAL_ENV'] + '/share/OpenCV/haarcascades/haarcascade_eye_tree_eyeglasses.xml'
+FACE_HAAR_CASCADE_PATH = '/usr/local' + '/share/OpenCV/haarcascades/haarcascade_frontalface_default.xml'
+EYE_HAAR_CASCADE_PATH = '/usr/local' + '/share/OpenCV/haarcascades/haarcascade_eye_tree_eyeglasses.xml'
 
 def eye():
     me = mp.current_process()
@@ -85,7 +87,7 @@ def video():
 
     subscriber = context.socket(zmq.PULL)
     subscriber.bind('tcp://*:{}'.format(PROJECTOR))
-    
+'''
     while True:
         _, frame = video_feed.read()
         frame = cv2.resize(frame, frame_size)
@@ -102,7 +104,7 @@ def video():
             cv2.imshow('Output', np.zeros((360, 640)))
 
         cv2.waitKey(100)
-
+'''
 def audio():
     me = mp.current_process()
     print me.name, 'PID', me.pid
