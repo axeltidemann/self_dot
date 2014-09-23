@@ -20,6 +20,27 @@
         krelease        release
         kactive         = 1-krelease
                         chnset kactive, "memRecActive"          ; tell Python that we're recording
+
+        ; write pitch data to a separate file
+        iPitchFn        ftgentmp 0, 0, 131072, 2, 0	; empty table
+        kcps            chnget "pitch1_ampdf"
+        kindx		init 1
+		        tablew	kcps, kindx, iPitchFn
+        kindx		= kindx + 1
+        ; write end index (length of data) to table index 0
+		        tablew	kindx, 0, iPitchFn
+        ; write table to file when instrument stops
+        istrlen         strlen Swavname
+        Spitchfile      strsub Swavname, 0, istrlen-4
+        Spitchfile      strcat Spitchfile, "_pitch.txt"
+        ksaveonce       init 1
+        if krelease > 0 then
+          if ksaveonce == 1 then
+                        ftsave 	Spitchfile, 1, iPitchFn
+          ksaveonce     = 0
+          endif
+        endif
+
 /*
 	; trigger instr events to record subsegments
 	kcount		init 0

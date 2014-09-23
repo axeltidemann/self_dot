@@ -213,6 +213,18 @@ endif
          	;pvsout  fftin1, 0 			; write signal to pvs out bus channel 0
 
 ; ***************
+; post filtering
+	kautocorr	samphold kautocorr, kgate	
+	kspread		samphold kspread, kgate
+	kurtosisM	mediank kurtosis, 6, 6
+
+	kcpsBoth	= kepochZCcps+kcps1p
+	kpzgate		= (kcentroid > 6000 ? 0 : 1)
+	kepochZCcps	samphold kepochZCcps, kpzgate
+*/
+
+/*
+; ***************
 ; pitch tracking
 ; using two different methods, keeping both signals
 ; ptrack may be better for polyphonic signals
@@ -243,15 +255,17 @@ endif
 	;kcps1p		samphold kcps1p, kgate
 	imedianSize	= 20
 	kcps1p		mediank	kcps1p, imedianSize, imedianSize
-
-; ***************
-; post filtering
-	kautocorr	samphold kautocorr, kgate	
-	kspread		samphold kspread, kgate
-	kurtosisM	mediank kurtosis, 6, 6
-
-	kcpsBoth	= kepochZCcps+kcps1p
-	kpzgate		= (kcentroid > 6000 ? 0 : 1)
-	kepochZCcps	samphold kepochZCcps, kpzgate
 */
 
+; ***************
+; third method of pitch tracking, effective for use as control signal for Pitch Synchronous Granular Synthesis (PSGS)
+; used in one of the self voice instruments (instr 60 pp)
+        imincps		= 100
+        imaxcps		= 1000
+        aPitch		lowpass2 a1, imaxcps, 2
+        initfreq	= imincps
+        imedian		= 0
+        idowns		= 4
+        iexcps		= imincps
+        irmsmedi	= 0
+        kcpsA,krmsA	pitchamdf	aPitch*0.2, imincps, imaxcps ,initfreq ,imedian ,idowns ,iexcps ,irmsmedi

@@ -58,7 +58,7 @@
 <CsScore>
 ; run for N sec
 #define SCORELEN # 86400 #
-;#define SCORELEN # 5 #
+;#define SCORELEN # 45 #
 
 ;#include "testscore.inc"
 
@@ -84,6 +84,19 @@ i99 	0 $SCORELEN			; master out
 ;i 70    1 1                             ; test read a segment from memoryRecording       
 ;i 74    2 1 800                         ; test play a loaded segment from memoryRecording       
 ;i 55    2 0 "memory_recordings/2014_08_07_15_15_54.wav"   ; test play granular file playback
+
+/*
+; test self voice
+;          p3  soundfile                                        start   end   amp   voice   dly   rvb   speed
+i 60    0  1   "memory_recordings/2014_08_07_15_15_54.wav"      0       0     -2    2      -12    -23    1
+i 61    5  1   "memory_recordings/2014_08_07_15_15_54.wav"      0       0     -2    2      -12    -23    1
+i 62   10  1   "memory_recordings/2014_08_07_15_15_54.wav"      0       0     -2    2      -12    -23    1
+i 63   15  1   "memory_recordings/2014_08_07_15_15_54.wav"      0       0     -2    2      -12    -23    1
+i 64   20  1   "memory_recordings/2014_08_07_15_15_54.wav"      0       0     -2    2      -12    -23    1
+i 65   25  1   "memory_recordings/2014_08_07_15_15_54.wav"      0       0     -2    2      -12    -23    1
+i 66   30  1   "memory_recordings/2014_08_07_15_15_54.wav"      0       0     -2    2      -12    -23    1
+i 67   35  1   "memory_recordings/2014_08_07_15_15_54.wav"      0       0     -2    2      -12    -23    1
+*/
 </CsScore>
 
 </CsoundSynthesizer>

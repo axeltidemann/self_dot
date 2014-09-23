@@ -113,6 +113,8 @@ loadAudioAndMarkers(testname)
         kTime		chnget "SecondaryDelayTime"
         kFeed		chnget "SecondaryDelayFeed"
 	kFiltFq		chnget "SecondaryDelayFiltFq"
+        kDryLevel       chnget "SecondaryDryLevel"
+        kRvbSend        chnget "SecondaryReverbSendLevel"        
         imaxdel         = 2
 	adelTim		upsamp 	kTime				; smoothing
 	adelTim		tone	adelTim, 2			; smoothing
@@ -120,10 +122,15 @@ loadAudioAndMarkers(testname)
 	aout		deltapi adelTim				; tap delay 
 	adelw		= a1 + (aout*kFeed)			; mix input and feedback
 	adelw		butterlp adelw, kFiltFq			; filter delay signal
-	adelw           butterhp adelw, 40                      ; low cut on feedback
+	adelw           butterhp adelw, 100                     ; low cut on feedback
+        kLoFreq         chnget "SecondaryMasterLoCut"
+	adelw           butterhp adelw, kLoFreq                 ; low cut on feedback
 			delayw	adelw				; write source to delay line
-	aout		butterhp aout, 120
-			chnmix aout, "SecondaryDry"
+	aout		butterhp aout*4, 120
+        aReverbSend     = aout * ampdbfs(kRvbSend)
+        aDry            = aout * ampdbfs(kDryLevel)
+			chnmix aDry, "SecondaryDry"
+			chnmix aReverbSend, "SecondaryReverbSend"
 	endin
 
 ; ******************************
@@ -147,6 +154,7 @@ loadAudioAndMarkers(testname)
         aout            = a1*klevel
         kLoFreq         chnget "SecondaryMasterLoCut"
         aout            butterhp aout, kLoFreq        
+        aout            butterhp aout, kLoFreq*0.8        
 			chnmix aout, "MasterOut2"
         ; reset channels for secondary assoc
         a0              = 0

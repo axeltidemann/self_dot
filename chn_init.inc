@@ -7,16 +7,17 @@
 	chnset -20, "td_LoShelfGain"
 	chnset -15, "td_AmpAdjust"	; approximate amp compensation for EQ
 
-	chnset -5, "SecondaryDryLevel"          ; in dB
-	chnset -18, "SecondaryDelaySendLevel"    ; in dB
-	chnset -24, "SecondaryReverbSendLevel"   ; in dB
+        ; these three are active only for the "secondary synth" voices, and for send between effects (i.e. only the send from delay to reverb)
+	chnset -1, "SecondaryDryLevel"          ; in dB
+	chnset -14, "SecondaryDelaySendLevel"    ; in dB
+	chnset -14, "SecondaryReverbSendLevel"   ; in dB ; affects send from delay to reverb
 
-        chnset 2.0, "SecondaryDelayTime"
+        chnset 1.5, "SecondaryDelayTime"
         chnset 0.3, "SecondaryDelayFeed"
-        chnset 3000, "SecondaryDelayFiltFq"
+        chnset 1500, "SecondaryDelayFiltFq"
 
-        chnset 0.94, "SecondaryReverbFeed"
-	chnset 7000, "SecondaryReverbFiltFq"
+        chnset 0.91, "SecondaryReverbFeed"
+	chnset 6000, "SecondaryReverbFiltFq"
 
 	chnset 700, "SecondaryMasterLoCut"       ; cut LF on master out for secondary associations synth
-	chnset -1, "SecondaryMasterLevel"       ; in dB
+	chnset 7, "SecondaryMasterLevel"       ; in dB

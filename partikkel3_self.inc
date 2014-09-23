@@ -31,23 +31,15 @@
 	kwavekey3	= kwavekey3/kfildur3
 	kwavekey4	= kwavekey4/kfildur4
 
-	kTimeRate	= 0.6				; time pointer rate
-
-	;asamplepos0	phasor kTimeRate / kfildur1	; phasor from 0 to 1, scaled to the length of the first source waveform
-        ;idur_once       = 1/ (i(kTimeRate) / i(kfildur1))
-        ;print idur_once
-        asamplepos0	line 0, p3, 1
+        asamplepos0	line 0, idurSamplepos, 1
 	ksamplepos0     downsamp asamplepos0
-        ;printk2 ksamplepos0, 20
         asamplepos1     init 0
-	kTimeRate2	= 0.2				; segment time pointer rate
-        ichangeRate     = 2
         kmetro          metro ichangeRate
         ;asposSH         samphold asamplepos0, kmetro
         kcount          init -1
         kcount          += kmetro
         kcount          = kcount%4
-        printk2 kcount
+        ;printk2 kcount
         kcpsamp1        init 0
         kcpsamp2        init 0
         kcpsamp3        init 0
@@ -80,7 +72,7 @@
 */
 spos1:
         ks1amp          oscil1, 0, 1, 1/i(kcpsamp1), giHanning
-        aspos1          phasor kTimeRate2 / kfildur1
+        aspos1          phasor iTimeRate2 / kfildur1
         ipos1           = i(ksamplepos0)
         asamplepos1     = ipos1 + aspos1
         ;agate           table  asamplepos1, giSampleposGate
@@ -92,21 +84,21 @@ spos1:
         ;kgoto donespos
 spos2:
         ks2amp          oscil1, 0, 1, 1/i(kcpsamp2), giHanning
-        aspos2          phasor kTimeRate2 / kfildur1
+        aspos2          phasor iTimeRate2 / kfildur1
         ipos2           = i(ksamplepos0)
         asamplepos2     = ipos2 + aspos2
         rireturn
         ;kgoto donespos
 spos3:
         ks3amp          oscil1, 0, 1, 1/i(kcpsamp3), giHanning
-        aspos3          phasor kTimeRate2 / kfildur1
+        aspos3          phasor iTimeRate2 / kfildur1
         ipos3           = i(ksamplepos0)
         asamplepos3     = ipos3 + aspos3
         rireturn
         ;kgoto donespos
 spos4:
         ks4amp          oscil1, 0, 1, 1/i(kcpsamp4), giHanning
-        aspos4          phasor kTimeRate2 / kfildur1
+        aspos4          phasor iTimeRate2 / kfildur1
         ipos4           = i(ksamplepos0)
         asamplepos4     = ipos4 + aspos4
         rireturn
@@ -228,10 +220,8 @@ a1,a2,a3,a4,a5,a6,a7,a8	partikkel agrainrate, kdistribution, idisttab, async, ke
                	  iwaveamptab, asamplepos1, asamplepos2, asamplepos3, asamplepos4, \
                	  kwavekey1, kwavekey2, kwavekey3, kwavekey4, imax_grains
 
-; boost some, to balance with other audio generators
-a1	= a1*2
-a2	= a2*2
-        aout            = a1+a2
+; out
+        aout            = a1*1.3
         aout            butterhp aout, 300
         aout            butterhp aout, 400
 

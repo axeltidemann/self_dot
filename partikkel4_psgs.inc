@@ -1,7 +1,6 @@
 
 /*frequency in which the file is read*/
 ifildur			= ilen
-print ifildur
 iwavfreq		= 1 / ifildur
 kwavfreq		= iwavfreq * iformant
 afilposphas		phasor		ispeed / ifildur
@@ -76,6 +75,6 @@ a1,a2,a3,a4	partikkel kgrainfreq, kdistribution, idisttab, async, kenv2amt, ienv
                	iwaveamptab, asamplepos1, asamplepos2, asamplepos3, asamplepos4, \
                	kwavekey1, kwavekey2, kwavekey3, kwavekey4, imax_grains, iopcode_id
 
-aout		= a1
+aout		= a1*0.3
 
 

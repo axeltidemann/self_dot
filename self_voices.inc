@@ -5,17 +5,22 @@
 
 	Ssound	        strget p4
         ilen            filelen Ssound
-        
-; start and end not implemented yet
-        istart          = p5                                    ; segment start
-        iend            = p6                                    ; segment end
-
+                
 ; regular instr parameters        
         iamp            = ampdbfs(p7)                           ; amp
         ivoice          = p8                                    ; 1 or 2, for primary or secondary association
         idel2           = ampdbfs(p9)                           ; send to delay (2)
         irvb2           = ampdbfs(p10)                          ; send to reverb (2)
         ispeed          = p11                                   ; playback speed
+
+; start and end not fully implemented yet, read segment info from sound/markerfile to get start and end points 
+        istart          = p5                                    ; segment start
+        iend            = p6                                    ; segment end
+        if iend == 0 then
+        iend            = ilen
+        endif
+        idur            = iend - istart
+        p3              = idur/ispeed
         aenv            linen   iamp, 0.01, p3, 0.2
 
 ; sound generator        
@@ -44,21 +49,26 @@
 	Ssound	        strget p4
         ilen            filelen Ssound
         
-; start and end not implemented yet
-        istart          = p5                                    ; segment start
-        iend            = p6                                    ; segment end
-
 ; regular instr parameters        
         iamp            = ampdbfs(p7)                           ; amp
         ivoice          = p8                                    ; 1 or 2, for primary or secondary association
         idel2           = ampdbfs(p9)                           ; send to delay (2)
         irvb2           = ampdbfs(p10)                          ; send to reverb (2)
         ispeed          = p11                                   ; playback speed
+
+; start and end not fully implemented yet, read segment info from sound/markerfile to get start and end points 
+        istart          = p5                                    ; segment start
+        iend            = p6                                    ; segment end
+        if iend == 0 then
+        iend            = ilen
+        endif
+        idur            = iend - istart
+        p3              = idur/ispeed
         aenv            linen   iamp, 0.01, p3, 0.2
 
 ; sound generator        
-        iscale          = 2; semitone(p12)
-        ishift          = 100;p13
+        iscale          = semitone(1)
+        ishift          = -50;p13
         ilowest         = 100;p14
                 
         ifftsize	= 1024
@@ -74,7 +84,8 @@
         ikeepform2      = 0
 	fshift  	pvshift  fscale, ishift, ilowest, ikeepform2
         aout		pvsynth	fshift
-        aout            = aout * iamp * aenv * 4 
+        aout            butterhp aout, 400
+        aout            = aout * iamp * 2 * aenv
 
 ; output
         if ivoice == 1 then
@@ -98,16 +109,21 @@
 	Ssound	        strget p4
         ilen            filelen Ssound
         
-; start and end not implemented yet
-        istart          = p5                                    ; segment start
-        iend            = p6                                    ; segment end
-
 ; regular instr parameters        
         iamp            = ampdbfs(p7)                           ; amp
         ivoice          = p8                                    ; 1 or 2, for primary or secondary association
         idel2           = ampdbfs(p9)                           ; send to delay (2)
         irvb2           = ampdbfs(p10)                          ; send to reverb (2)
         ispeed          = p11                                   ; playback speed
+
+; start and end not fully implemented yet, read segment info from sound/markerfile to get start and end points 
+        istart          = p5                                    ; segment start
+        iend            = p6                                    ; segment end
+        if iend == 0 then
+        iend            = ilen
+        endif
+        idur            = iend - istart
+        p3              = idur/ispeed
         aenv            linen   iamp, 0.01, p3, 0.2
 
 ; sound generator          
@@ -158,16 +174,21 @@
 	Ssound	        strget p4
         ilen            filelen Ssound
         
-; start and end not implemented yet
-        istart          = p5                                    ; segment start
-        iend            = p6                                    ; segment end
-
 ; regular instr parameters        
         iamp            = ampdbfs(p7)                           ; amp
         ivoice          = p8                                    ; 1 or 2, for primary or secondary association
         idel2           = ampdbfs(p9)                           ; send to delay (2)
         irvb2           = ampdbfs(p10)                          ; send to reverb (2)
         ispeed          = p11                                   ; playback speed
+
+; start and end not fully implemented yet, read segment info from sound/markerfile to get start and end points 
+        istart          = p5                                    ; segment start
+        iend            = p6                                    ; segment end
+        if iend == 0 then
+        iend            = ilen
+        endif
+        idur            = iend - istart
+        p3              = idur/ispeed
         aenv            linen   iamp, 0.01, p3, 0.2
 
 ; sound generator          
@@ -204,7 +225,7 @@
         aout            butterhp aout, 400
         aout            butterhp aout, 400
         aout            butterhp aout, 400
-        aout           = aout * iamp * 7 * aenv 
+        aout           = aout * iamp * 4 * aenv 
 
 ; output
         if ivoice == 1 then
@@ -228,16 +249,21 @@
 	Ssound	        strget p4
         ilen            filelen Ssound
         
-; start and end not implemented yet
-        istart          = p5                                    ; segment start
-        iend            = p6                                    ; segment end
-
 ; regular instr parameters        
         iamp            = ampdbfs(p7)                           ; amp
         ivoice          = p8                                    ; 1 or 2, for primary or secondary association
         idel2           = ampdbfs(p9)                           ; send to delay (2)
         irvb2           = ampdbfs(p10)                          ; send to reverb (2)
         ispeed          = p11                                   ; playback speed
+
+; start and end not fully implemented yet, read segment info from sound/markerfile to get start and end points 
+        istart          = p5                                    ; segment start
+        iend            = p6                                    ; segment end
+        if iend == 0 then
+        iend            = ilen
+        endif
+        idur            = iend - istart
+        p3              = idur/ispeed
         aenv            linen   iamp, 0.01, p3, 0.2
 
 ; sound generator          
@@ -283,7 +309,7 @@ contin:
         aout            butterhp aout, 800
         aout            butterbr aout, 1000, 700
         aout            butterbr aout, 1000, 500
-        aout           = aout * iamp * 7 * aenv 
+        aout           = aout * iamp * 4 * aenv 
 
 ; output
         if ivoice == 1 then
@@ -307,16 +333,21 @@ contin:
 	Ssound	        strget p4
         ilen            filelen Ssound
         
-; start and end not implemented yet
-        istart          = p5                                    ; segment start
-        iend            = p6                                    ; segment end
-
 ; regular instr parameters        
         iamp            = ampdbfs(p7)                           ; amp
         ivoice          = p8                                    ; 1 or 2, for primary or secondary association
         idel2           = ampdbfs(p9)                           ; send to delay (2)
         irvb2           = ampdbfs(p10)                          ; send to reverb (2)
         ispeed          = p11                                   ; playback speed
+
+; start and end not fully implemented yet, read segment info from sound/markerfile to get start and end points 
+        istart          = p5                                    ; segment start
+        iend            = p6                                    ; segment end
+        if iend == 0 then
+        iend            = ilen
+        endif
+        idur            = iend - istart
+        p3              = idur/ispeed
         aenv            linen   iamp, 0.01, p3, 0.2
 
 ; sound generator          
@@ -372,7 +403,7 @@ contin:
         aout            butterhp aout, 300
         aout            butterhp aout, 400
         aout            butterhp aout, 600
-        aout           = aout * iamp * aenv 
+        aout           = aout * iamp * 1.5 * aenv 
 
 ; output
         if ivoice == 1 then
@@ -397,16 +428,24 @@ contin:
 	Ssound	        strget p4
         ilen            filelen Ssound
         
-; start and end not implemented yet
-        istart          = p5                                    ; segment start
-        iend            = p6                                    ; segment end
-
 ; regular instr parameters        
         iamp            = ampdbfs(p7)                           ; amp
         ivoice          = p8                                    ; 1 or 2, for primary or secondary association
         idel2           = ampdbfs(p9)                           ; send to delay (2)
         irvb2           = ampdbfs(p10)                          ; send to reverb (2)
         ispeed          = p11                                   ; playback speed
+
+; start and end not fully implemented yet, read segment info from sound/markerfile to get start and end points 
+        istart          = p5                                    ; segment start
+        iend            = p6                                    ; segment end
+        if iend == 0 then
+        iend            = ilen
+        endif
+        idur            = iend - istart
+        ichangeRate     = 2                                     ; grain subsegment spawn rate
+	iTimeRate2	= ispeed*0.6				; grain subsegment time pointer rate
+	idurSamplepos   = (idur/ispeed)
+        p3              = (idur/ispeed)+((1/ichangeRate)*iTimeRate2)
         aenv            linen   iamp, 0.01, p3, 0.2
 
 ; sound generator         
@@ -430,31 +469,37 @@ contin:
 	endin
 
 ;******************************
-; Partikkel voice 1, "slowdown but at original speed"
-	instr 66
+; Partikkel voice 1, "PSGS", Pitch Synchronous Granular Synthesis
+	instr 67
 
 	Ssound	        strget p4
         ilen            filelen Ssound
         
-; start and end not implemented yet
-        istart          = p5                                    ; segment start
-        iend            = p6                                    ; segment end
-
 ; regular instr parameters        
         iamp            = ampdbfs(p7)                           ; amp
         ivoice          = p8                                    ; 1 or 2, for primary or secondary association
         idel2           = ampdbfs(p9)                           ; send to delay (2)
         irvb2           = ampdbfs(p10)                          ; send to reverb (2)
         ispeed          = p11                                   ; playback speed
+
+; start and end not fully implemented yet, read segment info from sound/markerfile to get start and end points 
+        istart          = p5                                    ; segment start
+        iend            = p6                                    ; segment end
+        if iend == 0 then
+        iend            = ilen
+        endif
+        idur            = iend - istart
+        p3              = idur/ispeed
         aenv            linen   iamp, 0.01, p3, 0.2
 
 ; sound generator         
         iSound          ftgentmp 0, 0, 0, 1, Ssound, 0,0,0
-        iPitchFn        ftgentmp 0, 0, 65537, 2, 0	; empty table
+        iPitchFn        ftgentmp 0, 0, 131072, 2, 0	; empty table
         istrlen         strlen Ssound
         Spitchfile      strsub Ssound, 0, istrlen-4
         Spitchfile      strcat Spitchfile, "_pitch.txt"
         ftload 		Spitchfile, 1, iPitchFn
+        puts Spitchfile, 1
         iformant	= cent(100)		; formant change in cents
         itransp		= cent(-1200)		; transposition in cents
 #include "partikkel4_psgs.inc"
