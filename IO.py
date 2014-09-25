@@ -140,8 +140,9 @@ def audio():
     poller.register(assoc, zmq.POLLIN)
 
     import time
-    t = time.strftime
-    
+    t_str = time.strftime
+    t_tim = time.time()
+
     memRecPath = "./memory_recordings/"
 
     if not os.path.exists(memRecPath):
@@ -214,15 +215,17 @@ def audio():
         transient = cGet("transient")                   # signals start of a segment within a statement (audio in)        
         memRecTimeMarker = cGet("memRecTimeMarker")     # (in memRec) get the time since start of statement
         memRecActive = cGet("memRecActive")             # flag to check if memoryRecording is currently recording to file in Csound
-         
+                 
         if state['memoryRecording']:
             if audioStatusTrig > 0:
                 print 'starting memoryRec'
-                timestamp = t('%Y_%m_%d_%H_%M_%S')
-                filename = memRecPath+timestamp+'.wav'
+                timestr = t_str('%Y_%m_%d_%H_%M_%S')
+                tim_time = t_tim
+                filename = memRecPath+timestr+'.wav'
                 cs.InputMessage('i 34 0 -1 "%s"'%filename)
-                markerfile = open(memRecPath+timestamp+'.txt', 'w')
-                markerfile.write('Self. audio clip perceived at %s\n'%timestamp)
+                markerfileName = memRecPath+timestr+'.txt'
+                markerfile = open(markerfileName, 'w')
+                markerfile.write('Self. audio clip perceived at %s\n'%tim_time)
                 segments = 'Sub segment start times: \n0.000 \n'
             if (transient > 0) & (memRecActive > 0):
                 segments += '%.3f \n'%memRecTimeMarker
@@ -230,15 +233,17 @@ def audio():
                 cs.InputMessage('i -34 0 1')
                 markerfile.write(segments)
                 markerfile.write('Total duration: %f'%memRecTimeMarker)
+                markerfile.close()
                 print 'stopping memoryRec'
-		assoc.send_json('***audio says hello***')
+                assoc.send_json(markerfileName)
 
         if not state['memoryRecording'] and memRecActive:
             cs.InputMessage('i -34 0 1')
             markerfile.write(segments)
             markerfile.write('Total duration: %f'%memRecTimeMarker)
+            markerfile.close()
             print 'stopping memoryRec'
-	    assoc.send_json('***audio says hello***')
+            assoc.send_json(markerfileName)
                                 
         if state['autolearn']:
             if audioStatusTrig > 0:
