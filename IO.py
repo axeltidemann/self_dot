@@ -3,6 +3,7 @@
 
 import multiprocessing as mp
 import os
+import random
 
 import cv2
 import numpy as np
@@ -306,7 +307,29 @@ def audio():
                 zeroChannelsOnNoBrain = int('{}'.format(pushbutton['zerochannels']))
 
             if 'playfile' in pushbutton:
-                print 'deprecated, use playfile_input, playfile_primary or playfile_secondary'
+                print '[self.] playfile {}'.format(pushbutton['playfile'])
+                soundfile = '{}'.format(pushbutton['playfile'])
+                
+                voiceChannel = random.choice([1,2]) # internal or external voice (primary/secondary associations)
+                voiceType = random.choice([1,2,3,4,5,6,7]) # different voice timbres, (0-7), see self_voices.inc for details
+                instr = 60 + voiceType
+                start = 0 # segment start and end within sound file
+                end = 0 # if zero, play whole file
+                amp = -3 # voice amplitude in dB
+                if voiceChannel == 2:
+                    delaySend = -26 # delay send in dB
+                    reverbSend = -23 # reverb send in dB
+                else:
+                    delaySend = -96
+                    reverbSend = -35 
+                if voiceType == 7:
+                    speed = 0.6 #playback  speed
+                else:
+                    speed = 1 
+                
+                test = 'i %i 0 1 "%s" %f %f %f %i %f %f %f' %(instr, soundfile, start, end, amp, voiceChannel, delaySend, reverbSend, speed)
+                print '******test***', test
+                cs.InputMessage('i %i 0 1 "%s" %f %f %f %i %f %f %f' %(instr, soundfile, start, end, amp, voiceChannel, delaySend, reverbSend, speed))
 
             if 'playfile_input' in pushbutton:
                 print '[self.] wants to play {}'.format(pushbutton['playfile_input'])

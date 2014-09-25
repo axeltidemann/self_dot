@@ -12,7 +12,7 @@
 	chnset -14, "SecondaryDelaySendLevel"    ; in dB
 	chnset -14, "SecondaryReverbSendLevel"   ; in dB ; affects send from delay to reverb
 
-        chnset 1.5, "SecondaryDelayTime"
+        chnset 1.2, "SecondaryDelayTime"
         chnset 0.3, "SecondaryDelayFeed"
         chnset 1500, "SecondaryDelayFiltFq"
 

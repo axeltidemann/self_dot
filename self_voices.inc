@@ -2,7 +2,7 @@
 ;******************************
 ; audio file playback 
 	instr 60
-
+print p1,p2,p3,p5,p6,p7,p8,p9,p10,p11
 	Ssound	        strget p4
         ilen            filelen Ssound
                 
@@ -499,7 +499,7 @@ contin:
         Spitchfile      strsub Ssound, 0, istrlen-4
         Spitchfile      strcat Spitchfile, "_pitch.txt"
         ftload 		Spitchfile, 1, iPitchFn
-        puts Spitchfile, 1
+        ;puts Spitchfile, 1
         iformant	= cent(100)		; formant change in cents
         itransp		= cent(-1200)		; transposition in cents
 #include "partikkel4_psgs.inc"
