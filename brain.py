@@ -196,7 +196,7 @@ def classifier_brain(host):
                 print 'Respond to', pushbutton['filename']
 
                 if len(NAPs) == 1:
-                    sender.send_json('playfile_primary {}'.format(wavs[-1]))
+                    sender.send_json('playfile {}'.format(wavs[-1]))
                     continue
 
                 try:
@@ -210,7 +210,7 @@ def classifier_brain(host):
                     NAP_resampled = resample(NAP, float(maxlen)/NAP.shape[0], 'sinc_best')
 
                     winner = audio_recognizer.predict(np.ndarray.flatten(NAP_resampled))[0]
-                    sender.send_json('playfile_primary {}'.format(wavs[winner]))
+                    sender.send_json('playfile {}'.format(wavs[winner]))
 
                     projection = video_producer[winner](NAP[::video_producer[winner].stride])
 

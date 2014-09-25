@@ -17,6 +17,7 @@ from zmq.utils.jsonapi import dumps
 import IO
 import utils
 import brain
+import analyze_associations
 
 class Controller:
     def __init__(self, init_state):
@@ -166,9 +167,10 @@ if __name__ == '__main__':
 
     mp.Process(target=IO.audio, name='AUDIO').start() 
     mp.Process(target=IO.video, name='VIDEO').start()
-    mp.Process(target=IO.eye, name='EYE').start()
+    #mp.Process(target=IO.eye, name='EYE').start()
     mp.Process(target=Controller, args=(persistent_states,), name='CONTROLLER').start()
     mp.Process(target=brain.classifier_brain, args=('localhost',)).start()
+    mp.Process(target=analyze_associations.analyze, args=('localhost',)).start()
 
     try:
         raw_input('')

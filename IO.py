@@ -20,6 +20,7 @@ STATE = 5565
 EXTERNAL = 5566
 SNAPSHOT = 5567
 EVENT = 5568
+ASSOCIATIONS = 5569
 
 #FACE_HAAR_CASCADE_PATH = os.environ['VIRTUAL_ENV'] + '/share/OpenCV/haarcascades/haarcascade_frontalface_default.xml'
 #EYE_HAAR_CASCADE_PATH = os.environ['VIRTUAL_ENV'] + '/share/OpenCV/haarcascades/haarcascade_eye_tree_eyeglasses.xml'
@@ -87,7 +88,7 @@ def video():
 
     subscriber = context.socket(zmq.PULL)
     subscriber.bind('tcp://*:{}'.format(PROJECTOR))
-'''
+
     while True:
         _, frame = video_feed.read()
         frame = cv2.resize(frame, frame_size)
@@ -104,7 +105,7 @@ def video():
             cv2.imshow('Output', np.zeros((360, 640)))
 
         cv2.waitKey(100)
-'''
+
 def audio():
     me = mp.current_process()
     print me.name, 'PID', me.pid
@@ -112,6 +113,9 @@ def audio():
     context = zmq.Context()
     publisher = context.socket(zmq.PUB)
     publisher.bind('tcp://*:{}'.format(MIC))
+
+    assoc = context.socket(zmq.PUB)
+    assoc.bind('tcp://*:{}'.format(ASSOCIATIONS))
 
     subscriber = context.socket(zmq.PULL)
     subscriber.bind('tcp://*:{}'.format(SPEAKER))
@@ -133,6 +137,7 @@ def audio():
     poller.register(subscriber, zmq.POLLIN)
     poller.register(stateQ, zmq.POLLIN)
     poller.register(eventQ, zmq.POLLIN)
+    poller.register(assoc, zmq.POLLIN)
 
     import time
     t = time.strftime
@@ -226,12 +231,14 @@ def audio():
                 markerfile.write(segments)
                 markerfile.write('Total duration: %f'%memRecTimeMarker)
                 print 'stopping memoryRec'
+		assoc.send_json('***audio says hello***')
 
         if not state['memoryRecording'] and memRecActive:
             cs.InputMessage('i -34 0 1')
             markerfile.write(segments)
             markerfile.write('Total duration: %f'%memRecTimeMarker)
             print 'stopping memoryRec'
+	    assoc.send_json('***audio says hello***')
                                 
         if state['autolearn']:
             if audioStatusTrig > 0:
