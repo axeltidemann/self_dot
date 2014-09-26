@@ -35,3 +35,4 @@ contin:
 
 	aclean		pvsynth fsin
 			chnset aclean, "in1"
+			fout "suppress.wav", 14, ain, aclean

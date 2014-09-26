@@ -326,9 +326,8 @@ def audio():
                     speed = 0.6 #playback  speed
                 else:
                     speed = 1 
-                
-                test = 'i %i 0 1 "%s" %f %f %f %i %f %f %f' %(instr, soundfile, start, end, amp, voiceChannel, delaySend, reverbSend, speed)
-                print '******test***', test
+                #test = 'i %i 0 1 "%s" %f %f %f %i %f %f %f' %(instr, soundfile, start, end, amp, voiceChannel, delaySend, reverbSend, speed)
+                #print '******test***', test
                 cs.InputMessage('i %i 0 1 "%s" %f %f %f %i %f %f %f' %(instr, soundfile, start, end, amp, voiceChannel, delaySend, reverbSend, speed))
 
             if 'playfile_input' in pushbutton:

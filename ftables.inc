@@ -1,5 +1,5 @@
 ; pvs ftables
-	gifftsize 	= 512
+	gifftsize 	= 1024
 			chnset gifftsize, "fftsize"
 	giFftTabSize	= (gifftsize / 2)+1
 	gifna     	ftgen   1 ,0 ,giFftTabSize, 7, 0, giFftTabSize, 0   	; for pvs analysis

@@ -8,7 +8,7 @@
 <CsInstruments>
 
 	sr = 44100  
-	ksmps = 128
+	ksmps = 256
 	nchnls = 2	
 	0dbfs = 1
 
@@ -67,10 +67,10 @@ i4 	0 $SCORELEN			; audio input
 i11 	0 $SCORELEN			; merge left and right input
 i21 	0 .1 1				; initialize input level
 i22 	0 .1 "inputNoisefloor" -20	; initialize noise floor 
-i22 	0 .1 "memoryRecording" 1	; enable/disable recording of audio memory
+;i22 	0 .1 "memoryRecording" 1	; enable/disable recording of audio memory
 i31 	0 $SCORELEN			; analysis
 ;i51 	0 -1				; subtractive harmonic resynthesis
-i52 	0 -1				; partikkel resynthesis
+;i52 	0 -1				; partikkel resynthesis
 ;i53 	3 -1				; fft resynthesis
 ;i98 	0 $SCORELEN			; analysis of own output
 i77     0 $SCORELEN			; delay for secondary associations playback
@@ -87,6 +87,7 @@ i99 	0 $SCORELEN			; master out
 
 /*
 ; test self voice
+i 60    0  1   "memory_recordings/2014_09_25_10_43_46.wav"      0       0     -2    1      -96    -96    1
 ;          p3  soundfile                                        start   end   amp   voice   dly   rvb   speed
 i 60    0  1   "memory_recordings/2014_08_07_15_15_54.wav"      0       0     -2    2      -12    -23    1
 i 61    5  1   "memory_recordings/2014_08_07_15_15_54.wav"      0       0     -2    2      -12    -23    1
