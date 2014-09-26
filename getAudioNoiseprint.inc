@@ -13,7 +13,7 @@
 
 if (kflag > 0) then
 	kArrAprev[]		= kArrA
-        			copyf2array kArrA, gifna
+        			copyf2array kArrA, gifnaNoiseIn
 	kindx 			= 0
 	kfiltered		= 0
   process:

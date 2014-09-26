@@ -1,13 +1,15 @@
 	ain		chnget "in1"
 	ilatency	chnget "audio_io_latency"
-	ilatency	limit ilatency, 1/kr, 1
+	ilatency	limit ilatency-0.01, 1/kr, 1
 	aout		chnget "MyOutput"
 	aout		delay aout, ilatency
+        aoutHP          butterhp aout, 4000
+        aout            = (aout*1.2) + (aoutHP*7) ; increase the amount of HF in the feedback signal asa it seems they are harder to cancel out
 	iwtype 		= 1
 	fsin 		pvsanal	ain, gifftsize, gifftsize/4, gifftsize, iwtype
 	ireduce		= p4
 	fsout 		pvsanal	aout*ireduce, gifftsize, gifftsize/4, gifftsize, iwtype
-	fsouts 		pvsmooth fsout, 1, 1		
+	;fsouts 		pvsmooth fsout, 0.5, 0.5		
 	kflag   	pvsftw	fsin,gifnaIn  	        	; export  amps  and freqs to table
 	kflag1   	pvsftw	fsout,gifnaOut	        	; export  amps  and freqs to table
 	iNPscale	= p5
@@ -35,4 +37,4 @@ contin:
 
 	aclean		pvsynth fsin
 			chnset aclean, "in1"
-			;fout "suppress.wav", 14, ain, aclean
+			fout "suppress.wav", 14, ain, aclean

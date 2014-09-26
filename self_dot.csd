@@ -58,7 +58,7 @@
 <CsScore>
 ; run for N sec
 #define SCORELEN # 86400 #
-;#define SCORELEN # 45 #
+#define SCORELEN # 15 #
 
 ;#include "testscore.inc"
 
@@ -97,6 +97,16 @@ i 64   20  1   "memory_recordings/2014_08_07_15_15_54.wav"      0       0     -2
 i 65   25  1   "memory_recordings/2014_08_07_15_15_54.wav"      0       0     -2    2      -12    -23    1
 i 66   30  1   "memory_recordings/2014_08_07_15_15_54.wav"      0       0     -2    2      -12    -23    1
 i 67   35  1   "memory_recordings/2014_08_07_15_15_54.wav"      0       0     -2    2      -12    -23    1
+*/
+/*
+; test self suppression
+i 12 1 4') # measure roundtrip latency
+i 13 5 1.9') # get audio input noise print
+i 14 7 -1 1 1') # enable noiseprint and self-output suppression
+i 15 7.2 2') # get noise floor level 
+i 16 8.3 0.1') # set noise gate shape
+i 17 8.5 -1') # turn on new noise gate
+i 60 10  1   "memory_recordings/2014_08_07_15_15_54.wav"      0       0     -2    2      -16    -16    1
 */
 </CsScore>
 

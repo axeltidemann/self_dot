@@ -292,8 +292,8 @@ def audio():
             if 'calibrateAudio' in pushbutton:
                 cs.InputMessage('i -17 0 1') # turn off old noise gate
                 cs.InputMessage('i 12 0 4') # measure roundtrip latency
-                cs.InputMessage('i 13 4 2') # get audio input noise print
-                cs.InputMessage('i 14 6 -1 0.6 1') # enable noiseprint and self-output suppression
+                cs.InputMessage('i 13 4 1.9') # get audio input noise print
+                cs.InputMessage('i 14 6 -1 1.0 1.0') # enable noiseprint and self-output suppression
                 cs.InputMessage('i 15 6.2 2') # get noise floor level 
                 cs.InputMessage('i 16 8.3 0.1') # set noise gate shape
                 cs.InputMessage('i 17 8.5 -1') # turn on new noise gate
