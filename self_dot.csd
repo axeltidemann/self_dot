@@ -58,7 +58,7 @@
 <CsScore>
 ; run for N sec
 #define SCORELEN # 86400 #
-#define SCORELEN # 15 #
+;#define SCORELEN # 15 #
 
 ;#include "testscore.inc"
 
