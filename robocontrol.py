@@ -29,6 +29,10 @@ except:
     print '*****************************************'
 
 connected = False
+pan1 = 60
+tilt1 = 45
+pan2 = 60
+tilt2 = 45
 if serialAvailable:
     while not connected:
         serin = ser.read()
@@ -37,10 +41,12 @@ if serialAvailable:
         
     time.sleep(2)
     print 'set initial position'
-    # set tilt
-    ser.write('t 045n')
-    ser.write('p 000n')
-    print 't'
+    ser.write('p %03dn'%tilt1)
+    ser.write('p %03dn'%pan1)
+    time.sleep(0.3)
+    ser.write('p %03dn'%tilt1)
+    ser.write('p %03dn'%pan1)
+    print '...' 
     print 'initial position is set'
     time.sleep(1)
 
@@ -54,32 +60,23 @@ def robocontrol(host):
     robo.connect('tcp://{}:{}'.format(host, IO.ROBO))
     robo.setsockopt(zmq.SUBSCRIBE, b'')
 
-    roboback = context.socket(zmq.PUB)
-    roboback.bind('tcp://*:{}'.format(IO.ROBOBACK))
+    #roboback = context.socket(zmq.PUB)
+    #roboback.bind('tcp://*:{}'.format(IO.ROBOBACK))
 
     #timeStamp = time.time()
-    pos = 45
+    global pan1, tilt1, pan2, tilt2
     while True:
     	#print 'robocontrol is running %i', time.time()-timeStamp
     	time.sleep(.05)
-        message = None
-        try:
-            message = robo.recv_json(flags=zmq.DONTWAIT)
-        except:
-            message = 'hellllo'
-        print 'message', message
-        panposition = robo.recv_json()
-        #print 'panposition', panposition
-        # send pan position to head (eg. 'p 60')
-        pos += int((panposition-0.5)*80)
-        if pos < 10: pos += 180
-        if pos > 200: pos -= 180
-        command = 'p %03dn'%pos
-        ser.write(command)
-        #serRead = ser.readline()
-        #print 'read * ', serRead, '*'
-        #cs.SetChannel("panGate", 0)
-        roboback.send_json(0)
+        robohead,axis,value = robo.recv_json()
+        if robohead == 1:
+            if axis == 'pan':
+                print 'head 1 panposition', value
+                # send pan position to head (eg. 'p 60')
+                pan1 += int((value-0.5)*80)
+                if pan1 < 10: pan1 += 180
+                if pan1 > 200: pan1 -= 180
+                ser.write('p %03dn'%pan1)
 
 
 

@@ -23,7 +23,7 @@ SNAPSHOT = 5567
 EVENT = 5568
 ASSOCIATIONS = 5569
 ROBO = 5570
-ROBOBACK = 5571
+#ROBOBACK = 5571
 
 #FACE_HAAR_CASCADE_PATH = os.environ['VIRTUAL_ENV'] + '/share/OpenCV/haarcascades/haarcascade_frontalface_default.xml'
 #EYE_HAAR_CASCADE_PATH = os.environ['VIRTUAL_ENV'] + '/share/OpenCV/haarcascades/haarcascade_eye_tree_eyeglasses.xml'
@@ -123,9 +123,9 @@ def audio():
     robocontrol = context.socket(zmq.PUB)
     robocontrol.bind('tcp://*:{}'.format(ROBO))
 
-    roboback = context.socket(zmq.SUB)
-    roboback.connect('tcp://localhost:{}'.format(ROBOBACK))
-    roboback.setsockopt(zmq.SUBSCRIBE, b'')
+    #roboback = context.socket(zmq.SUB)
+    #roboback.connect('tcp://localhost:{}'.format(ROBOBACK))
+    #roboback.setsockopt(zmq.SUBSCRIBE, b'')
 
     subscriber = context.socket(zmq.PULL)
     subscriber.bind('tcp://*:{}'.format(SPEAKER))
@@ -148,7 +148,7 @@ def audio():
     poller.register(stateQ, zmq.POLLIN)
     poller.register(eventQ, zmq.POLLIN)
     poller.register(assoc, zmq.POLLIN)
-    poller.register(roboback, zmq.POLLIN)
+    #poller.register(roboback, zmq.POLLIN)
 
     import time
     t_str = time.strftime
@@ -207,7 +207,7 @@ def audio():
         fftoutFlag = cGet("pvsoutflag")
         panposition = cs.GetChannel("panalyzer_pan")
         if panposition != 0.5:
-            robocontrol.send_json(panposition)
+            robocontrol.send_json([1,'pan',panposition])
         
         if fftinFlag:
             fftin_amplist = map(tGet,fftin_amptabs,fftbinindices)
@@ -222,9 +222,6 @@ def audio():
 
         if stateQ in events:
             state = stateQ.recv_json()
-        if roboback in events:
-            pangate = roboback.recv_json()
-            cSet("panGate", pangate)
 
         # get Csound channel data
         audioStatus = cGet("audioStatus")           

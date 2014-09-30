@@ -21,27 +21,24 @@
 	krmsPosLarge	= ((ktempdiv)*3)
 
 ; gate /samphold
-    ;igate           = -42
-	kgate		    = -42;chnget "inputNoisefloor"
+	kgate		    = -22;chnget "inputNoisefloor"
 	kgateL		    = (dbfsamp(krmsLg) > kgate ? 1 : 0)
 	kgateR		    = (dbfsamp(krmsRg) > kgate ? 1 : 0)
     krmsPos		    samphold krmsPos, (kgateL+kgateR)
+    ktransient      chnget "transient"
+noDoubleTrig:
+    idoublePeriod   = 1
+    kdoubleMute     linseg 0, idoublePeriod, 0, 0, 1, 1, 1
+    rireturn
+    ktransient2     = ktransient*kdoubleMute
     kcenter         = 0.5
-    kOne            = 1
-    ;printk2 kgateL+kgateR
-    ;printk2 krmsPos, 10
-    if (kgateL+kgateR > 0) then
-                    chnset kOne, "panGate"           
-    endif
-    kpangate        chnget "panGate"
-    ;printk2 kpangate, 20
-    kcenter         = 0.5
-    if kpangate > 0 then
+    if ktransient2 > 0 then
                     chnset krmsPos, "panalyzer_pan"
+                    reinit noDoubleTrig
     else
                     chnset kcenter, "panalyzer_pan"
     endif
-    ktest   chnget "panalyzer_pan"
+    ;ktest   chnget "panalyzer_pan"
     ;printk2 ktest, 30
 
 /*
