@@ -8,10 +8,11 @@ print p1,p2,p3,p5,p6,p7,p8,p9,p10,p11
                 
 ; regular instr parameters        
         iamp            = ampdbfs(p7)                           ; amp
-        ivoice          = p8                                    ; 1 or 2, for primary or secondary association
-        idel2           = ampdbfs(p9)                           ; send to delay (2)
-        irvb2           = ampdbfs(p10)                          ; send to reverb (2)
-        ispeed          = p11                                   ; playback speed
+        imaxamp         = p8                                    ; max amp in this sound file
+        ivoice          = p9                                    ; 1 or 2, for primary or secondary association
+        idel2           = ampdbfs(p10)                           ; send to delay (2)
+        irvb2           = ampdbfs(p11)                          ; send to reverb (2)
+        ispeed          = p12                                   ; playback speed
 
 ; start and end not fully implemented yet, read segment info from sound/markerfile to get start and end points 
         istart          = p5                                    ; segment start
@@ -25,7 +26,7 @@ print p1,p2,p3,p5,p6,p7,p8,p9,p10,p11
 
 ; sound generator        
 	aout	        diskin Ssound, ispeed
-        aout            = aout * aenv	
+        aout            = aout * aenv * (1/imaxamp)
 
 ; output
         if ivoice == 1 then
@@ -51,10 +52,11 @@ print p1,p2,p3,p5,p6,p7,p8,p9,p10,p11
         
 ; regular instr parameters        
         iamp            = ampdbfs(p7)                           ; amp
-        ivoice          = p8                                    ; 1 or 2, for primary or secondary association
-        idel2           = ampdbfs(p9)                           ; send to delay (2)
-        irvb2           = ampdbfs(p10)                          ; send to reverb (2)
-        ispeed          = p11                                   ; playback speed
+        imaxamp         = p8                                    ; max amp in this sound file
+        ivoice          = p9                                    ; 1 or 2, for primary or secondary association
+        idel2           = ampdbfs(p10)                           ; send to delay (2)
+        irvb2           = ampdbfs(p11)                          ; send to reverb (2)
+        ispeed          = p12                                   ; playback speed
 
 ; start and end not fully implemented yet, read segment info from sound/markerfile to get start and end points 
         istart          = p5                                    ; segment start
@@ -85,7 +87,7 @@ print p1,p2,p3,p5,p6,p7,p8,p9,p10,p11
 	fshift  	pvshift  fscale, ishift, ilowest, ikeepform2
         aout		pvsynth	fshift
         aout            butterhp aout, 400
-        aout            = aout * iamp * 2 * aenv
+        aout            = aout * iamp * 2 * aenv * (1/imaxamp)
 
 ; output
         if ivoice == 1 then
@@ -111,10 +113,11 @@ print p1,p2,p3,p5,p6,p7,p8,p9,p10,p11
         
 ; regular instr parameters        
         iamp            = ampdbfs(p7)                           ; amp
-        ivoice          = p8                                    ; 1 or 2, for primary or secondary association
-        idel2           = ampdbfs(p9)                           ; send to delay (2)
-        irvb2           = ampdbfs(p10)                          ; send to reverb (2)
-        ispeed          = p11                                   ; playback speed
+        imaxamp         = p8                                    ; max amp in this sound file
+        ivoice          = p9                                    ; 1 or 2, for primary or secondary association
+        idel2           = ampdbfs(p10)                           ; send to delay (2)
+        irvb2           = ampdbfs(p11)                          ; send to reverb (2)
+        ispeed          = p12                                   ; playback speed
 
 ; start and end not fully implemented yet, read segment info from sound/markerfile to get start and end points 
         istart          = p5                                    ; segment start
@@ -150,7 +153,7 @@ print p1,p2,p3,p5,p6,p7,p8,p9,p10,p11
         aout2		pvsynth	fblur
         aout1           = aout1 * iamp * 4 
         aout2           = aout2 * iamp * 3 
-        aout            = (aout1+aout2) * 0.5 * aenv 
+        aout            = (aout1+aout2) * 0.5 * aenv * (1/imaxamp)
 
 ; output
         if ivoice == 1 then
@@ -176,10 +179,11 @@ print p1,p2,p3,p5,p6,p7,p8,p9,p10,p11
         
 ; regular instr parameters        
         iamp            = ampdbfs(p7)                           ; amp
-        ivoice          = p8                                    ; 1 or 2, for primary or secondary association
-        idel2           = ampdbfs(p9)                           ; send to delay (2)
-        irvb2           = ampdbfs(p10)                          ; send to reverb (2)
-        ispeed          = p11                                   ; playback speed
+        imaxamp         = p8                                    ; max amp in this sound file
+        ivoice          = p9                                    ; 1 or 2, for primary or secondary association
+        idel2           = ampdbfs(p10)                           ; send to delay (2)
+        irvb2           = ampdbfs(p11)                          ; send to reverb (2)
+        ispeed          = p12                                   ; playback speed
 
 ; start and end not fully implemented yet, read segment info from sound/markerfile to get start and end points 
         istart          = p5                                    ; segment start
@@ -225,7 +229,7 @@ print p1,p2,p3,p5,p6,p7,p8,p9,p10,p11
         aout            butterhp aout, 400
         aout            butterhp aout, 400
         aout            butterhp aout, 400
-        aout           = aout * iamp * 4 * aenv 
+        aout           = aout * iamp * 4 * aenv * (1/imaxamp)
 
 ; output
         if ivoice == 1 then
@@ -251,10 +255,11 @@ print p1,p2,p3,p5,p6,p7,p8,p9,p10,p11
         
 ; regular instr parameters        
         iamp            = ampdbfs(p7)                           ; amp
-        ivoice          = p8                                    ; 1 or 2, for primary or secondary association
-        idel2           = ampdbfs(p9)                           ; send to delay (2)
-        irvb2           = ampdbfs(p10)                          ; send to reverb (2)
-        ispeed          = p11                                   ; playback speed
+        imaxamp         = p8                                    ; max amp in this sound file
+        ivoice          = p9                                    ; 1 or 2, for primary or secondary association
+        idel2           = ampdbfs(p10)                           ; send to delay (2)
+        irvb2           = ampdbfs(p11)                          ; send to reverb (2)
+        ispeed          = p12                                   ; playback speed
 
 ; start and end not fully implemented yet, read segment info from sound/markerfile to get start and end points 
         istart          = p5                                    ; segment start
@@ -309,7 +314,7 @@ contin:
         aout            butterhp aout, 800
         aout            butterbr aout, 1000, 700
         aout            butterbr aout, 1000, 500
-        aout           = aout * iamp * 4 * aenv 
+        aout           = aout * iamp * 4 * aenv * (1/imaxamp)
 
 ; output
         if ivoice == 1 then
@@ -335,10 +340,11 @@ contin:
         
 ; regular instr parameters        
         iamp            = ampdbfs(p7)                           ; amp
-        ivoice          = p8                                    ; 1 or 2, for primary or secondary association
-        idel2           = ampdbfs(p9)                           ; send to delay (2)
-        irvb2           = ampdbfs(p10)                          ; send to reverb (2)
-        ispeed          = p11                                   ; playback speed
+        imaxamp         = p8                                    ; max amp in this sound file
+        ivoice          = p9                                    ; 1 or 2, for primary or secondary association
+        idel2           = ampdbfs(p10)                           ; send to delay (2)
+        irvb2           = ampdbfs(p11)                          ; send to reverb (2)
+        ispeed          = p12                                   ; playback speed
 
 ; start and end not fully implemented yet, read segment info from sound/markerfile to get start and end points 
         istart          = p5                                    ; segment start
@@ -403,7 +409,7 @@ contin:
         aout            butterhp aout, 300
         aout            butterhp aout, 400
         aout            butterhp aout, 600
-        aout           = aout * iamp * 1.5 * aenv 
+        aout           = aout * iamp * 1.5 * aenv * (1/imaxamp)
 
 ; output
         if ivoice == 1 then
@@ -430,10 +436,11 @@ contin:
         
 ; regular instr parameters        
         iamp            = ampdbfs(p7)                           ; amp
-        ivoice          = p8                                    ; 1 or 2, for primary or secondary association
-        idel2           = ampdbfs(p9)                           ; send to delay (2)
-        irvb2           = ampdbfs(p10)                          ; send to reverb (2)
-        ispeed          = p11                                   ; playback speed
+        imaxamp         = p8                                    ; max amp in this sound file
+        ivoice          = p9                                    ; 1 or 2, for primary or secondary association
+        idel2           = ampdbfs(p10)                           ; send to delay (2)
+        irvb2           = ampdbfs(p11)                          ; send to reverb (2)
+        ispeed          = p12                                   ; playback speed
 
 ; start and end not fully implemented yet, read segment info from sound/markerfile to get start and end points 
         istart          = p5                                    ; segment start
@@ -451,7 +458,7 @@ contin:
 ; sound generator         
         iSound  ftgentmp 0, 0, 0, 1, Ssound, 0,0,0
 #include "partikkel3_self.inc"
-        aout           = aout * iamp * aenv 
+        aout           = aout * iamp * aenv * (1/imaxamp)
 
 ; output
         if ivoice == 1 then
@@ -477,10 +484,11 @@ contin:
         
 ; regular instr parameters        
         iamp            = ampdbfs(p7)                           ; amp
-        ivoice          = p8                                    ; 1 or 2, for primary or secondary association
-        idel2           = ampdbfs(p9)                           ; send to delay (2)
-        irvb2           = ampdbfs(p10)                          ; send to reverb (2)
-        ispeed          = p11                                   ; playback speed
+        imaxamp         = p8                                    ; max amp in this sound file
+        ivoice          = p9                                    ; 1 or 2, for primary or secondary association
+        idel2           = ampdbfs(p10)                           ; send to delay (2)
+        irvb2           = ampdbfs(p11)                          ; send to reverb (2)
+        ispeed          = p12                                   ; playback speed
 
 ; start and end not fully implemented yet, read segment info from sound/markerfile to get start and end points 
         istart          = p5                                    ; segment start
@@ -503,7 +511,7 @@ contin:
         iformant	= cent(100)		; formant change in cents
         itransp		= cent(-1200)		; transposition in cents
 #include "partikkel4_psgs.inc"
-        aout           = aout * iamp * aenv 
+        aout           = aout * iamp * aenv * (1/imaxamp)
 
 ; output
         if ivoice == 1 then

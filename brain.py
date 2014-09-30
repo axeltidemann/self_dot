@@ -210,8 +210,15 @@ def classifier_brain(host):
                     NAP_resampled = resample(NAP, float(maxlen)/NAP.shape[0], 'sinc_best')
 
                     winner = audio_recognizer.predict(np.ndarray.flatten(NAP_resampled))[0]
-                    sender.send_json('playfile {}'.format(wavs[winner]))
-
+                    
+                    winnerinfo = open(wavs[winner][:-4]+'.txt', 'r')
+                   
+                    maxamp = 1
+                    for line in winnerinfo:
+                        if 'Max amp for file: ' in line:
+                            maxamp = float(line[18:])
+                    sender.send_json('playfile {} {}'.format(wavs[winner], maxamp))
+                    
                     projection = video_producer[winner](NAP[::video_producer[winner].stride])
 
                     for row in projection:
