@@ -64,7 +64,7 @@
 
 i1 	0 .1			        ; init chn values
 i4 	0 $SCORELEN			; audio input
-i11 	0 $SCORELEN			; merge left and right input
+i11 	0 $SCORELEN			; panalyze, merge left and right input
 i21 	0 .1 1				; initialize input level
 i22 	0 .1 "inputNoisefloor" -20	; initialize noise floor 
 ;i22 	0 .1 "memoryRecording" 1	; enable/disable recording of audio memory

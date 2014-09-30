@@ -18,6 +18,7 @@ import IO
 import utils
 import brain
 import analyze_associations
+import robocontrol
 
 class Controller:
     def __init__(self, init_state):
@@ -165,6 +166,7 @@ if __name__ == '__main__':
     mp.Process(target=Controller, args=(persistent_states,), name='CONTROLLER').start()
     mp.Process(target=brain.classifier_brain, args=('localhost',)).start()
     mp.Process(target=analyze_associations.analyze, args=('localhost',)).start()
+    mp.Process(target=robocontrol.robocontrol, args=('localhost',)).start()
 
     try:
         raw_input('')

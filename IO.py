@@ -22,6 +22,8 @@ EXTERNAL = 5566
 SNAPSHOT = 5567
 EVENT = 5568
 ASSOCIATIONS = 5569
+ROBO = 5570
+ROBOBACK = 5571
 
 #FACE_HAAR_CASCADE_PATH = os.environ['VIRTUAL_ENV'] + '/share/OpenCV/haarcascades/haarcascade_frontalface_default.xml'
 #EYE_HAAR_CASCADE_PATH = os.environ['VIRTUAL_ENV'] + '/share/OpenCV/haarcascades/haarcascade_eye_tree_eyeglasses.xml'
@@ -118,6 +120,13 @@ def audio():
     assoc = context.socket(zmq.PUB)
     assoc.bind('tcp://*:{}'.format(ASSOCIATIONS))
 
+    robocontrol = context.socket(zmq.PUB)
+    robocontrol.bind('tcp://*:{}'.format(ROBO))
+
+    roboback = context.socket(zmq.SUB)
+    roboback.connect('tcp://localhost:{}'.format(ROBOBACK))
+    roboback.setsockopt(zmq.SUBSCRIBE, b'')
+
     subscriber = context.socket(zmq.PULL)
     subscriber.bind('tcp://*:{}'.format(SPEAKER))
 
@@ -139,6 +148,7 @@ def audio():
     poller.register(stateQ, zmq.POLLIN)
     poller.register(eventQ, zmq.POLLIN)
     poller.register(assoc, zmq.POLLIN)
+    poller.register(roboback, zmq.POLLIN)
 
     import time
     t_str = time.strftime
@@ -195,6 +205,9 @@ def audio():
         stopflag = perfKsmps()
         fftinFlag = cGet("pvsinflag")
         fftoutFlag = cGet("pvsoutflag")
+        panposition = cs.GetChannel("panalyzer_pan")
+        if panposition != 0.5:
+            robocontrol.send_json(panposition)
         
         if fftinFlag:
             fftin_amplist = map(tGet,fftin_amptabs,fftbinindices)
@@ -209,14 +222,18 @@ def audio():
 
         if stateQ in events:
             state = stateQ.recv_json()
-        
+        if roboback in events:
+            pangate = roboback.recv_json()
+            cSet("panGate", pangate)
+
         # get Csound channel data
         audioStatus = cGet("audioStatus")           
         audioStatusTrig = cGet("audioStatusTrig")       # signals start of a statement (audio in)
         transient = cGet("transient")                   # signals start of a segment within a statement (audio in)        
         memRecTimeMarker = cGet("memRecTimeMarker")     # (in memRec) get the time since start of statement
         memRecActive = cGet("memRecActive")             # flag to check if memoryRecording is currently recording to file in Csound
-                 
+        memRecMaxAmp = cGet("memRecMaxAmp")             # max amplitude for each recorded file
+         
         if state['memoryRecording']:
             if audioStatusTrig > 0:
                 print 'starting memoryRec'
@@ -233,7 +250,8 @@ def audio():
             if (audioStatusTrig < 0) & (memRecActive > 0):
                 cs.InputMessage('i -34 0 1')
                 markerfile.write(segments)
-                markerfile.write('Total duration: %f'%memRecTimeMarker)
+                markerfile.write('Total duration: %f\n'%memRecTimeMarker)
+                markerfile.write('\nMax amp for file: %f'%memRecMaxAmp)
                 markerfile.close()
                 print 'stopping memoryRec'
                 assoc.send_json(markerfileName)
