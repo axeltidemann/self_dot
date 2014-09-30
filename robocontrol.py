@@ -57,28 +57,29 @@ def robocontrol(host):
     roboback = context.socket(zmq.PUB)
     roboback.bind('tcp://*:{}'.format(IO.ROBOBACK))
 
-    poller = zmq.Poller()
-    poller.register(robo, zmq.POLLIN)
-
     #timeStamp = time.time()
     pos = 45
     while True:
     	#print 'robocontrol is running %i', time.time()-timeStamp
     	time.sleep(.05)
-        events = dict(poller.poll(timeout=0))
-        if robo in events:
-            panposition = robo.recv_json()
-            #print 'panposition', panposition
-            # send pan position to head (eg. 'p 60')
-            pos += int((panposition-0.5)*80)
-            if pos < 10: pos += 180
-            if pos > 200: pos -= 180
-            command = 'p %03dn'%pos
-            ser.write(command)
-            #serRead = ser.readline()
-            #print 'read * ', serRead, '*'
-            #cs.SetChannel("panGate", 0)
-            roboback.send_json(0)
+        message = None
+        try:
+            message = robo.recv_json(flags=zmq.DONTWAIT)
+        except:
+            message = 'hellllo'
+        print 'message', message
+        panposition = robo.recv_json()
+        #print 'panposition', panposition
+        # send pan position to head (eg. 'p 60')
+        pos += int((panposition-0.5)*80)
+        if pos < 10: pos += 180
+        if pos > 200: pos -= 180
+        command = 'p %03dn'%pos
+        ser.write(command)
+        #serRead = ser.readline()
+        #print 'read * ', serRead, '*'
+        #cs.SetChannel("panGate", 0)
+        roboback.send_json(0)
 
 
 
