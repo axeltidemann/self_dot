@@ -33,13 +33,24 @@
 	instr 99
 
 	a1	chnget "MasterOut1"
+
+	kthresh         chnget "PrimaryCompThresh"
+	kratio          chnget "PrimaryCompRatio"
+	kattack		    = 15				; attack time 
+	krelease	    = 20				; release time 
+#include "compressor.inc"
+	klevel          chnget "PrimaryMasterLevel"
+    klevel          = ampdbfs(klevel)
+    a1              = a1*klevel
+
 	a2	chnget "MasterOut2"
-		outs a1, a2
-		chnset (a1+a2)*0.5, "MyOutput"
+    iMasterAdjust   = 2
+		            outs a1*iMasterAdjust, a2*iMasterAdjust
+		            chnset (a1+a2)*0.5, "MyOutput"
 
 	a0	= 0
-		chnset a0, "MasterOut1"
-		chnset a0, "MasterOut2"
-		chnset a0, "in1"
-		chnset a0, "in2"
+                    chnset a0, "MasterOut1"
+                    chnset a0, "MasterOut2"
+                    chnset a0, "in1"
+                    chnset a0, "in2"
 	endin
