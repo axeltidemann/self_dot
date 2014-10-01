@@ -81,9 +81,17 @@ def video():
     me = mp.current_process()
     print me.name, 'PID', me.pid
 
-    cv2.namedWindow('Output', cv2.WINDOW_NORMAL)
+    #cv2.namedWindow('Output', cv2.WINDOW_NORMAL)
+
+    cv2.namedWindow('Output', cv2.WND_PROP_FULLSCREEN)
+    #cv2.setWindowProperty('Output', cv2.WND_PROP_FULLSCREEN, cv2.cv.CV_WINDOW_FULLSCREEN)
+
     video_feed = cv2.VideoCapture(0)
     frame_size = (160, 90)
+    #cv2.moveWindow('Output', 2100, 100)
+    #cv2.resizeWindow('Output', 1100, 700)
+    
+    #cv2.setWindowProperty('Output', cv2.WND_PROP_FULLSCREEN, cv2.cv.CV_WINDOW_FULLSCREEN)
 
     context = zmq.Context()
     publisher = context.socket(zmq.PUB)
@@ -92,7 +100,25 @@ def video():
     subscriber = context.socket(zmq.PULL)
     subscriber.bind('tcp://*:{}'.format(PROJECTOR))
 
+    stateQ = context.socket(zmq.SUB)
+    stateQ.connect('tcp://localhost:{}'.format(STATE))
+    stateQ.setsockopt(zmq.SUBSCRIBE, b'') 
+    poller = zmq.Poller()
+    poller.register(stateQ, zmq.POLLIN)
+      
     while True:
+        events = dict(poller.poll(timeout=0))
+        if stateQ in events:
+            state = stateQ.recv_json()        
+
+            if state['fullscreen'] > 0:
+                cv2.setWindowProperty('Output', cv2.WND_PROP_FULLSCREEN, cv2.cv.CV_WINDOW_FULLSCREEN)
+                state['fullscreen'] = 0
+            if state['display2'] > 0:
+                cv2.moveWindow('Output', 2100, 100)
+                state['display2'] = 0
+
+
         _, frame = video_feed.read()
         frame = cv2.resize(frame, frame_size)
         gray_image = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY) / 255.
@@ -200,8 +226,9 @@ def audio():
     fftin_freqlist = [0]*ffttabsize
 
     filename = []
-        
+    counter = 0
     while not stopflag:
+        counter += 1
         stopflag = perfKsmps()
         fftinFlag = cGet("pvsinflag")
         fftoutFlag = cGet("pvsoutflag")
@@ -232,6 +259,8 @@ def audio():
         if state['roboActive'] > 0:
             if panposition != 0.5:
                 robocontrol.send_json([1,'pan',panposition])
+            if (counter % 500) == 0:
+                robocontrol.send_json([2,'pan',-1])
          
         if state['memoryRecording']:
             if audioStatusTrig > 0:

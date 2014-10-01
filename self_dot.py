@@ -66,6 +66,12 @@ class Controller:
                 _, name, free = message.split()
                 self.state['brains'][name] = int(free)
 
+            if 'fullscreen' in message:
+                self.state['fullscreen'] = int(message[11:])
+
+            if 'display2' in message:
+                self.state['display2'] = int(message[9:])
+
             if message == 'startrec':
                 self.state['record'] = True
 
@@ -162,6 +168,8 @@ if __name__ == '__main__':
                          'record': False,
                          'memoryRecording': False,
                          'roboActive': False,
+                         'fullscreen': 0,
+                         'display2': 0,
                          'associate': False,
                          'associate_learn': False}
 
