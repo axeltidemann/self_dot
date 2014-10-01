@@ -2,6 +2,49 @@
 	aLeft	chnget "in1"
 	aRight	chnget "in2"
 
+; preprocess
+/*
+    aLeft           butterhp aLeft, 400
+    aRight          butterhp aRight, 400
+    aLeft           butterhp aLeft, 300
+    aRight          butterhp aRight, 300
+*/
+; amplitude comparision
+	krmsLg		    rms aLeft
+	krmsRg		    rms aRight
+	armsL           follow2 aLeft, 0.01, 0.5
+	armR            follow2 aRight, 0.01, 0.5
+	krmsL           downsamp armsL
+	krmsR           downsamp armR
+	ktempdiv	    divz (krmsL - krmsR), (krmsL+krmsR), 1
+	krmsPos		    = ((ktempdiv)+1)*0.5
+	krmsPosLarge	= ((ktempdiv)*3)
+
+; gate /samphold
+	kgate		    = -22;chnget "inputNoisefloor"
+	kgateL		    = (dbfsamp(krmsLg) > kgate ? 1 : 0)
+	kgateR		    = (dbfsamp(krmsRg) > kgate ? 1 : 0)
+    ;krmsPos		    samphold krmsPos, (kgateL+kgateR)
+;printk2 krmsPos
+    ktransient      chnget "transient"
+noDoubleTrig:
+    idoublePeriod   = 1
+    kdoubleMute     linseg 0, idoublePeriod, 0, 0, 1, 1, 1
+    rireturn
+    ktransient2     = ktransient*kdoubleMute
+    kcenter         = 0.5
+    if ktransient2 > 0 then
+                    chnset krmsPos, "panalyzer_pan"
+                    reinit noDoubleTrig
+    else
+                    chnset kcenter, "panalyzer_pan"
+    endif
+    ;ktest   chnget "panalyzer_pan"
+    ;printk2 ktest, 30
+
+/*
+; below here is for backup only
+
 ; amplitude comparision
 	krmsLg		rms aLeft
 	krmsRg		rms aRight
@@ -145,4 +188,5 @@ starts:
 	armsPos		upsamp krmsPos
 			fout "panalyze_test.wav", 14, aLeft*7, aRight*7, aindex, armsPos
         endif
-        
+*/
+

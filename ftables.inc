@@ -1,5 +1,5 @@
 ; pvs ftables
-	gifftsize 	= 512
+	gifftsize 	= 1024
 			chnset gifftsize, "fftsize"
 	giFftTabSize	= (gifftsize / 2)+1
 	gifna     	ftgen   1 ,0 ,giFftTabSize, 7, 0, giFftTabSize, 0   	; for pvs analysis
@@ -24,6 +24,8 @@
 	giTri		ftgen	0, 0, 8192, 7, 0, 2048, 1, 4096, -1, 2048, 0		; triangle wave 
 
 ; grain envelope tables
+        giSampleposGate ftgen   0, 0, 8193, 7, 1, 8190, 2, 0                            ; gate at end
+	giHanning 	ftgen	0, 0, 8193, 20, 2, 1				        ; Hanning
 	giSigmoRise 	ftgen	0, 0, 8193, 19, 0.5, 1, 270, 1				; rising sigmoid
 	giSigmoFall 	ftgen	0, 0, 8193, 19, 0.5, 1, 90, 1				; falling sigmoid
 	giExpFall	ftgen	0, 0, 8193, 5, 1, 8193, 0.00001				; exponential decay

@@ -24,9 +24,15 @@ from scipy.signal.signaltools import correlate2d as c2d
 
 import utils
 import IO
+
+try:
+    opencv_prefix = os.environ['VIRTUAL_ENV']
+except:
+    opencv_prefix = '/usr/local'
+    print 'VIRTUAL_ENV variable not set, we are guessing OpenCV files reside in /usr/local - if OpenCV croaks, this is the reason.'
     
-FACE_HAAR_CASCADE_PATH = os.environ['VIRTUAL_ENV'] + '/share/OpenCV/haarcascades/haarcascade_frontalface_default.xml'
-EYE_HAAR_CASCADE_PATH = os.environ['VIRTUAL_ENV'] + '/share/OpenCV/haarcascades/haarcascade_eye_tree_eyeglasses.xml'
+FACE_HAAR_CASCADE_PATH = opencv_prefix + '/share/OpenCV/haarcascades/haarcascade_frontalface_default.xml'
+EYE_HAAR_CASCADE_PATH = opencv_prefix + '/share/OpenCV/haarcascades/haarcascade_eye_tree_eyeglasses.xml'
 HAMMERTIME = 10 # Hamming distance match criterion
         
 def face_extraction(host, extended_search=False):
@@ -298,7 +304,7 @@ def classifier_brain(host):
                 print 'Respond to', pushbutton['filename']
 
                 if len(NAPs) == 1:
-                    sender.send_json('playfile_primary {}'.format(wavs[-1]))
+                    sender.send_json('playfile {}'.format(wavs[-1]))
                     continue
 
                 try:
@@ -310,7 +316,14 @@ def classifier_brain(host):
 
                     audio_id = audio_recognizer.predict(np.ndarray.flatten(NAP_resampled))[0]
                     response = np.random.choice(wavs[audio_id])
-                    sender.send_json('playfile_primary {}'.format(response))
+                    
+                    audioinfo = open(response[:-4]+'.txt')
+                   
+                    maxamp = 1
+                    for line in audioinfo:
+                        if 'Max amp for file: ' in line:
+                            maxamp = float(line[18:])
+                    sender.send_json('playfile {} {}'.format(response, maxamp))
 
                     sorted_sounds = np.argsort([ utils.hamming_distance(new_audio_hash, np.random.choice(h)) for h in NAP_hashes ])
 

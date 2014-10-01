@@ -11,6 +11,7 @@
 	puts Swavname, 1
         a1              chnget "rec_in1"
                 	fout Swavname, 14, a1
+
                         
         ; for writing transient marker txt file
         ktime           timeinsts
@@ -18,8 +19,36 @@
 
                         xtratim 1/kr
         krelease        release
+
+        ; save max amp for this sound file so we can normalize each segment on the fly later
+        kmetro          metro 5
+        kmaxa           max_k a1, kmetro, 1
+        kmaxamp         init 0
+        kmaxamp         max, kmaxamp, kmaxa
+                        chnset kmaxamp, "memRecMaxAmp"            
+
         kactive         = 1-krelease
                         chnset kactive, "memRecActive"          ; tell Python that we're recording
+
+        ; write pitch data to a separate file
+        iPitchFn        ftgentmp 0, 0, 131072, 2, 0	; empty table
+        kcps            chnget "pitch1_amdf"
+        kindx		init 1
+		        tablew	kcps, kindx, iPitchFn
+        kindx		= kindx + 1
+        ; write end index (length of data) to table index 0
+		        tablew	kindx, 0, iPitchFn
+
+        ; write table to file when instrument stops
+        istrlen         strlen Swavname
+        Spitchfile      strsub Swavname, 0, istrlen-4
+        Spitchfile      strcat Spitchfile, "_pitch.txt"
+	puts Spitchfile, 1
+        ksaveonce       trigger krelease, 0.5, 0
+        if ksaveonce == 1 then
+                        ftsavek	Spitchfile, ksaveonce, 1, iPitchFn
+        endif
+
 /*
 	; trigger instr events to record subsegments
 	kcount		init 0

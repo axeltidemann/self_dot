@@ -7,13 +7,13 @@
 	kflag   	pvsftw	fsin,gifnaNoiseIn  	        	
 
 	; copy pvs data from table to array
-	kArrA[]  		init    giFftTabSize-2
-	kArrAprev[]  		init    giFftTabSize-2
-	kArrAfilt[]  		init    giFftTabSize-2
+	kArrA[]  		init    giFftTabSize
+	kArrAprev[]  		init    giFftTabSize
+	kArrAfilt[]  		init    giFftTabSize
 
 if (kflag > 0) then
 	kArrAprev[]		= kArrA
-        			copyf2array kArrA, gifna
+        			copyf2array kArrA, gifnaNoiseIn
 	kindx 			= 0
 	kfiltered		= 0
   process:

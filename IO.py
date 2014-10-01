@@ -3,6 +3,7 @@
 
 import multiprocessing as mp
 import os
+import random
 
 import cv2
 import numpy as np
@@ -21,13 +22,18 @@ EXTERNAL = 5566
 SNAPSHOT = 5567
 EVENT = 5568
 FACE = 5569
+ASSOCIATIONS = 5569
+ROBO = 5570
+#ROBOBACK = 5571
+
 
 def video():
     me = mp.current_process()
     print me.name, 'PID', me.pid
 
-    cv2.namedWindow('Output', cv2.WINDOW_NORMAL)
-    video_feed = cv2.VideoCapture(0)
+    #cv2.namedWindow('Output', cv2.WINDOW_NORMAL)
+
+    cv2.namedWindow('Output', cv2.WND_PROP_FULLSCREEN)
 
     context = zmq.Context()
     publisher = context.socket(zmq.PUB)
@@ -38,7 +44,24 @@ def video():
     
     frame_size = (640,360)
 
+    stateQ = context.socket(zmq.SUB)
+    stateQ.connect('tcp://localhost:{}'.format(STATE))
+    stateQ.setsockopt(zmq.SUBSCRIBE, b'') 
+    poller = zmq.Poller()
+    poller.register(stateQ, zmq.POLLIN)
+
     while True:
+        events = dict(poller.poll(timeout=0))
+        if stateQ in events:
+            state = stateQ.recv_json()        
+
+            if state['fullscreen'] > 0:
+                cv2.setWindowProperty('Output', cv2.WND_PROP_FULLSCREEN, cv2.cv.CV_WINDOW_FULLSCREEN)
+                state['fullscreen'] = 0
+            if state['display2'] > 0:
+                cv2.moveWindow('Output', 2100, 100)
+                state['display2'] = 0
+
         _, frame = video_feed.read()
         frame = cv2.resize(frame, frame_size)
         send_array(publisher, frame)
@@ -57,6 +80,16 @@ def audio():
     context = zmq.Context()
     publisher = context.socket(zmq.PUB)
     publisher.bind('tcp://*:{}'.format(MIC))
+
+    assoc = context.socket(zmq.PUB)
+    assoc.bind('tcp://*:{}'.format(ASSOCIATIONS))
+
+    robocontrol = context.socket(zmq.PUB)
+    robocontrol.bind('tcp://*:{}'.format(ROBO))
+
+    #roboback = context.socket(zmq.SUB)
+    #roboback.connect('tcp://localhost:{}'.format(ROBOBACK))
+    #roboback.setsockopt(zmq.SUBSCRIBE, b'')
 
     subscriber = context.socket(zmq.PULL)
     subscriber.bind('tcp://*:{}'.format(SPEAKER))
@@ -78,10 +111,13 @@ def audio():
     poller.register(subscriber, zmq.POLLIN)
     poller.register(stateQ, zmq.POLLIN)
     poller.register(eventQ, zmq.POLLIN)
+    poller.register(assoc, zmq.POLLIN)
+    #poller.register(roboback, zmq.POLLIN)
 
     import time
-    t = time.strftime
-    
+    t_str = time.strftime
+    t_tim = time.time()
+
     memRecPath = "./memory_recordings/"
 
     if not os.path.exists(memRecPath):
@@ -128,8 +164,9 @@ def audio():
     fftin_freqlist = [0]*ffttabsize
 
     filename = []
-        
+    counter = 0
     while not stopflag:
+        counter += 1
         stopflag = perfKsmps()
         fftinFlag = cGet("pvsinflag")
         fftoutFlag = cGet("pvsoutflag")
@@ -147,36 +184,51 @@ def audio():
 
         if stateQ in events:
             state = stateQ.recv_json()
-        
+
         # get Csound channel data
         audioStatus = cGet("audioStatus")           
         audioStatusTrig = cGet("audioStatusTrig")       # signals start of a statement (audio in)
         transient = cGet("transient")                   # signals start of a segment within a statement (audio in)        
         memRecTimeMarker = cGet("memRecTimeMarker")     # (in memRec) get the time since start of statement
         memRecActive = cGet("memRecActive")             # flag to check if memoryRecording is currently recording to file in Csound
+        memRecMaxAmp = cGet("memRecMaxAmp")             # max amplitude for each recorded file
+        panposition = cs.GetChannel("panalyzer_pan")
+
+        if state['roboActive'] > 0:
+            if panposition != 0.5:
+                robocontrol.send_json([1,'pan',panposition])
+            if (counter % 500) == 0:
+                robocontrol.send_json([2,'pan',-1])
          
         if state['memoryRecording']:
             if audioStatusTrig > 0:
                 print 'starting memoryRec'
-                timestamp = t('%Y_%m_%d_%H_%M_%S')
-                filename = memRecPath+timestamp+'.wav'
+                timestr = t_str('%Y_%m_%d_%H_%M_%S')
+                tim_time = t_tim
+                filename = memRecPath+timestr+'.wav'
                 cs.InputMessage('i 34 0 -1 "%s"'%filename)
-                markerfile = open(memRecPath+timestamp+'.txt', 'w')
-                markerfile.write('Self. audio clip perceived at %s\n'%timestamp)
+                markerfileName = memRecPath+timestr+'.txt'
+                markerfile = open(markerfileName, 'w')
+                markerfile.write('Self. audio clip perceived at %s\n'%tim_time)
                 segments = 'Sub segment start times: \n0.000 \n'
             if (transient > 0) & (memRecActive > 0):
                 segments += '%.3f \n'%memRecTimeMarker
             if (audioStatusTrig < 0) & (memRecActive > 0):
                 cs.InputMessage('i -34 0 1')
                 markerfile.write(segments)
-                markerfile.write('Total duration: %f'%memRecTimeMarker)
+                markerfile.write('Total duration: %f\n'%memRecTimeMarker)
+                markerfile.write('\nMax amp for file: %f'%memRecMaxAmp)
+                markerfile.close()
                 print 'stopping memoryRec'
+                assoc.send_json(markerfileName)
 
         if not state['memoryRecording'] and memRecActive:
             cs.InputMessage('i -34 0 1')
             markerfile.write(segments)
             markerfile.write('Total duration: %f'%memRecTimeMarker)
+            markerfile.close()
             print 'stopping memoryRec'
+            assoc.send_json(markerfileName)
                                 
         if state['autolearn']:
             if audioStatusTrig > 0:
@@ -224,8 +276,8 @@ def audio():
             if 'calibrateAudio' in pushbutton:
                 cs.InputMessage('i -17 0 1') # turn off old noise gate
                 cs.InputMessage('i 12 0 4') # measure roundtrip latency
-                cs.InputMessage('i 13 4 2') # get audio input noise print
-                cs.InputMessage('i 14 6 -1 0.6 1') # enable noiseprint and self-output suppression
+                cs.InputMessage('i 13 4 1.9') # get audio input noise print
+                cs.InputMessage('i 14 6 -1 1.0 1.0') # enable noiseprint and self-output suppression
                 cs.InputMessage('i 15 6.2 2') # get noise floor level 
                 cs.InputMessage('i 16 8.3 0.1') # set noise gate shape
                 cs.InputMessage('i 17 8.5 -1') # turn on new noise gate
@@ -239,7 +291,30 @@ def audio():
                 zeroChannelsOnNoBrain = int('{}'.format(pushbutton['zerochannels']))
 
             if 'playfile' in pushbutton:
-                print 'deprecated, use playfile_input, playfile_primary or playfile_secondary'
+                print '[self.] playfile {}'.format(pushbutton['playfile'])
+                try:
+                    params = pushbutton['playfile']
+                    soundfile, maxamp = params.split(' ')
+                    voiceChannel = random.choice([1,2]) # internal or external voice (primary/secondary associations)
+                    voiceType = random.choice([1,2,3,4,5,6,7]) # different voice timbres, (0-7), see self_voices.inc for details
+                    instr = 60 + voiceType
+                    start = 0 # segment start and end within sound file
+                    end = 0 # if zero, play whole file
+                    amp = -3 # voice amplitude in dB
+                    if voiceChannel == 2:
+                        delaySend = -26 # delay send in dB
+                        reverbSend = -23 # reverb send in dB
+                    else:
+                        delaySend = -96
+                        reverbSend = -35 
+                    if voiceType == 7:
+                        speed = 0.6 #playback  speed
+                    else:
+                        speed = 1 
+                    cs.InputMessage('i %i 0 1 "%s" %f %f %f %f %i %f %f %f' %(instr, soundfile, start, end, amp, float(maxamp), voiceChannel, delaySend, reverbSend, speed))
+
+                except Exception, e:
+                    print e, 'Playfile aborted.'
 
             if 'playfile_input' in pushbutton:
                 print '[self.] wants to play {}'.format(pushbutton['playfile_input'])

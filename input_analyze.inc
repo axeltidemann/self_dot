@@ -18,6 +18,7 @@
 			chnset kstatus, "audioStatus"
 			chnset kstatusTrig, "audioStatusTrig"
 			chnset ktrig1, "transient"
+                        chnset kcpsA, "pitch1_amdf"
 /*
 			chnset kflag, "pvsinflag"
 			chnset krms1, "level1"

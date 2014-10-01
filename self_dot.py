@@ -17,6 +17,8 @@ from zmq.utils.jsonapi import dumps
 import IO
 import utils
 import brain
+import analyze_associations
+import robocontrol
 
 class Controller:
     def __init__(self, init_state):
@@ -64,6 +66,12 @@ class Controller:
                 _, name, free = message.split()
                 self.state['brains'][name] = int(free)
 
+            if 'fullscreen' in message:
+                self.state['fullscreen'] = int(message[11:])
+
+            if 'display2' in message:
+                self.state['display2'] = int(message[9:])
+
             if message == 'startrec':
                 self.state['record'] = True
 
@@ -76,6 +84,10 @@ class Controller:
 
             if 'memoryRecording' in message:
                 self.state['memoryRecording'] = message[16:] in ['True', '1']
+
+            if 'roboActive' in message:
+                self.state['roboActive'] = int(message[11:])
+                print self.state['roboActive']
 
             if 'decrement' in message:
                 _, name = message.split()
@@ -124,14 +136,8 @@ class Controller:
             if 'zerochannels' in message:
                 self.event.send_json({ 'zerochannels': message[13:] })
 
-            '''
             if 'playfile' in message:
-                self.event.send_json({ 'inputLevel': 'mute' }) # A bit ugly - Csound should mute itself, maybe?
                 self.event.send_json({ 'playfile': message[9:] })
-                time.sleep(utils.wav_duration(message[9:]))
-                self.event.send_json({ 'inputLevel': 'unmute' })
-            '''
-
             if 'playfile_input' in message:
                 self.event.send_json({ 'playfile_input': message[15:] })
 
@@ -166,6 +172,9 @@ if __name__ == '__main__':
                          'brains': {},
                          'record': False,
                          'memoryRecording': False,
+                         'roboActive': False,
+                         'fullscreen': 0,
+                         'display2': 0,
                          'associate': False,
                          'associate_learn': False, 
                          'facerecognition': False}
@@ -175,6 +184,8 @@ if __name__ == '__main__':
     mp.Process(target=brain.face_extraction, args=('localhost',), name='FACE EXTRACTION').start()
     mp.Process(target=Controller, args=(persistent_states,), name='CONTROLLER').start()
     mp.Process(target=brain.classifier_brain, args=('localhost',)).start()
+    mp.Process(target=analyze_associations.analyze, args=('localhost',)).start()
+    mp.Process(target=robocontrol.robocontrol, args=('localhost',)).start()
 
     try:
         raw_input('')
