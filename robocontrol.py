@@ -8,7 +8,10 @@ import time
 import random
 
 # connect to arduino
-import serial
+try:
+    import serial
+except:
+    print 'Serial module not available.'
 
 class NoSerial:
     def readline(self):

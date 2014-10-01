@@ -142,8 +142,6 @@ def classifier_brain(host):
     # This is the size for the neural networks to learn. Differs from original framesize.
     frame_size = (160, 90) 
         
-    import matplotlib.pyplot as plt
-    plt.ion()
     cv2.namedWindow('Faces', cv2.WINDOW_NORMAL)
 
     while True:

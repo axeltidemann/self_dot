@@ -21,11 +21,10 @@ STATE = 5565
 EXTERNAL = 5566
 SNAPSHOT = 5567
 EVENT = 5568
-FACE = 5569
 ASSOCIATIONS = 5569
 ROBO = 5570
 #ROBOBACK = 5571
-
+FACE = 5572
 
 def video():
     me = mp.current_process()
@@ -34,6 +33,7 @@ def video():
     #cv2.namedWindow('Output', cv2.WINDOW_NORMAL)
 
     cv2.namedWindow('Output', cv2.WND_PROP_FULLSCREEN)
+    camera = cv2.VideoCapture(0)
 
     context = zmq.Context()
     publisher = context.socket(zmq.PUB)
@@ -62,7 +62,7 @@ def video():
                 cv2.moveWindow('Output', 2100, 100)
                 state['display2'] = 0
 
-        _, frame = video_feed.read()
+        _, frame = camera.read()
         frame = cv2.resize(frame, frame_size)
         send_array(publisher, frame)
         
