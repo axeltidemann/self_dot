@@ -20,56 +20,7 @@ STATE = 5565
 EXTERNAL = 5566
 SNAPSHOT = 5567
 EVENT = 5568
-
-FACE_HAAR_CASCADE_PATH = os.environ['VIRTUAL_ENV'] + '/share/OpenCV/haarcascades/haarcascade_frontalface_default.xml'
-EYE_HAAR_CASCADE_PATH = os.environ['VIRTUAL_ENV'] + '/share/OpenCV/haarcascades/haarcascade_eye_tree_eyeglasses.xml'
-
-def eye():
-    me = mp.current_process()
-    print me.name, 'PID', me.pid
-    
-    cv2.namedWindow('Input', cv2.WINDOW_NORMAL)
-
-    camera = cv2.VideoCapture(0)
-    storage = cv2.cv.CreateMemStorage()
-    eye_cascade = cv2.cv.Load(EYE_HAAR_CASCADE_PATH)
-    face_cascade = cv2.cv.Load(FACE_HAAR_CASCADE_PATH)
-
-    rows, cols = (640,360)
-
-    while True:
-        _, frame = camera.read()
-
-        frame = cv2.resize(frame, (rows, cols)) # 16:9 aspect ratio of Logitech USB camera
- 
-        eyes = [ (x,y,w,h) for (x,y,w,h),n in cv2.cv.HaarDetectObjects(cv2.cv.fromarray(frame), eye_cascade, storage, 1.2, 2, cv2.cv.CV_HAAR_DO_CANNY_PRUNING, (20,20)) ] 
-
-        for (x,y,w,h) in eyes:
-            cv2.rectangle(frame, (x,y), (x+w,y+h), (0, 0, 255), 2)
-
-        faces = [ (x,y,w,h) for (x,y,w,h),n in cv2.cv.HaarDetectObjects(cv2.cv.fromarray(frame), face_cascade, storage, 1.2, 2, cv2.cv.CV_HAAR_DO_CANNY_PRUNING, (50,50)) ] 
-
-        for (x,y,w,h) in faces:
-            cv2.rectangle(frame, (x,y), (x+w,y+h), (255, 0, 0), 2)
-
-        if len(eyes) == 2:
-            x, y, _, _ = eyes[0]
-            x_, y_, _, _ = eyes[1]
-            angle = np.rad2deg(np.arctan( float((y_ - y))/(x_ - x) ))
-            rotation = cv2.getRotationMatrix2D((rows/2, cols/2), angle,1)
-            frame = cv2.warpAffine(frame, rotation, (rows,cols))
-
-            faces = [ (x,y,w,h) for (x,y,w,h),n in cv2.cv.HaarDetectObjects(cv2.cv.fromarray(frame), face_cascade, storage, 1.2, 2, cv2.cv.CV_HAAR_DO_CANNY_PRUNING, (50,50)) ] 
-
-            for (x,y,w,h) in faces:
-                cv2.rectangle(frame, (x,y), (x+w,y+h), (0, 0, 255), 2)
-
-            rotation = cv2.getRotationMatrix2D((rows/2, cols/2), -angle,1)
-            frame = cv2.warpAffine(frame, rotation, (rows,cols))
-            
-                
-        cv2.imshow("Input", frame)
-        cv2.waitKey(100)
+FACE = 5569
 
 def video():
     me = mp.current_process()
@@ -77,7 +28,6 @@ def video():
 
     cv2.namedWindow('Output', cv2.WINDOW_NORMAL)
     video_feed = cv2.VideoCapture(0)
-    frame_size = (160, 90)
 
     context = zmq.Context()
     publisher = context.socket(zmq.PUB)
@@ -86,20 +36,17 @@ def video():
     subscriber = context.socket(zmq.PULL)
     subscriber.bind('tcp://*:{}'.format(PROJECTOR))
     
+    frame_size = (640,360)
+
     while True:
         _, frame = video_feed.read()
         frame = cv2.resize(frame, frame_size)
-        gray_image = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY) / 255.
-
-        send_array(publisher, np.ndarray.flatten(gray_image))
+        send_array(publisher, frame)
         
         try: 
-            cv2.imshow('Output', 
-                       cv2.resize(
-                           np.resize(recv_array(subscriber, flags=zmq.DONTWAIT), (90,160)),
-                           (640,360)))
+            cv2.imshow('Output', cv2.resize(recv_array(subscriber, flags=zmq.DONTWAIT), frame_size))
         except:
-            cv2.imshow('Output', np.zeros((360, 640)))
+            cv2.imshow('Output', np.zeros(frame_size[::-1]))
 
         cv2.waitKey(100)
 

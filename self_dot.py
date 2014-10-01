@@ -70,6 +70,10 @@ class Controller:
             if message == 'stoprec':
                 self.state['record'] = False
 
+            if 'facerecognition' in message:
+                _, value = message.split()
+                self.state['facerecognition'] = value in ['True', '1']
+
             if 'memoryRecording' in message:
                 self.state['memoryRecording'] = message[16:] in ['True', '1']
 
@@ -130,6 +134,7 @@ class Controller:
 
             if 'playfile_input' in message:
                 self.event.send_json({ 'playfile_input': message[15:] })
+
             if 'playfile_primary' in message:
                 self.event.send_json({ 'inputLevel': 'mute' }) # A bit ugly - Csound should mute itself, maybe?
                 self.event.send_json({ 'playfile_primary': message[17:] })
@@ -162,11 +167,12 @@ if __name__ == '__main__':
                          'record': False,
                          'memoryRecording': False,
                          'associate': False,
-                         'associate_learn': False}
+                         'associate_learn': False, 
+                         'facerecognition': False}
 
     mp.Process(target=IO.audio, name='AUDIO').start() 
     mp.Process(target=IO.video, name='VIDEO').start()
-    mp.Process(target=IO.eye, name='EYE').start()
+    mp.Process(target=brain.face_extraction, args=('localhost',), name='FACE EXTRACTION').start()
     mp.Process(target=Controller, args=(persistent_states,), name='CONTROLLER').start()
     mp.Process(target=brain.classifier_brain, args=('localhost',)).start()
 

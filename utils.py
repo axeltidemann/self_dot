@@ -6,6 +6,9 @@ import time
 import numpy as np
 import zmq
 from scipy.io import wavfile
+import scipy.fftpack
+from sklearn.covariance import EmpiricalCovariance, MinCovDet
+import cv2
 
 # http://goo.gl/zeJZl
 def bytes2human(n, format="%(value)i%(symbol)s"):
@@ -25,10 +28,12 @@ def bytes2human(n, format="%(value)i%(symbol)s"):
             return format % locals()
     return format % dict(symbol=symbols[0], value=n)
 
+
 def csv_to_array(filename, delimiter=' '):
     with open(filename, 'rb') as csvfile:
         reader = csv.reader(csvfile, delimiter=delimiter)
         return np.array([ [ float(r) for r in row ] for row in reader ])
+
 
 def array_to_csv(filename, data, delimiter=' '):
     with open(filename, 'wb') as csvfile:
@@ -47,13 +52,16 @@ def wait_for_wav(filename):
             break
         except:
             time.sleep(.1)
+
             
 def filesize(filename):
     return bytes2human(os.path.getsize(filename))
 
+
 def wav_duration(filename):
     sound = wave.open(filename, 'r')
     return sound.getnframes()/float(sound.getframerate())
+
 
 def trim(A, threshold=100):
     ''' Trims off excess fat on either side of the thresholded part of the signal '''
@@ -64,6 +72,7 @@ def trim(A, threshold=100):
     while A[left] < threshold:
         left += 1
     return A[left:right]
+
 
 def split_signal(data, threshold=100, length=5000, elbow_grease=100, plot=False, markers=[]):
     ''' Splits the signal after [length] silence '''
@@ -84,10 +93,12 @@ def split_signal(data, threshold=100, length=5000, elbow_grease=100, plot=False,
 
     return chunks
 
+
 def split_wav(filename, threshold=100, length=5000, elbow_grease=100, plot=False):
     from scipy.io import wavfile
     rate, data = wavfile.read(filename)
     return split_signal(data, threshold=threshold, length=length, elbow_grease=elbow_grease, plot=plot)
+
 
 def send_array(socket, A, flags=0, copy=True, track=False):
     """send a numpy array with metadata"""
@@ -98,6 +109,7 @@ def send_array(socket, A, flags=0, copy=True, track=False):
     socket.send_json(md, flags|zmq.SNDMORE)
     return socket.send(A, flags, copy=copy, track=track)
 
+
 def recv_array(socket, flags=0, copy=True, track=False):
     """recv a numpy array"""
     md = socket.recv_json(flags=flags)
@@ -105,3 +117,90 @@ def recv_array(socket, flags=0, copy=True, track=False):
     buf = buffer(msg)
     A = np.frombuffer(buf, dtype=md['dtype'])
     return A.reshape(md['shape'])
+
+
+def diff_to_hex_bad(diff):
+    bits = "".join(map(lambda pixel: '1' if pixel else '0', diff))
+    hexadecimal = int(bits, 2).__format__('016x').upper()
+    return hexadecimal
+
+
+# It seems as average hash is better at determining greater difference than
+# perceptive hash - which is what we want, basically.
+def average_hash(image):
+    avg = np.mean(image)
+    diff = image > avg
+    return diff_to_hex(diff)
+
+
+def a_hash(image, hash_size=8):
+    image = cv2.resize(image, (hash_size, hash_size), interpolation=cv2.INTER_AREA)
+    diff = np.ndarray.flatten(image) > np.mean(image)
+    return diff_to_hex(diff)
+
+    
+def p_hash(image, hash_size=64):
+    # Scale to [0,255]
+    image = np.rint(scale(image)*255)
+
+    # Remember: width x height in cv2.resize function
+    image = cv2.resize(image, (hash_size + 1, hash_size), interpolation=cv2.INTER_AREA)
+
+    dct = scipy.fftpack.dct(image)
+    dctlowfreq = np.ndarray.flatten(dct[:8, 1:8])
+    avg = dctlowfreq.mean()
+    diff = dctlowfreq > avg
+    return diff_to_hex(diff)
+
+
+def diff_to_hex(difference):
+    # Convert the binary array to a hexadecimal string.
+    decimal_value = 0
+    hex_string = []
+    for index, value in enumerate(difference):
+        if value:
+            decimal_value += 2**(index % 8)
+        if (index % 8) == 7:
+            hex_string.append(hex(decimal_value)[2:].rjust(2, '0'))
+            decimal_value = 0
+
+    return ''.join(hex_string)
+
+
+def d_hash(image, hash_size = 8):
+        # Scale to [0,255]
+        image = np.rint(scale(image)*255)
+        
+        # Remember: width x height in cv2.resize function
+        image = cv2.resize(image, (hash_size + 1, hash_size), interpolation=cv2.INTER_AREA)
+    
+        # Compare adjacent pixels.
+        difference = []
+        for row in xrange(hash_size):
+            for col in xrange(hash_size):
+                pixel_left = image[row, col]
+                pixel_right = image[row, col + 1]
+                difference.append(pixel_left > pixel_right)
+
+        return diff_to_hex(difference)
+
+    
+def hamming_distance(s1, s2):
+    return sum([ch1 != ch2 for ch1, ch2 in zip(s1, s2)])
+
+
+def similarity_measure(signal, error_func, oneclass, local_signals, local_hashes):
+    signal_hash = average_hash(signal)
+        
+    return [ oneclass.predict(signal)[0], 
+            abs(oneclass.decision_function(signal)[0][0]), 
+            np.mean([ error_func(signal, candidate) for candidate in local_signals ]), 
+            np.mean([ hamming_distance(signal_hash, candidate) for candidate in local_hashes ]) ]
+
+
+def zero_pad(signal, length):
+    return np.vstack(( signal, np.zeros(( length - signal.shape[0], signal.shape[1])) )) if signal.shape[0] < length else signal
+
+
+def scale(image):
+    return (image - np.min(image))/(np.max(image) - np.min(image))

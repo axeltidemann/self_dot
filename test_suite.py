@@ -16,23 +16,39 @@ from utils import wav_duration
 
 def play_sounds(wait_secs):
 
-    for f in glob.glob('testsounds/44100/*.wav')[:10]:
-        send('playfile {}'.format(f))
+    for f in glob.glob('testsounds/44100/*.wav')[:5]:
+        send('playfile_input {}'.format(f))
         sleep(wav_duration(f) + wait_secs)
 
 if __name__ == '__main__':
 
-    send('calibrateAudio')
-    raw_input('Press enter when calibrating is done')
+    for i in range(4):
+        sleep(10)
+        print 'Starting recording'
+        send('startrec')
+        sleep(3)
+        send('stoprec')
+        send('learnwav /Users/tidemann/Documents/NTNU/self_dot/testsounds/44100/count10_44100.wav')
+        print 'Stopping recording'
 
-    print 'Playing sounds [self.] will learn. Make gestures.'
-
-    send('autolearn 1')
-    play_sounds(7)
-    send('autolearn 0')
+    send('facerecognition 1')
     
-    print 'Playing sounds [self.] will respond to. See if the gestures are the same.'
 
-    send('autorespond 1')
-    play_sounds(10)
-    send('autorespond 0')
+    # send('calibrateAudio')
+    # raw_input('Press enter when calibrating is done')
+
+    # print 'Playing sounds [self.] will learn. Make gestures.'
+
+    # send('autolearn 1')
+    # send('memoryRecording 1')
+    # play_sounds(10)
+    # send('autolearn 0')
+    # send('memoryRecording 0')
+
+    # send('facerecognition 1')
+    
+    # print 'Playing sounds [self.] will respond to. See if the gestures are the same.'
+
+    # send('autorespond 1')
+    # play_sounds(10)
+    # send('autorespond 0')
