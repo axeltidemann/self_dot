@@ -205,9 +205,6 @@ def audio():
         stopflag = perfKsmps()
         fftinFlag = cGet("pvsinflag")
         fftoutFlag = cGet("pvsoutflag")
-        panposition = cs.GetChannel("panalyzer_pan")
-        if panposition != 0.5:
-            robocontrol.send_json([1,'pan',panposition])
         
         if fftinFlag:
             fftin_amplist = map(tGet,fftin_amptabs,fftbinindices)
@@ -230,6 +227,11 @@ def audio():
         memRecTimeMarker = cGet("memRecTimeMarker")     # (in memRec) get the time since start of statement
         memRecActive = cGet("memRecActive")             # flag to check if memoryRecording is currently recording to file in Csound
         memRecMaxAmp = cGet("memRecMaxAmp")             # max amplitude for each recorded file
+        panposition = cs.GetChannel("panalyzer_pan")
+
+        if state['roboActive'] > 0:
+            if panposition != 0.5:
+                robocontrol.send_json([1,'pan',panposition])
          
         if state['memoryRecording']:
             if audioStatusTrig > 0:

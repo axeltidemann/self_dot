@@ -24,7 +24,8 @@
 	kgate		    = -22;chnget "inputNoisefloor"
 	kgateL		    = (dbfsamp(krmsLg) > kgate ? 1 : 0)
 	kgateR		    = (dbfsamp(krmsRg) > kgate ? 1 : 0)
-    krmsPos		    samphold krmsPos, (kgateL+kgateR)
+    ;krmsPos		    samphold krmsPos, (kgateL+kgateR)
+;printk2 krmsPos
     ktransient      chnget "transient"
 noDoubleTrig:
     idoublePeriod   = 1

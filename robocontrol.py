@@ -29,8 +29,8 @@ except:
     print '*****************************************'
 
 connected = False
-pan1 = 60
-tilt1 = 45
+pan1 = 0
+tilt1 = 55
 pan2 = 60
 tilt2 = 45
 if serialAvailable:
@@ -41,11 +41,11 @@ if serialAvailable:
         
     time.sleep(2)
     print 'set initial position'
-    ser.write('p %03dn'%tilt1)
+    ser.write('t %03dn'%tilt1)
     ser.write('p %03dn'%pan1)
     time.sleep(0.3)
-    ser.write('p %03dn'%tilt1)
-    ser.write('p %03dn'%pan1)
+    ser.write('r %03dn'%tilt1)
+    ser.write('o %03dn'%pan1)
     print '...' 
     print 'initial position is set'
     time.sleep(1)

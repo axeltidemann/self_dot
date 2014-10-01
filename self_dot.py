@@ -75,6 +75,10 @@ class Controller:
             if 'memoryRecording' in message:
                 self.state['memoryRecording'] = message[16:] in ['True', '1']
 
+            if 'roboActive' in message:
+                self.state['roboActive'] = int(message[11:])
+                print self.state['roboActive']
+
             if 'decrement' in message:
                 _, name = message.split()
                 self.state['brains'][name] -= 1
@@ -157,6 +161,7 @@ if __name__ == '__main__':
                          'brains': {},
                          'record': False,
                          'memoryRecording': False,
+                         'roboActive': False,
                          'associate': False,
                          'associate_learn': False}
 
