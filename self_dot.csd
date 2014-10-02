@@ -87,16 +87,16 @@ i99 	0 $SCORELEN			; master out
 
 /*
 ; test self voice
-i 60    0  1   "memory_recordings/2014_09_25_10_43_46.wav"      0       0     -2    1      -96    -96    1
-;          p3  soundfile                                        start   end   amp   voice   dly   rvb   speed
-i 60    0  1   "memory_recordings/2014_08_07_15_15_54.wav"      0       0     -2    2      -12    -23    1
-i 61    5  1   "memory_recordings/2014_08_07_15_15_54.wav"      0       0     -2    2      -12    -23    1
-i 62   10  1   "memory_recordings/2014_08_07_15_15_54.wav"      0       0     -2    2      -12    -23    1
-i 63   15  1   "memory_recordings/2014_08_07_15_15_54.wav"      0       0     -2    2      -12    -23    1
-i 64   20  1   "memory_recordings/2014_08_07_15_15_54.wav"      0       0     -2    2      -12    -23    1
-i 65   25  1   "memory_recordings/2014_08_07_15_15_54.wav"      0       0     -2    2      -12    -23    1
-i 66   30  1   "memory_recordings/2014_08_07_15_15_54.wav"      0       0     -2    2      -12    -23    1
-i 67   35  1   "memory_recordings/2014_08_07_15_15_54.wav"      0       0     -2    2      -12    -23    1
+i 60    0  1   "memory_recordings/2014_10_02_13_35_10.wav"      0       0     -2    1       1   -96    -96    1
+;          p3  soundfile                                        start   end   amp   voice   max dly   rvb   speed
+i 60    0  1   "memory_recordings/2014_08_07_15_15_54.wav"      0       0     -2    2      1    -12    -23    1
+i 61    5  1   "memory_recordings/2014_08_07_15_15_54.wav"      0       0     -2    2      1    -12    -23    1
+i 62   10  1   "memory_recordings/2014_08_07_15_15_54.wav"      0       0     -2    2      1    -12    -23    1
+i 63   15  1   "memory_recordings/2014_08_07_15_15_54.wav"      0       0     -2    2      1    -12    -23    1
+i 64   20  1   "memory_recordings/2014_08_07_15_15_54.wav"      0       0     -2    2      1    -12    -23    1
+i 65   25  1   "memory_recordings/2014_08_07_15_15_54.wav"      0       0     -2    2      1    -12    -23    1
+i 66   30  1   "memory_recordings/2014_08_07_15_15_54.wav"      0       0     -2    2      1    -12    -23    1
+i 67   35  1   "memory_recordings/2014_08_07_15_15_54.wav"      0       0     -2    2      1    -12    -23    1
 */
 /*
 ; test self suppression

@@ -502,14 +502,14 @@ contin:
 
 ; sound generator         
         iSound          ftgentmp 0, 0, 0, 1, Ssound, 0,0,0
-        iPitchFn        ftgentmp 0, 0, 131072, 2, 0	; empty table
         istrlen         strlen Ssound
         Spitchfile      strsub Ssound, 0, istrlen-4
         Spitchfile      strcat Spitchfile, "_pitch.txt"
-        ftload 		Spitchfile, 1, iPitchFn
+        iPitchFn        ftgentmp 0, 0, 1048576, -23, Spitchfile
+        ;ftload 		Spitchfile, 1, iPitchFn
         ;puts Spitchfile, 1
-        iformant	= cent(100)		; formant change in cents
-        itransp		= cent(-1200)		; transposition in cents
+        iformant	= semitone(1)		; formant change in semitones
+        itransp		= semitone(-12)		; transposition in semitones
 #include "partikkel4_psgs.inc"
         aout           = aout * iamp * aenv * (1/imaxamp)
 

@@ -6,9 +6,11 @@ kwavfreq		= iwavfreq * iformant
 afilposphas		phasor		ispeed / ifildur
 
 /*read pitch analysis data from ftable*/
-kindx			downsamp afilposphas
-ilast			table	0, iPitchFn
-kindx			= (kindx*ilast)+1
+;kindx			downsamp afilposphas
+;ilast			table	0, iPitchFn
+;kindx			= (kindx*ilast)+1
+kindx           init 0
+kindx           = kindx+ispeed
 kcps			table	kindx, iPitchFn
 kcps			limit	kcps, 50, 1500
 
@@ -76,5 +78,6 @@ a1,a2,a3,a4	partikkel kgrainfreq, kdistribution, idisttab, async, kenv2amt, ienv
                	kwavekey1, kwavekey2, kwavekey3, kwavekey4, imax_grains, iopcode_id
 
 aout		= a1*0.3
-
+;atest           oscili 1, kcps*itransp, giSine
+;aout        = aout + atest
 
