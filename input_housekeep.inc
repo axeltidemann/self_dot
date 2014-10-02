@@ -34,9 +34,22 @@
 ;******************************
 ; live audio input
 	instr 4
-	a1,a2	inch 1,2
-		chnmix a1, "in1"
-		chnmix a2, "in2"
+	a1,a2	    inch 1,2
+
+	aref		chnget "MyOutput"
+    aenv        follow2 aref, 0.001, 0.9
+    aenv        butterlp aenv, 10
+
+    kduck       chnget "selfDucking"
+    aenv        = aenv * kduck
+    aenv        limit aenv, 0, 1
+    ktest       downsamp aenv
+
+		        chnmix a1*(1-aenv), "in1"
+		        chnmix a2*(1-aenv), "in2"
+
+;		        chnmix a1, "in1"
+;		        chnmix a2, "in2"
 	endin
 
 ;******************************
