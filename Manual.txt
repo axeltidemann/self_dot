@@ -1,6 +1,12 @@
 Self users manual
 *****************
 
+***
+The most reliable and up to date information about available commands is available by reading the code in self_dot.py and IO.py
+However, summaries of some commands are given below.
+Some commands listed below may be deprecated
+***
+
 python communication.py save <valgfritt navn - hvis ikke noe navn, blir navnet brain, hvor de enkelt nettverkene heter brainUUID>
 python communication.py load <brain_name, altså prefiks uten UUID>
 
@@ -43,6 +49,12 @@ For diagnostic use, one could monitor the input signal directly. This can be ena
 This can be done with 
 communication.py csinstr i 22 0 1 \"inputMonitor\" 0.2
 The last value (here 0.2) represent the desired monitor level.
+
+Self suppression
+When calibrateAudio has been run, we filter out the background noise and also selectively remove self's own output frequencies from the input. 
+Still, under certain conditions (using laptop speaker and microphone) it may be necessary to "duck" the input when self is speaking, 
+to avoid self to respond to own statements. Self ducking can be enabled with
+python communication.py selfDucking 1
 
 Pan position analysis of audio input
 The stereo position if input sound is analyzed. It requires a stereo microphone setup of 2 omni microphones with a Jecklin disk or other kind of acoustical separation. Distance between the microphones is assumed to be 20 cm. Pan position output is written to two chn channels: "inputPosition_idt" and "inputPosition_rms", each representing the output of two different methods of analysis (Inter aural time delay, and RMS level difference).
@@ -91,3 +103,5 @@ optional arguments [time, mode, filename] are:
 Learning associations:
 python communication.py associate 1/0
 This makes self associate sound1 -> sound2, i.e. it will listen for two sounds, and will respond with latter based on the former. 
+
+
