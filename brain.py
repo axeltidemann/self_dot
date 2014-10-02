@@ -127,8 +127,8 @@ def classifier_brain(host):
     face_hashes = []
     NAP_hashes = []
 
-    sound_face = {}
-    face_sound = {}
+    sound_to_face = {}
+    face_to_sound = {}
     
     audio_recognizer = []
     video_recognizer = []
@@ -174,7 +174,7 @@ def classifier_brain(host):
             if state['facerecognition']:
                 try: 
                     face_id = face_recognizer.predict(np.ndarray.flatten(gray))[0]
-                    print 'Face {} has previously said {}'.format(face_id, face_sound[face_id])
+                    print 'Face {} has previously said {}'.format(face_id, face_to_sound[face_id])
                                         
                 except Exception, e:
                     print e, 'Face recognition aborted.'
@@ -215,13 +215,13 @@ def classifier_brain(host):
                         NAPs[audio_id].append(new_sound)
                         NAP_hashes[audio_id].append(new_audio_hash)
                         wavs[audio_id].append(filename)
-                        print 'Similar to sound {}, hamming mean {}, previously said by faces {}'.format(audio_id, np.mean(hammings), sound_face[audio_id])
+                        print 'Sound is similar to sound {}, hamming mean {}, previously said by faces {}'.format(audio_id, np.mean(hammings), sound_to_face[audio_id])
                     else:
                         NAPs.append([new_sound])
                         NAP_hashes.append([new_audio_hash])
                         wavs.append([filename])
                         audio_id = len(NAPs) - 1
-                        sound_face[audio_id] = []
+                        sound_to_face[audio_id] = []
                         print 'New sound, hamming mean', np.mean(hammings)
                          
                     # Scale the sizes of the samples according to the biggest one. The idea is that this scale well. Otherwise, create overlapping bins.
@@ -257,12 +257,12 @@ def classifier_brain(host):
                     if np.mean(hammings) < HAMMERTIME:
                         face_history[face_id].extend(new_faces)
                         face_hashes[face_id].extend(new_faces_hashes)
-                        print 'Similar to face {}, hamming mean {}, has previously said {}'.format(face_id, np.mean(hammings), face_sound[face_id])
+                        print 'Face is similar to face {}, hamming mean {}, has previously said {}'.format(face_id, np.mean(hammings), face_to_sound[face_id])
                     else:
                         face_history.append(new_faces)
                         face_hashes.append(new_faces_hashes)
                         face_id = len(face_history) - 1
-                        face_sound[face_id] = []
+                        face_to_sound[face_id] = []
                         print 'New face, hamming mean', np.mean(hammings)
 
                     if len(face_history) > 1:
@@ -271,10 +271,10 @@ def classifier_brain(host):
                         targets = [ i for i,f in enumerate(face_history) for _ in f ]
                         face_recognizer.fit(x_train, targets)
 
-                    if not face_id in sound_face[audio_id]:
-                        sound_face[audio_id].append(face_id)
-                    if not audio_id in face_sound[face_id]:
-                        face_sound[face_id].append(audio_id)
+                    if not face_id in sound_to_face[audio_id]:
+                        sound_to_face[audio_id].append(face_id)
+                    if not audio_id in face_to_sound[face_id]:
+                        face_to_sound[face_id].append(audio_id)
 
                     # Might want to consider scaling the NAP used to train (as well as in the respond) - but it works without, and
                     # is currently only used for aesthetical reasons.

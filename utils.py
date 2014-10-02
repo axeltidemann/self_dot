@@ -189,15 +189,6 @@ def hamming_distance(s1, s2):
     return sum([ch1 != ch2 for ch1, ch2 in zip(s1, s2)])
 
 
-def similarity_measure(signal, error_func, oneclass, local_signals, local_hashes):
-    signal_hash = average_hash(signal)
-        
-    return [ oneclass.predict(signal)[0], 
-            abs(oneclass.decision_function(signal)[0][0]), 
-            np.mean([ error_func(signal, candidate) for candidate in local_signals ]), 
-            np.mean([ hamming_distance(signal_hash, candidate) for candidate in local_hashes ]) ]
-
-
 def zero_pad(signal, length):
     return np.vstack(( signal, np.zeros(( length - signal.shape[0], signal.shape[1])) )) if signal.shape[0] < length else signal
 
