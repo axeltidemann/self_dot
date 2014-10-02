@@ -249,17 +249,7 @@ def audio():
         if eventQ in events:
             pushbutton = eventQ.recv_json()
             if 'selfvoice' in pushbutton:
-                mode = '{}'.format(pushbutton['selfvoice'])
-                if mode in ['partikkel', 'spectral', 'noiseband']:
-                    print 'self change voice to...', mode
-                    cs.InputMessage('i -51 0 .1')
-                    cs.InputMessage('i -52 0 .1')
-                    cs.InputMessage('i -53 0 .1')
-                    if mode == 'noiseband': cs.InputMessage('i 51 0 -1')
-                    if mode == 'partikkel': cs.InputMessage('i 52 0 -1')
-                    if mode == 'spectral': cs.InputMessage('i 53 0 -1')
-                else:
-                    print 'unknown voice mode', mode
+                    print 'not implemented'
 
             if 'inputLevel' in pushbutton:
                 mode = pushbutton['inputLevel']
@@ -315,85 +305,6 @@ def audio():
 
                 except Exception, e:
                     print e, 'Playfile aborted.'
-
-            if 'playfile_input' in pushbutton:
-                print '[self.] wants to play {}'.format(pushbutton['playfile_input'])
-                cs.InputMessage('i3 0 0 "%s"'%'{}'.format(pushbutton['playfile_input']))
-            if 'playfile_primary' in pushbutton:
-                print '[self.] wants to play {}'.format(pushbutton['playfile_primary'])
-                cs.InputMessage('i50 0 0 "%s"'%'{}'.format(pushbutton['playfile_primary']))
-            if 'playfile_secondary' in pushbutton:
-                print '[self.] wants to play {}'.format(pushbutton['playfile_secondary'])
-                cs.InputMessage('i74 0 0 "%s"'%'{}'.format(pushbutton['playfile_secondary']))
-
-        # send_array(publisher, np.array([cGet("level1"), 
-        #                                 cGet("pitch1ptrack"), 
-        #                                 cGet("pitch1pll"), 
-        #                                 cGet("autocorr1"), 
-        #                                 cGet("centroid1"),
-        #                                 cGet("spread1"), 
-        #                                 cGet("skewness1"), 
-        #                                 cGet("kurtosis1"), 
-        #                                 cGet("flatness1"), 
-        #                                 cGet("crest1"), 
-        #                                 cGet("flux1"), 
-        #                                 cGet("epochSig1"), 
-        #                                 cGet("epochRms1"), 
-        #                                 cGet("epochZCcps1")]))# + fftin_amplist + fftin_freqlist))
-
-        # if subscriber in events:
-        #     sound = recv_array(subscriber)
-        #     cSet("respondLevel1", sound[0])
-        #     cSet("respondPitch1ptrack", sound[1])
-        #     cSet("respondPitch1pll", sound[2])
-        #     cSet("respondCentroid1", sound[4])
-        #     # test partikkel generator
-        #     cSet("partikkel1_amp", sound[0])
-        #     cSet("partikkel1_grainrate", sound[1])
-        #     cSet("partikkel1_wavfreq", sound[4])
-        #     cSet("partikkel1_graindur", sound[3]+0.1)
-        #     # transfer fft frame
-        #     fft_index = 14
-        #     #bogusamp = map(tSet,fftresyn_amptabs,fftbinindices,sound[fft_index:ffttabsize+fft_index]) #FFT temporarily disabled
-        #     #bogusfreq = map(tSet,fftresyn_freqtabs,fftbinindices,sound[ffttabsize+fft_index:ffttabsize+fft_index+ffttabsize])
-
-        #     '''
-        #     # partikkel parameters ready to be set
-        #     partikkelparmOffset = 5
-        #     cSet("partikkel1_amp",sound[partikkelparmOffset+0])
-        #     cSet("partikkel1_grainrate",sound[partikkelparmOffset+1])
-        #     cSet("partikkel1_graindur",sound[partikkelparmOffset+2])
-        #     cSet("partikkel1_sustain",sound[partikkelparmOffset+3])
-        #     cSet("partikkel1_adratio",sound[partikkelparmOffset+4])
-        #     cSet("partikkel1_wavfreq",sound[partikkelparmOffset+5])
-        #     cSet("partikkel1_octaviation",sound[partikkelparmOffset+6])
-        #     cSet("partikkel1_async_amount",sound[partikkelparmOffset+7])
-        #     cSet("partikkel1_distribution",sound[partikkelparmOffset+8])
-        #     cSet("partikkel1_randomask",sound[partikkelparmOffset+9])
-        #     cSet("partikkel1_grFmFreq",sound[partikkelparmOffset+10])
-        #     cSet("partikkel1_grFmIndex",sound[partikkelparmOffset+11])
-        #     cSet("partikkel1_wavekey1",sound[partikkelparmOffset+12])
-        #     cSet("partikkel1_wavekey2",sound[partikkelparmOffset+13])
-        #     cSet("partikkel1_wavekey3",sound[partikkelparmOffset+14])
-        #     cSet("partikkel1_wavekey4",sound[partikkelparmOffset+15])
-        #     cSet("partikkel1_pitchFmFreq",sound[partikkelparmOffset+16])
-        #     cSet("partikkel1_pitchFmIndex",sound[partikkelparmOffset+17])
-        #     cSet("partikkel1_trainPartials",sound[partikkelparmOffset+18])
-        #     cSet("partikkel1_trainChroma",sound[partikkelparmOffset+19])
-        #     cSet("partikkel1_wavemorf",sound[partikkelparmOffset+20])
-        #     '''
-        # else:
-        #     if zeroChannelsOnNoBrain:  
-        #         cSet("respondLevel1", 0)
-        #         cSet("respondPitch1ptrack", 0)
-        #         cSet("respondPitch1pll", 0)
-        #         cSet("respondCentroid1", 0)
-        #         # partikkel test
-        #         cSet("partikkel1_amp", 0)
-        #         cSet("partikkel1_grainrate", 0)
-        #         cSet("partikkel1_wavfreq", 0)
-        #         # zero fft frame 
-        #         bogusamp = map(tSet,fftresyn_amptabs,fftbinindices,fftzeros)
 
 # Setup so it can be accessed from processes which don't have a zmq context, i.e. for one-shot messaging
 def send(message, context=None, host='localhost', port=EXTERNAL):

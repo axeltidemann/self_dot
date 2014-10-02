@@ -2,6 +2,8 @@ import os
 import wave
 import csv
 import time
+import re
+findfloat=re.compile(r"[0-9.]*")
 
 import numpy as np
 import zmq
@@ -195,3 +197,16 @@ def zero_pad(signal, length):
 
 def scale(image):
     return (image - np.min(image))/(np.max(image) - np.min(image))
+
+def getMaxAmp(responsefile):
+    audioinfo = open(responsefile[:-4]+'.txt')
+    maxamp = 1
+    for line in audioinfo:
+        if 'Max amp for file: ' in line:
+            temp = findfloat.findall(line)
+            for item in temp:
+                if item != '':
+                    maxamp = item
+    return float(maxamp)
+
+

@@ -316,13 +316,7 @@ def classifier_brain(host):
                         
                     response = np.random.choice(wavs[audio_id])
                     
-                    audioinfo = open(response[:-4]+'.txt')
-                   
-                    maxamp = 1
-                    for line in audioinfo:
-                        if 'Max amp for file: ' in line:
-                            maxamp = float(line[18:])
-                    sender.send_json('playfile {} {}'.format(response, maxamp))
+                    sender.send_json('playfile {} {}'.format(response, utils.getMaxAmp(response)))
 
                     sorted_sounds = np.argsort([ utils.hamming_distance(new_audio_hash, np.random.choice(h)) for h in NAP_hashes ])
 
