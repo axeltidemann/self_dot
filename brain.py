@@ -301,10 +301,6 @@ def classifier_brain(host):
             if 'respond' in pushbutton:
                 print 'Respond to', pushbutton['filename']
 
-                if len(NAPs) == 1:
-                    sender.send_json('playfile {}'.format(wavs[-1]))
-                    continue
-
                 try:
                     utils.wait_for_wav(pushbutton['filename'])
                     NAP = cochlear(pushbutton['filename'])
@@ -312,7 +308,12 @@ def classifier_brain(host):
                     new_audio_hash = utils.d_hash(NAP)
                     NAP_resampled = utils.zero_pad(utils.scale(resample(NAP, float(maxlen)/NAP.shape[0], 'sinc_best')), maxlen_scaled)
 
-                    audio_id = audio_recognizer.predict(np.ndarray.flatten(NAP_resampled))[0]
+                    try:
+                        audio_id = audio_recognizer.predict(np.ndarray.flatten(NAP_resampled))[0]
+                    except:
+                        audio_id = 0
+                        print 'Responding having only heard 1 sound.'
+                        
                     response = np.random.choice(wavs[audio_id])
                     
                     audioinfo = open(response[:-4]+'.txt')
@@ -327,9 +328,13 @@ def classifier_brain(host):
 
                     print 'Recognized as sound {}, sorted similar sounds {}'.format(audio_id, sorted_sounds)
 
-                    predicted_faces = [ face_recognizer.predict(np.ndarray.flatten(f))[0] for f in list(faces) ]
-                    uniq = np.unique(predicted_faces)
-                    face_id = uniq[np.argsort([ sum(predicted_faces == u) for u in uniq ])[-1]]
+                    try:
+                        predicted_faces = [ face_recognizer.predict(np.ndarray.flatten(f))[0] for f in list(faces) ]
+                        uniq = np.unique(predicted_faces)
+                        face_id = uniq[np.argsort([ sum(predicted_faces == u) for u in uniq ])[-1]]
+                    except:
+                        face_id = 0
+                        print 'Responding having only seen 1 face.'
                     
                     projection = video_producer[(audio_id, face_id)](NAP[::video_producer[(audio_id, face_id)].stride])
 

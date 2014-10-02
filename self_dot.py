@@ -138,6 +138,7 @@ class Controller:
 
             if 'playfile' in message:
                 self.event.send_json({ 'playfile': message[9:] })
+
             if 'playfile_input' in message:
                 self.event.send_json({ 'playfile_input': message[15:] })
 
