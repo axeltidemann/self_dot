@@ -71,7 +71,8 @@
         endif
 */
 spos1:
-        ks1amp          oscil1, 0, 1, 1/i(kcpsamp1), giHanning
+        iduramp1        divz 1, i(kcpsamp1), 0
+        ks1amp          oscil1, 0, 1, iduramp1, giHanning
         aspos1          phasor iTimeRate2 / kfildur1
         ipos1           = i(ksamplepos0)
         asamplepos1     = ipos1 + aspos1
@@ -83,21 +84,24 @@ spos1:
         rireturn
         ;kgoto donespos
 spos2:
-        ks2amp          oscil1, 0, 1, 1/i(kcpsamp2), giHanning
+        iduramp2        divz 1, i(kcpsamp2), 0
+        ks2amp          oscil1, 0, 1, iduramp2, giHanning
         aspos2          phasor iTimeRate2 / kfildur1
         ipos2           = i(ksamplepos0)
         asamplepos2     = ipos2 + aspos2
         rireturn
         ;kgoto donespos
 spos3:
-        ks3amp          oscil1, 0, 1, 1/i(kcpsamp3), giHanning
+        iduramp3        divz 1, i(kcpsamp3), 0
+        ks3amp          oscil1, 0, 1, iduramp3, giHanning
         aspos3          phasor iTimeRate2 / kfildur1
         ipos3           = i(ksamplepos0)
         asamplepos3     = ipos3 + aspos3
         rireturn
         ;kgoto donespos
 spos4:
-        ks4amp          oscil1, 0, 1, 1/i(kcpsamp4), giHanning
+        iduramp4        divz 1, i(kcpsamp4), 0
+        ks4amp          oscil1, 0, 1, iduramp4, giHanning
         aspos4          phasor iTimeRate2 / kfildur1
         ipos4           = i(ksamplepos0)
         asamplepos4     = ipos4 + aspos4

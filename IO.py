@@ -277,6 +277,10 @@ def audio():
                 cs.InputMessage('{}'.format(pushbutton['csinstr']))
                 print 'sent {}'.format(pushbutton['csinstr'])
 
+            if 'selfDucking' in pushbutton:
+                value = pushbutton['selfDucking']
+                cs.InputMessage('i 22 0 1 "selfDucking" %f'%float(value))
+
             if 'zerochannels' in pushbutton:
                 zeroChannelsOnNoBrain = int('{}'.format(pushbutton['zerochannels']))
 
@@ -301,7 +305,10 @@ def audio():
                         speed = 0.6 #playback  speed
                     else:
                         speed = 1 
-                    cs.InputMessage('i %i 0 1 "%s" %f %f %f %f %i %f %f %f' %(instr, soundfile, start, end, amp, float(maxamp), voiceChannel, delaySend, reverbSend, speed))
+                    #cs.InputMessage('i 6 0 .1 440')                    
+                    csMessage = 'i %i 0 1 "%s" %f %f %f %f %i %f %f %f' %(instr, soundfile, start, end, amp, float(maxamp), voiceChannel, delaySend, reverbSend, speed)
+                    print 'csMessage', csMessage                 
+                    cs.InputMessage(csMessage)
 
                 except Exception, e:
                     print e, 'Playfile aborted.'

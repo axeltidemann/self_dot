@@ -133,6 +133,9 @@ class Controller:
             if 'csinstr' in message:
                 self.event.send_json({ 'csinstr': message[8:] })
              
+            if 'selfDucking' in message:
+                self.event.send_json({ 'selfDucking': message[12:] })
+
             if 'zerochannels' in message:
                 self.event.send_json({ 'zerochannels': message[13:] })
 

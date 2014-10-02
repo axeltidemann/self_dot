@@ -37,16 +37,18 @@
 	a1,a2	    inch 1,2
 
 	aref		chnget "MyOutput"
-    aenv        follow2 aref, 0.001, 0.9
-    aenv        butterlp aenv, 10
-
+    aenv        follow2 aref, 0.001, 0.9    ; amp of output
+    kenv        downsamp aenv
+    kgate       init 1
+    kgate       = (dbfsamp(kenv)>-40?0:kgate) ; hysteresis gate, turn off when signal is over
+    kgate       = (dbfsamp(kenv)<-60?1:kgate) ; complement of above
+    agate       upsamp 1-kgate              ; upsample and invert, input conditioning for follow2
+    aenv2       follow2 agate, 0.001, 0.8   ; follow2 add release fade out
     kduck       chnget "selfDucking"
-    aenv        = aenv * kduck
-    aenv        limit aenv, 0, 1
-    ktest       downsamp aenv
-
-		        chnmix a1*(1-aenv), "in1"
-		        chnmix a2*(1-aenv), "in2"
+    aenv2       = (aenv2*kduck)             ; user control for activation
+    aenv2       = 1-aenv2    ; invert (normally at 1, duck to zero, then fade back in)
+		        chnmix a1*aenv2, "in1"
+		        chnmix a2*aenv2, "in2"
 
 ;		        chnmix a1, "in1"
 ;		        chnmix a2, "in2"
