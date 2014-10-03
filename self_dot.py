@@ -85,6 +85,9 @@ class Controller:
             if 'showme' in message:
                 self.event.send_json({ 'showme': message[7:] })
 
+            if 'play_id' in message:
+                self.event.send_json({ 'play_id': message[7:] })
+
             if 'memoryRecording' in message:
                 self.state['memoryRecording'] = message[16:] in ['True', '1']
 

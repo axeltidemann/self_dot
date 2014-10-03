@@ -11,8 +11,6 @@
 	puts Swavname, 1
         a1              chnget "rec_in1"
                 	fout Swavname, 14, a1
-                	clear a1
-
                         
         ; for writing transient marker txt file
         ktime           timeinsts
@@ -30,7 +28,7 @@
 
         kactive         = 1-krelease
                         chnset kactive, "memRecActive"          ; tell Python that we're recording
-/*
+
 ; temporarily removed since it does interfere with fout on 6.02 (Axel on osx)
         ; write pitch data to a separate file
         istrlen         strlen Swavname
@@ -40,7 +38,7 @@
         kcps            chnget "pitch1_amdf"
         kcps            mediank kcps, 100, 100
                         dumpk kcps, Spitchfile, 7, 0
-*/
+
 
 /*
 	; trigger instr events to record subsegments

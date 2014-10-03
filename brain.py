@@ -344,6 +344,10 @@ def classifier_brain(host):
 
                 pushbutton['reset'] = True
 
+            if 'play_id' in pushbutton:
+                response = np.random.choice(wavs[audio_id])
+                sender.send_json('playfile {} {}'.format(response, utils.getMaxAmp(response)))
+
             if 'reset' in pushbutton:
                 audio.clear()
                 video.clear()

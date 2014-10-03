@@ -291,7 +291,7 @@ def audio():
                     soundfile, maxamp = params.split(' ')
                     soundfile = str(soundfile)
                     voiceChannel = random.choice([1,2]) # internal or external voice (primary/secondary associations)
-                    voiceType = random.choice([1,2,3,4,5,6]) # different voice timbres, (0-7), see self_voices.inc for details
+                    voiceType = random.choice([1,2,3,4,5,6,7]) # different voice timbres, (0-7), see self_voices.inc for details
                     instr = 60 + voiceType
                     start = 0 # segment start and end within sound file
                     end = 0 # if zero, play whole file
@@ -307,7 +307,7 @@ def audio():
                     else:
                         speed = 1 
                     csMessage = 'i %i 0 1 "%s" %f %f %f %f %i %f %f %f' %(instr, soundfile, start, end, amp, float(maxamp), voiceChannel, delaySend, reverbSend, speed)
-                    #print 'csMessage', csMessage                 
+                    print 'csMessage', csMessage                 
                     cs.InputMessage(csMessage)
 
                 except Exception, e:
