@@ -29,7 +29,8 @@
 
         kactive         = 1-krelease
                         chnset kactive, "memRecActive"          ; tell Python that we're recording
-
+/*
+; temporarily removed since it does interfere with fout on 6.02 (Axel on osx)
         ; write pitch data to a separate file
         istrlen         strlen Swavname
         Spitchfile      strsub Swavname, 0, istrlen-4
@@ -38,7 +39,7 @@
         kcps            chnget "pitch1_amdf"
         kcps            mediank kcps, 100, 100
                         dumpk kcps, Spitchfile, 7, 0
-
+*/
 
 /*
 	; trigger instr events to record subsegments

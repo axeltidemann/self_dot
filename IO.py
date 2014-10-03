@@ -290,7 +290,7 @@ def audio():
                     params = pushbutton['playfile']
                     soundfile, maxamp = params.split(' ')
                     voiceChannel = random.choice([1,2]) # internal or external voice (primary/secondary associations)
-                    voiceType = random.choice([1,2,3,4,5,6,7]) # different voice timbres, (0-7), see self_voices.inc for details
+                    voiceType = random.choice([1,2,3,4,5,6]) # different voice timbres, (0-7), see self_voices.inc for details
                     instr = 59#TESTING#60 + voiceType
                     start = 0 # segment start and end within sound file
                     end = 0 # if zero, play whole file
