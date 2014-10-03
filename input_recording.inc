@@ -11,6 +11,7 @@
 	puts Swavname, 1
         a1              chnget "rec_in1"
                 	fout Swavname, 14, a1
+                	clear a1
 
                         
         ; for writing transient marker txt file

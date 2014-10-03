@@ -306,10 +306,8 @@ def audio():
                         speed = 0.6 #playback  speed
                     else:
                         speed = 1 
-                    #cs.InputMessage('i 6 0 .1 440')                    
                     csMessage = 'i %i 0 1 "%s" %f %f %f %f %i %f %f %f' %(instr, soundfile, start, end, amp, float(maxamp), voiceChannel, delaySend, reverbSend, speed)
-                    #csMessage = 'i %i 0 1 "%s" %f %f %f' %(instr, soundfile, start, end, amp)
-                    print 'csMessage', csMessage                 
+                    #print 'csMessage', csMessage                 
                     cs.InputMessage(csMessage)
 
                 except Exception, e:
