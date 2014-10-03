@@ -1,5 +1,14 @@
 
 ;******************************
+;test
+    instr 59
+print p1,p2,p3,p5,p6,p7,p8,p9,p10,p11
+	Ssound	        strget p4
+    puts Ssound, 1
+    endin
+
+
+;******************************
 ; audio file playback 
 	instr 60
 print p1,p2,p3,p5,p6,p7,p8,p9,p10,p11

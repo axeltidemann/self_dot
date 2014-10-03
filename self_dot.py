@@ -82,6 +82,9 @@ class Controller:
                 _, value = message.split()
                 self.state['facerecognition'] = value in ['True', '1']
 
+            if 'showme' in message:
+                self.event.send_json({ 'showme': message[7:] })
+
             if 'memoryRecording' in message:
                 self.state['memoryRecording'] = message[16:] in ['True', '1']
 

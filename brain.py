@@ -357,6 +357,12 @@ def classifier_brain(host):
                 video.clear()
                 faces.clear()
 
+            if 'showme' in pushbutton:
+                # just for inspecting the contents of objects while running 
+                print 'printing '+pushbutton['showme']
+                o = compile('print '+pushbutton['showme'], '<string>','exec')
+                eval(o)
+
             if 'load' in pushbutton:
                 filename = pushbutton['load']
                 audio_recognizer, audio_producer, video_producer, NAPs, wavs, maxlen = pickle.load(file(filename, 'r'))
