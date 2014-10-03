@@ -289,9 +289,10 @@ def audio():
                 try:
                     params = pushbutton['playfile']
                     soundfile, maxamp = params.split(' ')
+                    soundfile = str(soundfile)
                     voiceChannel = random.choice([1,2]) # internal or external voice (primary/secondary associations)
                     voiceType = random.choice([1,2,3,4,5,6]) # different voice timbres, (0-7), see self_voices.inc for details
-                    instr = 59#TESTING#60 + voiceType
+                    instr = 60 + voiceType
                     start = 0 # segment start and end within sound file
                     end = 0 # if zero, play whole file
                     amp = -3 # voice amplitude in dB
@@ -306,8 +307,8 @@ def audio():
                     else:
                         speed = 1 
                     #cs.InputMessage('i 6 0 .1 440')                    
-                    #csMessage = 'i %i 0 1 "%s" %f %f %f %f %i %f %f %f' %(instr, soundfile, start, end, amp, float(maxamp), voiceChannel, delaySend, reverbSend, speed)
-                    csMessage = 'i %i 0 1 "%s" %f %f %f' %(instr, soundfile, start, end, amp)
+                    csMessage = 'i %i 0 1 "%s" %f %f %f %f %i %f %f %f' %(instr, soundfile, start, end, amp, float(maxamp), voiceChannel, delaySend, reverbSend, speed)
+                    #csMessage = 'i %i 0 1 "%s" %f %f %f' %(instr, soundfile, start, end, amp)
                     print 'csMessage', csMessage                 
                     cs.InputMessage(csMessage)
 
