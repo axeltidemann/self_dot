@@ -11,6 +11,7 @@ from subprocess import call
 import time
 import ctypes
 import os
+import analyze_associations2 as association
 
 import numpy as np
 import zmq
@@ -275,6 +276,9 @@ def classifier_brain(host):
                         sound_to_face[audio_id].append(face_id)
                     if not audio_id in face_to_sound[face_id]:
                         face_to_sound[face_id].append(audio_id)
+                        
+                    # Send sound id and classification to associations analysis
+                    association.analyze(audio_id)
 
                     # Might want to consider scaling the NAP used to train (as well as in the respond) - but it works without, and
                     # is currently only used for aesthetical reasons.
