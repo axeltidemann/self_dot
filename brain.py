@@ -224,6 +224,9 @@ def classifier_brain(host):
                         audio_id = len(NAPs) - 1
                         sound_to_face[audio_id] = []
                         print 'New sound, hamming mean', np.mean(hammings)
+                    
+                    # Save the hammings for use in association
+                    audio_hammings = hammings
                          
                     # Scale the sizes of the samples according to the biggest one. The idea is that this scale well. Otherwise, create overlapping bins.
                     start_time = time.time()
@@ -239,7 +242,7 @@ def classifier_brain(host):
                         audio_recognizer = svm.LinearSVC()
                         # Is the high dimensionality required? Maybe PCA could help reduce the training time necessary. 
                         audio_recognizer.fit(resampled_flattened_memories, audio_targets)
-
+                    
                     # Do we know this face?
                     hammings = [ np.inf ]
                     new_faces = list(faces)
@@ -277,8 +280,8 @@ def classifier_brain(host):
                     if not audio_id in face_to_sound[face_id]:
                         face_to_sound[face_id].append(audio_id)
                         
-                    # Send sound id and classification to associations analysis
-                    association.analyze(audio_id)
+                    # Send sound id and classification data to associations analysis
+                    association.analyze(filename,audio_id,wavs,audio_hammings,sound_to_face,face_to_sound)
 
                     # Might want to consider scaling the NAP used to train (as well as in the respond) - but it works without, and
                     # is currently only used for aesthetical reasons.

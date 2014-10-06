@@ -22,9 +22,10 @@ faceWord = all words said by this face
 import re 
 import re
 findfloat=re.compile(r"[0-9.]*")
+import copy
 
-wavs = []               # list of wave files for each word (audio id) [[w1,w2,w3],[w4],...]
-allWords = []           # just a list of all current audio_id (the indices for wavs)
+wavsAsWords = []        # list of wave files for each word (audio id) [[w1,w2,w3],[w4],...]
+allWords = set([])      # just a list of all current audio_id (the indices for wavs)
 wordTime = {}           # {id1:[time1, time2, t3...]], id2: ...}
 timeWord = []           # [[time,id1],[time,id2],...]
 durationWord = []       # [[dur, id1], [dur,id2]
@@ -34,27 +35,64 @@ neighborAfter = {}      # as above, but only including words that immediately fo
 wordFace = {}           # {id1:[face1,face2,...], id2:[...]}
 faceWord ={}            # [face1:[id1,id2...], face2:[...]}
 
-def analyze(audio_id):
-    print '*** association analysis comes (soon)'
-    
+def analyze(filename,audio_id,wavs,audio_hammings,sound_to_face,face_to_sound):
+    #print_us(filename,audio_id,wavs,audio_hammings,sound_to_face,face_to_sound)
 
-def parseMarkerFile(markerfile):
+    markerfile = filename[:-4]+'.txt'
+    startTime, totalDur, segments = parseFile(markerfile)
+
+    wavsAsWords = copy.copy(wavs)
+    allWords.update([audio_id])
+    timeWord.append((startTime, audio_id))
+    wordTime.setdefault(audio_id, []).append(startTime)
+    durationWord.append((totalDur, audio_id))
+    #similarWords =      
+    #neighbors = 
+    #neighborAfter = 
+    wordFace = copy.copy(sound_to_face)
+    faceWord = copy.copy(face_to_sound)
+    
+    
+def parseFile(markerfile):
     f = open(markerfile, 'r')
     segments = []
     enable = 0
-    totaldur = 0
+    startTime = 0
     for line in f:
         if 'Self. audio clip perceived at ' in line:
-	        start = float(line[30:])
+	        startTime = float(line[30:])
         if 'Total duration:'  in line: 
             enable = 0
-            for item in findfloat.findall(line):
-                if item != [] : totaldur = float(item)
+            totalDur = float(line[16:])
         if enable:
-            segments.append(float(line)+start) 
+            segments.append(float(line)+startTime) 
         if 'Sub segment start times:' in line: enable = 1
-    #return segments
-    return totaldur
+    return startTime, totalDur, segments
+
+
+def print_us(filename,audio_id,wavs,audio_hammings,sound_to_face,face_to_sound):
+    print '*** association analysis ***'
+    print filename
+
+    print '\n***' 
+    print audio_id
+
+    print '\n***' 
+    print wavs
+    
+    print '\n***' 
+    # would like to have distance from id to all other ids not in same class
+    # or distance from this class to all other classes 
+    print audio_hammings # distance from id to all other in same class?
+
+    print '\n***' 
+    print sound_to_face
+
+    print '\n***' 
+    print face_to_sound
+    print '\n***' 
+    
+
 
 
 
