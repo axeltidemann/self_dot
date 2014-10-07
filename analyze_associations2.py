@@ -42,7 +42,7 @@ def analyze(filename,audio_id,wavs,audio_hammings,sound_to_face,face_to_sound):
 
     markerfile = filename[:-4]+'.txt'
     startTime, totalDur, segments = parseFile(markerfile)
-
+    
     wavs_as_words = copy.copy(wavs)
     time_word.append((startTime, audio_id))
     wordTime.setdefault(audio_id, []).append(startTime)
@@ -95,12 +95,13 @@ def print_us(filename,audio_id,wavs,audio_hammings,sound_to_face,face_to_sound):
     
 def makeSentence(predicate, numWords, method,
                 timeBeforeWeight, timeAfterWeight, timeDistance, 
-                durationWeight,
+                durationWeight, posInSentenceWeight,
                 method2, 
                 timeBeforeWeight2, timeAfterWeight2, timeDistance2, 
-                durationWeight2):
+                durationWeight2, posInSentenceWeight2):
 
     print 'makeSentence predicate', predicate
+    
     sentence = [predicate]
     secondaryStream = []
     #timeThen = time.time()
@@ -128,10 +129,11 @@ def makeSentence(predicate, numWords, method,
                             posInSentence2, posInSentenceWidth2, posInSentenceWeight2, 
                             preferredDuration2, preferredDurationWidth2, durationWeight2)
         secondaryStream.append(secondaryAssoc)
-    print 'sentence', sentence
-    print 'secondaryStream', secondaryStream
+    #print 'sentence', sentence
+    #print 'secondaryStream', secondaryStream
     #print 'processing time for %i words: %f secs'%(numWords, time.time() - timeThen)
-
+    return sentence, secondaryStream
+    
 def generate(predicate, method, 
             timeBeforeWeight, timeAfterWeight, timeDistance, 
             posInSentence, posInSentenceWidth, posInSentenceWeight, 
@@ -140,12 +142,14 @@ def generate(predicate, method,
     timeContextBefore, timeContextAfter = getTimeContext(predicate, timeDistance) 
     timeContextBefore = normalizeItemScore(timeContextBefore)
     timeContextAfter = normalizeItemScore(timeContextAfter)
-    durationContext = getCandidatesFromContext(duration_item, preferredDuration, preferredDurationWidth)
+    durationContext = getCandidatesFromContext(duration_word, preferredDuration, preferredDurationWidth)
+    #print 'generate lengths:', len(timeContextBefore), len(timeContextAfter), len(durationContext)
     # merge them
     if method == 'add': method = weightedSum
     if method == 'boundedAdd': method = boundedSum
     temp = method(timeContextBefore, timeBeforeWeight, timeContextAfter, timeAfterWeight)
-    temp = method(temp, 1.0, durationContext, durationWeight)        
+    temp = method(temp, 1.0, durationContext, durationWeight) 
+    print 'generate temp', temp       
     # select the one with the highest score
     nextWord = select(temp, 'highest')
     return nextWord
@@ -160,6 +164,7 @@ def getTimeContext(predicate, distance):
     This list will have items (words) sorted from close in time to far in time, retaining a normalized score 
     for how far in time from the predicate each word has occured.
     '''
+    #print 'getTimeContext wordTime', wordTime
     timeWhenUsed = wordTime[predicate]
     quantize = 0.01
     iquantize = 1/quantize

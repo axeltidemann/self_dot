@@ -13,7 +13,7 @@
 ; write to chn
 
 	Stest		sprintfk "input audio status %i, trig status %i, dbstart %f", kstatus, kstatusTrig, kdBStart
-			puts Stest, 2+(kstatus + kstatusTrig)
+			;puts Stest, 2+(kstatus + kstatusTrig)
 
 			chnset kstatus, "audioStatus"
 			chnset kstatusTrig, "audioStatusTrig"

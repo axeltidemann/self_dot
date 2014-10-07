@@ -21,7 +21,7 @@ STATE = 5565
 EXTERNAL = 5566
 SNAPSHOT = 5567
 EVENT = 5568
-ASSOCIATIONS = 5569
+#ASSOCIATIONS = 5569
 ROBO = 5570
 #ROBOBACK = 5571
 FACE = 5572
@@ -81,8 +81,8 @@ def audio():
     publisher = context.socket(zmq.PUB)
     publisher.bind('tcp://*:{}'.format(MIC))
 
-    assoc = context.socket(zmq.PUB)
-    assoc.bind('tcp://*:{}'.format(ASSOCIATIONS))
+    #assoc = context.socket(zmq.PUB)
+    #assoc.bind('tcp://*:{}'.format(ASSOCIATIONS))
 
     robocontrol = context.socket(zmq.PUB)
     robocontrol.bind('tcp://*:{}'.format(ROBO))
@@ -111,12 +111,12 @@ def audio():
     poller.register(subscriber, zmq.POLLIN)
     poller.register(stateQ, zmq.POLLIN)
     poller.register(eventQ, zmq.POLLIN)
-    poller.register(assoc, zmq.POLLIN)
+    #poller.register(assoc, zmq.POLLIN)
     #poller.register(roboback, zmq.POLLIN)
 
     import time
     t_str = time.strftime
-    t_tim = time.time()
+    t_tim = time.time
 
     memRecPath = "./memory_recordings/"
 
@@ -204,7 +204,7 @@ def audio():
             if audioStatusTrig > 0:
                 print 'starting memoryRec'
                 timestr = t_str('%Y_%m_%d_%H_%M_%S')
-                tim_time = t_tim
+                tim_time = t_tim()
                 filename = memRecPath+timestr+'.wav'
                 cs.InputMessage('i 34 0 -1 "%s"'%filename)
                 markerfileName = memRecPath+timestr+'.txt'
@@ -220,7 +220,7 @@ def audio():
                 markerfile.write('\nMax amp for file: %f'%memRecMaxAmp)
                 markerfile.close()
                 print 'stopping memoryRec'
-                assoc.send_json(markerfileName)
+                #assoc.send_json(markerfileName)
 
         if not state['memoryRecording'] and memRecActive:
             cs.InputMessage('i -34 0 1')
@@ -228,7 +228,7 @@ def audio():
             markerfile.write('Total duration: %f'%memRecTimeMarker)
             markerfile.close()
             print 'stopping memoryRec'
-            assoc.send_json(markerfileName)
+            #assoc.send_json(markerfileName)
                                 
         if state['autolearn']:
             if audioStatusTrig > 0:
@@ -293,29 +293,27 @@ def audio():
                 zeroChannelsOnNoBrain = int('{}'.format(pushbutton['zerochannels']))
 
             if 'playfile' in pushbutton:
-                print '[self.] playfile {}'.format(pushbutton['playfile'])
+                #print '[self.] playfile {}'.format(pushbutton['playfile'])
                 try:
                     params = pushbutton['playfile']
-                    soundfile, maxamp = params.split(' ')
+                    voiceChannel, voiceType, start, soundfile, speed, segstart, segend, amp, maxamp = params.split(' ')
                     soundfile = str(soundfile)
-                    voiceChannel = random.choice([1,2]) # internal or external voice (primary/secondary associations)
-                    voiceType = random.choice([1,2,3,4,5,6,7]) # different voice timbres, (0-7), see self_voices.inc for details
-                    instr = 60 + voiceType
-                    start = 0 # segment start and end within sound file
-                    end = 0 # if zero, play whole file
-                    amp = -3 # voice amplitude in dB
+                    voiceChannel = int(voiceChannel) # internal or external voice (primary/secondary associations)
+                    instr = 60 + int(voiceType)
+                    start = float(start)
+                    segstart = float(segstart)
+                    segend = float(segend)
+                    amp = float(amp)
+                    maxamp = float(maxamp)
+                    speed = float(speed)
                     if voiceChannel == 2:
                         delaySend = -26 # delay send in dB
                         reverbSend = -23 # reverb send in dB
                     else:
                         delaySend = -96
                         reverbSend = -35 
-                    if voiceType == 7:
-                        speed = 0.6 #playback  speed
-                    else:
-                        speed = 1 
-                    csMessage = 'i %i 0 1 "%s" %f %f %f %f %i %f %f %f' %(instr, soundfile, start, end, amp, float(maxamp), voiceChannel, delaySend, reverbSend, speed)
-                    print 'csMessage', csMessage                 
+                    csMessage = 'i %i %f 1 "%s" %f %f %f %f %i %f %f %f' %(instr, start, soundfile, segstart, segend, amp, maxamp, voiceChannel, delaySend, reverbSend, speed)
+                    #print 'csMessage', csMessage                 
                     cs.InputMessage(csMessage)
 
                 except Exception, e:

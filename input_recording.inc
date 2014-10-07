@@ -7,8 +7,8 @@
         instr 34
         ; We write the sound file in Csound, and the text file in Python
         Swavname        strget p4
-	print p1, p2, p3	
-	puts Swavname, 1
+	;print p1, p2, p3	
+	;puts Swavname, 1
         a1              chnget "rec_in1"
                 	fout Swavname, 14, a1
                         
@@ -34,7 +34,7 @@
         istrlen         strlen Swavname
         Spitchfile      strsub Swavname, 0, istrlen-4
         Spitchfile      strcat Spitchfile, "_pitch.txt"
-        puts Spitchfile, 1
+        ;puts Spitchfile, 1
         kcps            chnget "pitch1_amdf"
         kcps            mediank kcps, 100, 100
                         dumpk kcps, Spitchfile, 7, 0

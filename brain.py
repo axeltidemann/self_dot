@@ -323,7 +323,15 @@ def classifier_brain(host):
                         
                     response = np.random.choice(wavs[audio_id])
                     
-                    sender.send_json('playfile {} {}'.format(response, utils.getMaxAmp(response)))
+                    voiceChannel = 1
+                    voiceType = 1 
+                    speed = 1
+                    segstart = 0 # segment start and end within sound file
+                    segend = 0 # if zero, play whole file
+                    amp = -3 # voice amplitude in dB
+                    dur, maxamp = utils.getSoundParmFromFile(response)
+                    start = 0
+                    sender.send_json('playfile {} {} {} {} {} {} {} {} {}'.format(voiceChannel, voiceType, start, response, speed, segstart, segend, amp, maxamp))
 
                     sorted_sounds = np.argsort([ utils.hamming_distance(new_audio_hash, np.random.choice(h)) for h in NAP_hashes ])
 
@@ -343,12 +351,12 @@ def classifier_brain(host):
                         utils.send_array(projector, np.resize(row, frame_size[::-1]))
 
                 except Exception, e:
-                    print e, 'Response aborted.'
+                    print e, 'Single response aborted.'
 
                 pushbutton['reset'] = True
 
             if 'respond_sentence' in pushbutton:
-                print 'SENTENCE Respond to', pushbutton['filename']
+                print 'SENTENCE Respond to', pushbutton['filename'][-12:]
 
                 try:
                     utils.wait_for_wav(pushbutton['filename'])
@@ -363,29 +371,77 @@ def classifier_brain(host):
                         audio_id = 0
                         print 'Responding having only heard 1 sound.'
                         
-                    response = np.random.choice(wavs[audio_id])
-                    
-                    sender.send_json('playfile {} {}'.format(response, utils.getMaxAmp(response)))
+                    numWords = 4
+                    method = 'boundedAdd'
+                    timeBeforeWeight = 0.0
+                    timeAfterWeight = 0.5
+                    timeDistance = 5.0
+                    durationWeight = 0.1
+                    posInSentenceWeight = 0.5
+                    method2 = 'boundedAdd'
+                    timeBeforeWeight2 = 0.5
+                    timeAfterWeight2 = 0.0
+                    timeDistance2 = 5.0
+                    durationWeight2 = 0.5
+                    posInSentenceWeight2 = 0.5                                                        
+                    sentence, secondaryStream = association.makeSentence(audio_id, numWords, 
+                                                        method, timeBeforeWeight, timeAfterWeight, timeDistance, durationWeight, posInSentenceWeight,
+                                                        method2, timeBeforeWeight2, timeAfterWeight2, timeDistance2, durationWeight2, posInSentenceWeight2)
 
-                    sorted_sounds = np.argsort([ utils.hamming_distance(new_audio_hash, np.random.choice(h)) for h in NAP_hashes ])
+                    print '*** Play sentence', sentence, secondaryStream
+                    start = 0 
+                    nextTime1 = 0
+                    nextTime2 = 0
+                    enableVoice2 = 1
+                    for i in range(len(sentence)):
+                        word_id = sentence[i]
+                        soundfile = np.random.choice(wavs[word_id])
+                        voiceChannel = 1
+                        voiceType = 0
+                        speed = 1
+                        segstart = 0 # segment start and end within sound file
+                        segend = 0 # if zero, play whole file
+                        amp = -3 # voice amplitude in dB
+                        dur, maxamp = utils.getSoundParmFromFile(soundfile)
+                        sender.send_json('playfile {} {} {} {} {} {} {} {} {}'.format(voiceChannel, voiceType, start, soundfile, speed, segstart, segend, amp, maxamp))
+                        #start += dur # if we want to create a 'score section' for Csound, update start time to make segments into a contiguous sentence
+                        nextTime1 += (dur/speed)
+                        
+                        if enableVoice2:
+                            word_id2 = secondaryStream[i]
+                            soundfile2 = np.random.choice(wavs[word_id2])
+                            voiceChannel2 = 2
+                            voiceType2 = 3
+                            start2 = 0.7 #  set delay between voice 1 and 2
+                            speed2 = 0.7
+                            segstart2 = 0 # segment start and end within sound file
+                            segend2 = 0 # if zero, play whole file
+                            amp2 = -3 # voice amplitude in dB
+                            dur2, maxamp2 = utils.getSoundParmFromFile(soundfile2)
+                            sender.send_json('playfile {} {} {} {} {} {} {} {} {}'.format(voiceChannel2, voiceType2, start2, soundfile2, speed2, segstart2, segend2, amp2, maxamp2))
+                            nextTime2 += (dur2/speed2)
+                            enableVoice2 = 0
+                        # trig another word in voice 2 only if word 2 has finished playing (and sync to start of voice 1)
+                        if nextTime1 > nextTime2: enableVoice2 = 1 
 
-                    print 'Recognized as sound {}, sorted similar sounds {}'.format(audio_id, sorted_sounds)
+                        try:
+                            predicted_faces = [ face_recognizer.predict(np.ndarray.flatten(f))[0] for f in list(faces) ]
+                            uniq = np.unique(predicted_faces)
+                            face_id = uniq[np.argsort([ sum(predicted_faces == u) for u in uniq ])[-1]]
+                        except:
+                            face_id = 0
+                            print 'Responding having only seen 1 face.'
+                        
+                        projection = video_producer[(word_id, face_id)](NAP[::video_producer[(word_id, face_id)].stride])
 
-                    try:
-                        predicted_faces = [ face_recognizer.predict(np.ndarray.flatten(f))[0] for f in list(faces) ]
-                        uniq = np.unique(predicted_faces)
-                        face_id = uniq[np.argsort([ sum(predicted_faces == u) for u in uniq ])[-1]]
-                    except:
-                        face_id = 0
-                        print 'Responding having only seen 1 face.'
-                    
-                    projection = video_producer[(audio_id, face_id)](NAP[::video_producer[(audio_id, face_id)].stride])
-
-                    for row in projection:
-                        utils.send_array(projector, np.resize(row, frame_size[::-1]))
+                        for row in projection:
+                            utils.send_array(projector, np.resize(row, frame_size[::-1]))
+                        
+                        # as the first crude method of assembling a sentence, just wait for the word duration here
+                        time.sleep(dur)
 
                 except Exception, e:
-                    print e, 'Response aborted.'
+                    print e, 'Sentence response aborted.'
 
                 pushbutton['reset'] = True
 
@@ -395,7 +451,15 @@ def classifier_brain(host):
                 print 'wavs[play_audio_id]', wavs[play_audio_id]
                 print wavs
                 response = np.random.choice(wavs[play_audio_id])
-                sender.send_json('playfile {} {}'.format(response, utils.getMaxAmp(response)))
+                voiceChannel = 1
+                voiceType = 1 
+                speed = 1
+                segstart = 0 # segment start and end within sound file
+                segend = 0 # if zero, play whole file
+                amp = -3 # voice amplitude in dB
+                dur, maxamp = utils.getSoundParmFromFile(response)
+                start = 0
+                sender.send_json('playfile {} {} {} {} {} {} {} {} {}'.format(voiceChannel, voiceType, start, response, speed, segstart, segend, amp, maxamp))
 
             if 'reset' in pushbutton:
                 audio.clear()
@@ -422,12 +486,36 @@ def classifier_brain(host):
 
             if 'load' in pushbutton:
                 filename = pushbutton['load']
-                audio_recognizer, audio_producer, video_producer, NAPs, wavs, maxlen = pickle.load(file(filename, 'r'))
+                audio_recognizer, audio_producer, video_producer, NAPs, wavs, maxlen,\
+                            sound_to_face,\
+                            face_to_sound,\
+                            association.wavs_as_words,\
+                            association.wordTime,\
+                            association.time_word,\
+                            association.duration_word,\
+                            association.similarWords,\
+                            association.neighbors,\
+                            association.neighborAfter,\
+                            association.wordFace,\
+                            association.faceWord\
+                            = pickle.load(file(filename, 'r'))
                 print 'Brain loaded from file {} ({})'.format(filename, utils.filesize(filename))
 
             if 'save' in pushbutton:
                 filename = '{}.{}'.format(pushbutton['save'], me.name)
-                pickle.dump((audio_recognizer, audio_producer, video_producer, NAPs, wavs, maxlen), file(filename, 'w'))
+                pickle.dump((audio_recognizer, audio_producer, video_producer, NAPs, wavs, maxlen,
+                sound_to_face,
+                face_to_sound,
+                association.wavs_as_words,
+                association.wordTime,
+                association.time_word,
+                association.duration_word,
+                association.similarWords,
+                association.neighbors,
+                association.neighborAfter,
+                association.wordFace,
+                association.faceWord)
+                , file(filename, 'w'))
                 print '{} saved as file {} ({})'.format(me.name, filename, utils.filesize(filename))
                 
 

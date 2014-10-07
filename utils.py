@@ -198,15 +198,19 @@ def zero_pad(signal, length):
 def scale(image):
     return (image - np.min(image))/(np.max(image) - np.min(image))
 
-def getMaxAmp(responsefile):
+def getSoundParmFromFile(responsefile):
     audioinfo = open(responsefile[:-4]+'.txt')
     maxamp = 1
+    dur = 1
     for line in audioinfo:
+        if 'Total duration:'  in line: 
+            dur = float(line[16:])
         if 'Max amp for file: ' in line:
-            temp = findfloat.findall(line)
-            for item in temp:
-                if item != '':
-                    maxamp = item
-    return float(maxamp)
+            maxamp = float(line[18:])
+            #temp = findfloat.findall(line)
+            #for item in temp:
+            #    if item != '':
+            #        maxamp = item
+    return dur, maxamp
 
 
