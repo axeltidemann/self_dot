@@ -305,8 +305,50 @@ def classifier_brain(host):
 
                 pushbutton['reset'] = True
 
-            if 'respond' in pushbutton:
+            if 'respond_single' in pushbutton:
                 print 'Respond to', pushbutton['filename']
+
+                try:
+                    utils.wait_for_wav(pushbutton['filename'])
+                    NAP = cochlear(pushbutton['filename'])
+
+                    new_audio_hash = utils.d_hash(NAP)
+                    NAP_resampled = utils.zero_pad(utils.scale(resample(NAP, float(maxlen)/NAP.shape[0], 'sinc_best')), maxlen_scaled)
+
+                    try:
+                        audio_id = audio_recognizer.predict(np.ndarray.flatten(NAP_resampled))[0]
+                    except:
+                        audio_id = 0
+                        print 'Responding having only heard 1 sound.'
+                        
+                    response = np.random.choice(wavs[audio_id])
+                    
+                    sender.send_json('playfile {} {}'.format(response, utils.getMaxAmp(response)))
+
+                    sorted_sounds = np.argsort([ utils.hamming_distance(new_audio_hash, np.random.choice(h)) for h in NAP_hashes ])
+
+                    print 'Recognized as sound {}, sorted similar sounds {}'.format(audio_id, sorted_sounds)
+
+                    try:
+                        predicted_faces = [ face_recognizer.predict(np.ndarray.flatten(f))[0] for f in list(faces) ]
+                        uniq = np.unique(predicted_faces)
+                        face_id = uniq[np.argsort([ sum(predicted_faces == u) for u in uniq ])[-1]]
+                    except:
+                        face_id = 0
+                        print 'Responding having only seen 1 face.'
+                    
+                    projection = video_producer[(audio_id, face_id)](NAP[::video_producer[(audio_id, face_id)].stride])
+
+                    for row in projection:
+                        utils.send_array(projector, np.resize(row, frame_size[::-1]))
+
+                except Exception, e:
+                    print e, 'Response aborted.'
+
+                pushbutton['reset'] = True
+
+            if 'respond_sentence' in pushbutton:
+                print 'SENTENCE Respond to', pushbutton['filename']
 
                 try:
                     utils.wait_for_wav(pushbutton['filename'])

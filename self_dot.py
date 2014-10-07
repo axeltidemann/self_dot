@@ -117,9 +117,13 @@ class Controller:
                     self.event.send_json({ 'learn': winner, 'filename': filename })
                     self.state['associate_learn'] = False
 
-            if 'respondwav' in message:
+            if 'respondwav_single' in message:
                 _, filename = message.split()
-                self.event.send_json({ 'respond': True, 'filename': filename })
+                self.event.send_json({ 'respond_single': True, 'filename': filename })
+
+            if 'respondwav_sentence' in message:
+                _, filename = message.split()
+                self.event.send_json({ 'respond_sentence': True, 'filename': filename })
 
             if message == 'setmarker':
                 self.event.send_json({ 'setmarker': True })
@@ -127,8 +131,11 @@ class Controller:
             if 'autolearn' in message:
                 self.state['autolearn'] = message[10:] in ['True', '1']
 
-            if 'autorespond' in message:
-                self.state['autorespond'] = message[12:] in ['True', '1']
+            if 'autorespond_single' in message:
+                self.state['autorespond_single'] = message[19:] in ['True', '1']
+
+            if 'autorespond_sentence' in message:
+                self.state['autorespond_sentence'] = message[21:] in ['True', '1']
 
             if 'inputLevel' in message:
                 self.event.send_json({ 'inputLevel': message[11:] })
@@ -166,7 +173,8 @@ class Controller:
 if __name__ == '__main__':
 
     persistent_states = {'autolearn': False,
-                         'autorespond': False,
+                         'autorespond_single': False,
+                         'autorespond_sentence': False,
                          'brains': {},
                          'record': False,
                          'memoryRecording': False,

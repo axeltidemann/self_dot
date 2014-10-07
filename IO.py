@@ -238,13 +238,21 @@ def audio():
                 if filename:
                     send('learnwav {}'.format(os.path.abspath(filename)), context)
 
-        if state['autorespond']:
+        if state['autorespond_single']:
             if audioStatusTrig > 0:
                 send('startrec', context)
             if audioStatusTrig < 0:
                 send('stoprec', context)
                 if filename:
-                    send('respondwav {}'.format(os.path.abspath(filename)), context) 
+                    send('respondwav_single {}'.format(os.path.abspath(filename)), context) 
+
+        if state['autorespond_sentence']:
+            if audioStatusTrig > 0:
+                send('startrec', context)
+            if audioStatusTrig < 0:
+                send('stoprec', context)
+                if filename:
+                    send('respondwav_sentence {}'.format(os.path.abspath(filename)), context) 
 
         if eventQ in events:
             pushbutton = eventQ.recv_json()
