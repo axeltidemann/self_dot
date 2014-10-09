@@ -29,9 +29,9 @@ except:
     print '*****************************************'
 
 connected = False
-pan1 = 0
-tilt1 = 55
-pan2 = 60
+pan1 = 70
+tilt1 = 45
+pan2 = 30
 tilt2 = 45
 if serialAvailable:
     while not connected:

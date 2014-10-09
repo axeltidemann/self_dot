@@ -168,6 +168,7 @@ def classifier_brain(host):
             new_face = utils.recv_array(face)
             cv2.imshow('Faces', new_face)
             gray = cv2.cvtColor(new_face, cv2.COLOR_BGR2GRAY) / 255.
+            cv2.waitKey(5)
 
             if state['record']:
                 faces.append(gray)
@@ -224,9 +225,6 @@ def classifier_brain(host):
                         audio_id = len(NAPs) - 1
                         sound_to_face[audio_id] = []
                         print 'New sound, hamming mean', np.mean(hammings)
-                    
-                    # Save the hammings for use in association
-                    audio_hammings = hammings
                          
                     # Scale the sizes of the samples according to the biggest one. The idea is that this scale well. Otherwise, create overlapping bins.
                     start_time = time.time()
@@ -281,7 +279,9 @@ def classifier_brain(host):
                         face_to_sound[face_id].append(audio_id)
                         
                     # Send sound id and classification data to associations analysis
-                    association.analyze(filename,audio_id,wavs,audio_hammings,sound_to_face,face_to_sound)
+                    similar_ids = [ utils.hamming_distance(new_audio_hash, np.random.choice(h)) for h in NAP_hashes ]
+                    #sorted_sounds = np.argsort(similar_ids)
+                    association.analyze(filename,audio_id,wavs,similar_ids,sound_to_face,face_to_sound)
 
                     # Might want to consider scaling the NAP used to train (as well as in the respond) - but it works without, and
                     # is currently only used for aesthetical reasons.
@@ -333,18 +333,17 @@ def classifier_brain(host):
                     start = 0
                     sender.send_json('playfile {} {} {} {} {} {} {} {} {}'.format(voiceChannel, voiceType, start, response, speed, segstart, segend, amp, maxamp))
 
-                    sorted_sounds = np.argsort([ utils.hamming_distance(new_audio_hash, np.random.choice(h)) for h in NAP_hashes ])
+                    print 'Recognized as sound {}'.format(audio_id)
 
-                    print 'Recognized as sound {}, sorted similar sounds {}'.format(audio_id, sorted_sounds)
-
-                    try:
-                        predicted_faces = [ face_recognizer.predict(np.ndarray.flatten(f))[0] for f in list(faces) ]
-                        uniq = np.unique(predicted_faces)
-                        face_id = uniq[np.argsort([ sum(predicted_faces == u) for u in uniq ])[-1]]
-                    except:
-                        face_id = 0
-                        print 'Responding having only seen 1 face.'
+                    # try:
+                    #     predicted_faces = [ face_recognizer.predict(np.ndarray.flatten(f))[0] for f in list(faces) ]
+                    #     uniq = np.unique(predicted_faces)
+                    #     face_id = uniq[np.argsort([ sum(predicted_faces == u) for u in uniq ])[-1]]
+                    # except:
+                    #     face_id = 0
+                    #     print 'Responding having only seen 1 face.'
                     
+                    face_id = np.random.choice(sound_to_face[audio_id])
                     projection = video_producer[(audio_id, face_id)](NAP[::video_producer[(audio_id, face_id)].stride])
 
                     for row in projection:
@@ -411,7 +410,7 @@ def classifier_brain(host):
                             word_id2 = secondaryStream[i]
                             soundfile2 = np.random.choice(wavs[word_id2])
                             voiceChannel2 = 2
-                            voiceType2 = 3
+                            voiceType2 = 1
                             start2 = 0.7 #  set delay between voice 1 and 2
                             speed2 = 0.7
                             segstart2 = 0 # segment start and end within sound file
@@ -424,13 +423,15 @@ def classifier_brain(host):
                         # trig another word in voice 2 only if word 2 has finished playing (and sync to start of voice 1)
                         if nextTime1 > nextTime2: enableVoice2 = 1 
 
-                        try:
-                            predicted_faces = [ face_recognizer.predict(np.ndarray.flatten(f))[0] for f in list(faces) ]
-                            uniq = np.unique(predicted_faces)
-                            face_id = uniq[np.argsort([ sum(predicted_faces == u) for u in uniq ])[-1]]
-                        except:
-                            face_id = 0
-                            print 'Responding having only seen 1 face.'
+                        # try:
+                        #     predicted_faces = [ face_recognizer.predict(np.ndarray.flatten(f))[0] for f in list(faces) ]
+                        #     uniq = np.unique(predicted_faces)
+                        #     face_id = uniq[np.argsort([ sum(predicted_faces == u) for u in uniq ])[-1]]
+                        # except:
+                        #     face_id = 0
+                        #     print 'Responding having only seen 1 face.'
+                            
+                        face_id = np.random.choice(sound_to_face[word_id])
                         
                         projection = video_producer[(word_id, face_id)](NAP[::video_producer[(word_id, face_id)].stride])
 
@@ -446,20 +447,26 @@ def classifier_brain(host):
                 pushbutton['reset'] = True
 
             if 'play_id' in pushbutton:
-                play_audio_id = int(pushbutton['play_id'])
-                print 'play_audio_id', play_audio_id
-                print 'wavs[play_audio_id]', wavs[play_audio_id]
-                print wavs
-                response = np.random.choice(wavs[play_audio_id])
-                voiceChannel = 1
-                voiceType = 1 
-                speed = 1
-                segstart = 0 # segment start and end within sound file
-                segend = 0 # if zero, play whole file
-                amp = -3 # voice amplitude in dB
-                dur, maxamp = utils.getSoundParmFromFile(response)
-                start = 0
-                sender.send_json('playfile {} {} {} {} {} {} {} {} {}'.format(voiceChannel, voiceType, start, response, speed, segstart, segend, amp, maxamp))
+                try:
+                    items = pushbutton['play_id'].split(' ')
+                    play_audio_id = int(items[0])
+                    voiceChannel = int(items[1])
+                    print 'play_audio_id', play_audio_id, 'voice', voiceChannel
+                    print 'wavs[play_audio_id]', wavs[play_audio_id]
+                    print wavs
+                    response = np.random.choice(wavs[play_audio_id])
+                    voiceChannel = 1
+                    voiceType = 1 
+                    speed = 1
+                    segstart = 0 # segment start and end within sound file
+                    segend = 0 # if zero, play whole file
+                    amp = -3 # voice amplitude in dB
+                    dur, maxamp = utils.getSoundParmFromFile(response)
+                    start = 0
+                    sender.send_json('playfile {} {} {} {} {} {} {} {} {}'.format(voiceChannel, voiceType, start, response, speed, segstart, segend, amp, maxamp))
+                except Exception, e:
+                    print e, 'play_id aborted.'
+
 
             if 'reset' in pushbutton:
                 audio.clear()

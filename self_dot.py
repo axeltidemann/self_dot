@@ -86,7 +86,7 @@ class Controller:
                 self.event.send_json({ 'showme': message[7:] })
 
             if 'play_id' in message:
-                self.event.send_json({ 'play_id': message[7:] })
+                self.event.send_json({ 'play_id': message[8:] })
 
             if 'memoryRecording' in message:
                 self.state['memoryRecording'] = message[16:] in ['True', '1']
@@ -187,7 +187,7 @@ if __name__ == '__main__':
 
     mp.Process(target=IO.audio, name='AUDIO').start() 
     mp.Process(target=IO.video, name='VIDEO').start()
-    mp.Process(target=brain.face_extraction, args=('localhost',), name='FACE EXTRACTION').start()
+    mp.Process(target=brain.face_extraction, args=('localhost',False,), name='FACE EXTRACTION').start() # True to recognize more rotated faces.
     mp.Process(target=Controller, args=(persistent_states,), name='CONTROLLER').start()
     mp.Process(target=brain.classifier_brain, args=('localhost',)).start()
     #mp.Process(target=analyze_associations.analyze, args=('localhost',), name='ANALYZE ASSOCIATIONS').start()
