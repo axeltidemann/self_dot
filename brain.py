@@ -219,12 +219,13 @@ def classifier_brain(host):
                         wavs[audio_id].append(filename)
                         print 'Sound is similar to sound {}, hamming mean {}, previously said by faces {}'.format(audio_id, np.mean(hammings), sound_to_face[audio_id])
                     else:
+                        print 'New sound, hamming mean {} from sound {}'.format(np.mean(hammings), audio_id)
                         NAPs.append([new_sound])
                         NAP_hashes.append([new_audio_hash])
                         wavs.append([filename])
                         audio_id = len(NAPs) - 1
                         sound_to_face[audio_id] = []
-                        print 'New sound, hamming mean', np.mean(hammings)
+                        #print 'New sound, hamming mean', np.mean(hammings)
                          
                     # Scale the sizes of the samples according to the biggest one. The idea is that this scale well. Otherwise, create overlapping bins.
                     start_time = time.time()
@@ -261,11 +262,11 @@ def classifier_brain(host):
                         face_hashes[face_id].extend(new_faces_hashes)
                         print 'Face is similar to face {}, hamming mean {}, has previously said {}'.format(face_id, np.mean(hammings), face_to_sound[face_id])
                     else:
+                        print 'New face, hamming mean {} from face {}'.format(np.mean(hammings), face_id)
                         face_history.append(new_faces)
                         face_hashes.append(new_faces_hashes)
                         face_id = len(face_history) - 1
                         face_to_sound[face_id] = []
-                        print 'New face, hamming mean', np.mean(hammings)
 
                     if len(face_history) > 1:
                         x_train = [ np.ndarray.flatten(f) for cluster in face_history for f in cluster ]
