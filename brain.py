@@ -157,7 +157,7 @@ def respond(control_host, learn_host):
     while True:
         events = dict(poller.poll())
         if brainQ in events:
-            wavs, wav_segments, sound_to_face, face_to_sound, audio_recognizer, video_producer, maxlen,  maxlen_scaled = utils.recv_pickle(brainQ)
+            wavs, wav_segments, sound_to_face, face_to_sound, audio_recognizer, video_producer, maxlen,  maxlen_scaled = brainQ.recv_pyobj()
 
         if eventQ in events:
             pushbutton = eventQ.recv_json()
@@ -480,7 +480,7 @@ def learn(host):
                     tarantino.stride = stride
                     video_producer[(audio_id, face_id)] = tarantino
 
-                    utils.send_pickle(brainQ, [ wavs, wav_segments, sound_to_face, face_to_sound, audio_recognizer, video_producer, maxlen, maxlen_scaled ])
+                    brainQ.send_pyobj([ wavs, wav_segments, sound_to_face, face_to_sound, audio_recognizer, video_producer, maxlen, maxlen_scaled ])
                     print 'Learning classifier and video network in {} seconds'.format(time.time() - start_time)                    
                 except:
                     utils.print_exception('Learning aborted. Backing up.')

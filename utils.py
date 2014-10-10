@@ -134,14 +134,6 @@ def recv_zipped_pickle(socket, flags=0):
     return pickle.loads(pobj)
 
 
-def send_pickle(socket, obj, flags=0, protocol=-1):
-    return socket.send(pickle.dumps(obj, protocol), flags=flags)
-
-
-def recv_pickle(socket, flags=0):
-    return pickle.loads(socket.recv(flags))
-
-
 def send_array(socket, A, flags=0, copy=True, track=False):
     """send a numpy array with metadata"""
     md = dict(

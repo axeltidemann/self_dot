@@ -55,7 +55,7 @@ def video():
     poller.register(projector, zmq.POLLIN)
 
     while True:
-        events = dict(poller.poll())
+        events = dict(poller.poll(timeout=0))
 
         # This probably should be a pushbutton event instead - now this will be done every time the state is updated.
         if stateQ in events:
