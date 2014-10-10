@@ -47,14 +47,14 @@ def array_to_csv(filename, data, delimiter=' '):
 
 
 def wait_for_wav(filename):
-    # Super ugly hack! Since Csound might not be finished writing to the file, we try to read it, and upon fail (i.e. it was not closed) we wait .1 seconds.
+    # Super ugly hack! Since Csound might not be finished writing to the file, we try to read it, and upon fail (i.e. it was not closed) we wait .05 seconds.
     while True:
         try:
             wavfile.read(filename)
             break
         except:
-            time.sleep(.1)
-
+            time.sleep(.05)
+    return filename
             
 def filesize(filename):
     return bytes2human(os.path.getsize(filename))
@@ -66,20 +66,29 @@ def wav_duration(filename):
 
 
 def trim(A, threshold=100):
-    ''' Trims off excess fat on either side of the thresholded part of the signal '''
+    ''' Trims off excess fat on either side of the thresholded part of the signal.'''
     right = A.shape[0]-1
-    while A[right] < threshold:
+    while max(A[right]) < threshold:
         right -= 1
     left = 0 
-    while A[left] < threshold:
+    while max(A[left]) < threshold:
         left += 1
     return A[left:right]
 
+def trim_right(A, threshold=100):
+    ''' Trims right side of the thresholded part of the signal.'''
+    maxes = np.max(A, axis=1)
+    apex = np.argmax(maxes)
 
+    for i,m in enumerate(maxes[apex:]):
+        if m < threshold:
+            return A[:i+apex]
+    return A
+        
 def split_signal(data, threshold=100, length=5000, elbow_grease=100, plot=False, markers=[]):
     ''' Splits the signal after [length] silence '''
     abs_data = abs(data)
-    starts = np.array(sorted([ i for i,d in enumerate(abs_data) if i > length and d > threshold and all(abs_data[i-length:i] < threshold) ] + markers)) - elbow_grease
+    starts = np.array(sorted([ i for i,d in enumerate(abs_data) if i > length and np.mean(d) > threshold and all(np.mean(abs_data[i-length:i], axis=1) < threshold) ] + markers)) - elbow_grease
     chunks = [ data[q:s] for q,s in zip(starts[:-1], starts[1:]) ]
     chunks.append(data[starts[-1]:])
 
@@ -198,19 +207,35 @@ def zero_pad(signal, length):
 def scale(image):
     return (image - np.min(image))/(np.max(image) - np.min(image))
 
+
+def get_segments(wavfile, threshold=.5):
+    ''' Find segments in audio descriptor file. Transients closer together than the threshold will be excluded.'''
+    audio_info = open(wavfile[:-4]+'.txt')
+    segments = []
+    for line in audio_info:
+        if 'Total duration:' in line:
+            segments.append(float(line[16:]))
+        try:
+            segments.append(float(line))
+        except:
+            continue
+
+    remove = [ i for i,d in enumerate(np.diff(segments)) if d < threshold ]
+    for i in remove[::-1]:
+        segments.pop(i+1)
+        
+    return np.array(segments)
+
+
 def getSoundParmFromFile(responsefile):
     audioinfo = open(responsefile[:-4]+'.txt')
     maxamp = 1
     dur = 1
     for line in audioinfo:
-        if 'Total duration:'  in line: 
+        if 'Total duration:' in line: 
             dur = float(line[16:])
-        if 'Max amp for file: ' in line:
+        if 'Max amp for file:' in line:
             maxamp = float(line[18:])
-            #temp = findfloat.findall(line)
-            #for item in temp:
-            #    if item != '':
-            #        maxamp = item
-    return dur, maxamp
+    return dur, maxamp, segments
 
 

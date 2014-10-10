@@ -35,8 +35,10 @@ except:
 FACE_HAAR_CASCADE_PATH = opencv_prefix + '/share/OpenCV/haarcascades/haarcascade_frontalface_default.xml'
 EYE_HAAR_CASCADE_PATH = opencv_prefix + '/share/OpenCV/haarcascades/haarcascade_eye_tree_eyeglasses.xml'
 HAMMERTIME = 10 # Hamming distance match criterion
-        
-def face_extraction(host, extended_search=False):
+
+# LOOK AT EYES? CAN YOU DETERMINE ANYTHING FROM THEM?
+# PRESENT VISUAL INFORMATION - MOVE UP OR DOWN
+def face_extraction(host, extended_search=False, show=False):
     me = mp.current_process()
     print me.name, 'PID', me.pid
 
@@ -52,6 +54,9 @@ def face_extraction(host, extended_search=False):
     publisher = context.socket(zmq.PUB)
     publisher.bind('tcp://*:{}'.format(IO.FACE))
 
+    if show:
+        cv2.namedWindow('Faces', cv2.WINDOW_NORMAL)
+
     while True:
         frame = utils.recv_array(camera).copy() # Weird, but necessary to do a copy.
 
@@ -65,18 +70,29 @@ def face_extraction(host, extended_search=False):
             eyes = [ (x,y,w,h) for (x,y,w,h),n in 
                      cv2.cv.HaarDetectObjects(cv2.cv.fromarray(frame), eye_cascade, storage, 1.2, 2, cv2.cv.CV_HAAR_DO_CANNY_PRUNING, (20,20)) ] 
 
-            if len(eyes) == 2:
-                x, y, _, _ = eyes[0]
-                x_, y_, _, _ = eyes[1]
-                angle = np.rad2deg(np.arctan( float((y_ - y))/(x_ - x) ))
-                rotation = cv2.getRotationMatrix2D((rows/2, cols/2), angle, 1)
-                frame = cv2.warpAffine(frame, rotation, (rows,cols))
+            try: 
+                if len(eyes) == 2:
+                    x, y, _, _ = eyes[0]
+                    x_, y_, _, _ = eyes[1]
+                    angle = np.rad2deg(np.arctan( float((y_ - y))/(x_ - x) ))
+                    rotation = cv2.getRotationMatrix2D((rows/2, cols/2), angle, 1)
+                    frame = cv2.warpAffine(frame, rotation, (rows,cols))
 
-                faces.extend([ (x,y,w,h) for (x,y,w,h),n in 
-                               cv2.cv.HaarDetectObjects(cv2.cv.fromarray(frame), face_cascade, storage, 1.2, 2, cv2.cv.CV_HAAR_DO_CANNY_PRUNING, (50,50)) ])
-        
-        for (x,y,w,h) in faces:
+                    faces.extend([ (x,y,w,h) for (x,y,w,h),n in 
+                                   cv2.cv.HaarDetectObjects(cv2.cv.fromarray(frame), face_cascade, storage, 1.2, 2, cv2.cv.CV_HAAR_DO_CANNY_PRUNING, (50,50)) ])
+            except Exception, e:
+                print e, 'Eye detection failed.'
+
+        # We select the biggest face.
+        if faces:
+            faces_sorted = sorted(faces, key=lambda x: x[2]*x[3], reverse=True)
+            x,y,w,h = faces_sorted[0]
             utils.send_array(publisher, cv2.resize(frame[y:y+h, x:x+w], (100,100)))
+    
+        if show:
+            if faces:
+                cv2.rectangle(frame, (x,y), (x+w,y+h), (0, 0, 255), 2)
+            cv2.imshow('Faces', frame)
 
 
 def train_network(x, y, output_dim=100, leak_rate=.9, bias_scaling=.2, reset_states=True, use_pinv=True):
@@ -96,12 +112,14 @@ def train_network(x, y, output_dim=100, leak_rate=.9, bias_scaling=.2, reset_sta
 
     return net
 
+def dream(brain):
+    return True # SELF-ORGANIZING OF ALL MEMORIES! EXTRACT CATEGORIES AND FEATURES!
         
 def cochlear(filename, db=-40, stride=441, threshold=.025, new_rate=22050, ears=1, channels=71):
     rate, data = wavfile.read(filename)
     assert data.dtype == np.int16
     data = data / float(2**15)
-    data = resample(utils.trim(data, threshold=threshold), float(new_rate)/rate, 'sinc_best')
+    data = resample(data, float(new_rate)/rate, 'sinc_best')
     data = data*10**(db/20)
     utils.array_to_csv('{}-audio.txt'.format(filename), data)
     call(['./carfac-cmd', filename, str(len(data)), str(ears), str(channels), str(new_rate), str(stride)])
@@ -124,6 +142,7 @@ def classifier_brain(host):
     
     NAPs = []
     wavs = []
+    wav_segments = {}
     face_history = []
     face_hashes = []
     NAP_hashes = []
@@ -143,8 +162,10 @@ def classifier_brain(host):
     # This is the size for the neural networks to learn. Differs from original framesize.
     frame_size = (160, 90) 
         
-    cv2.namedWindow('Faces', cv2.WINDOW_NORMAL)
-
+    import matplotlib.pyplot as plt
+    plt.ion()
+    
+    # WRITE IMAGES TO DISK!
     while True:
         events = dict(poller.poll())
         
@@ -166,7 +187,6 @@ def classifier_brain(host):
         
         if face in events:
             new_face = utils.recv_array(face)
-            cv2.imshow('Faces', new_face)
             gray = cv2.cvtColor(new_face, cv2.COLOR_BGR2GRAY) / 255.
 
             if state['record']:
@@ -183,67 +203,15 @@ def classifier_brain(host):
         if eventQ in events:
             pushbutton = eventQ.recv_json()
             if 'learn' in pushbutton and pushbutton['learn'] == me.name:
+                # FIX AUDIO SEGMENTS!
                 try:
-                    backup = [ audio_recognizer, face_recognizer, maxlen, maxlen_scaled ]
+                    backup = [ audio_recognizer, face_recognizer, maxlen, maxlen_scaled ] # MORE ROBUST
                     
                     filename = pushbutton['filename']
                     if len(wav_first_segment):
                         print 'Learning to associate {} -> {}'.format(wav_first_segment, filename)
                         filename = wav_first_segment
-                    
-                    utils.wait_for_wav(filename)
-                    print 'Learning {} duration {} seconds'.format(filename, utils.wav_duration(filename))
-                    start_time = time.time()
-                    new_sound = cochlear(filename)
-                    print 'Calculating cochlear neural activation patterns took {} seconds'.format(time.time() - start_time)
-
-                    filename = pushbutton['filename'] if len(wav_first_segment) else filename
-
-                    # Do we know this sound?
-                    hammings = [ np.inf ]
-                    new_audio_hash = utils.d_hash(new_sound)
-                    audio_id = 0
-                    if len(NAPs) == 1:
-                        hammings = [ utils.hamming_distance(new_audio_hash, h) for h in NAP_hashes[0] ]
-                    
-                    if audio_recognizer:
-                        resampled_new_sound = utils.zero_pad(utils.scale(resample(new_sound, float(maxlen)/new_sound.shape[0], 'sinc_best')), maxlen_scaled)
-                        resampled_flattened_new_sound = np.ndarray.flatten(resampled_new_sound)
-                        audio_id = audio_recognizer.predict(resampled_flattened_new_sound)[0]
-                        hammings = [ utils.hamming_distance(new_audio_hash, h) for h in NAP_hashes[audio_id] ]
-
-                    if np.mean(hammings) < HAMMERTIME:
-                        NAPs[audio_id].append(new_sound)
-                        NAP_hashes[audio_id].append(new_audio_hash)
-                        wavs[audio_id].append(filename)
-                        print 'Sound is similar to sound {}, hamming mean {}, previously said by faces {}'.format(audio_id, np.mean(hammings), sound_to_face[audio_id])
-                    else:
-                        print 'New sound, hamming mean {} from sound {}'.format(np.mean(hammings), audio_id)
-                        NAPs.append([new_sound])
-                        NAP_hashes.append([new_audio_hash])
-                        wavs.append([filename])
-                        audio_id = len(NAPs) - 1
-                        sound_to_face[audio_id] = []
-
-                    
-                    # Save the hammings for use in association
-                    audio_hammings = hammings
-                         
-                    # Scale the sizes of the samples according to the biggest one. The idea is that this scale well. Otherwise, create overlapping bins.
-                    start_time = time.time()
-                    maxlen = max([ m.shape[0] for memory in NAPs for m in memory ])
-                    resampled_memories = [ [ utils.scale(resample(m, float(maxlen)/m.shape[0], 'sinc_best')) for m in memory ] for memory in NAPs ]
-                    maxlen_scaled = max([ m.shape[0] for memory in resampled_memories for m in memory ])
-
-                    if len(NAPs) > 1:
-                        resampled_memories = [ [ utils.zero_pad(m, maxlen_scaled) for m in memory ] for memory in resampled_memories ]
-                        resampled_flattened_memories = [ np.ndarray.flatten(m) for memory in resampled_memories for m in memory ]
-                        audio_targets = [ i for i,f in enumerate(NAPs) for _ in f ]
-
-                        audio_recognizer = svm.LinearSVC()
-                        # Is the high dimensionality required? Maybe PCA could help reduce the training time necessary. 
-                        audio_recognizer.fit(resampled_flattened_memories, audio_targets)
-                    
+                                        
                     # Do we know this face?
                     hammings = [ np.inf ]
                     new_faces = list(faces)
@@ -275,11 +243,70 @@ def classifier_brain(host):
                         face_recognizer = svm.LinearSVC()
                         targets = [ i for i,f in enumerate(face_history) for _ in f ]
                         face_recognizer.fit(x_train, targets)
+                        
+                    audio_segments = utils.get_segments(utils.wait_for_wav(filename))
+                    
+                    print 'Learning {} duration {} seconds with {} segments'.format(filename, audio_segments[-1], len(audio_segments)-1)
+                    start_time = time.time()
+                    new_sentence = cochlear(filename)
+                    print 'Calculating cochlear neural activation patterns took {} seconds'.format(time.time() - start_time)
 
-                    if not face_id in sound_to_face[audio_id]:
-                        sound_to_face[audio_id].append(face_id)
-                    if not audio_id in face_to_sound[face_id]:
-                        face_to_sound[face_id].append(audio_id)
+                    filename = pushbutton['filename'] if len(wav_first_segment) else filename
+                    norm_segments = np.rint(new_sentence.shape[0]*audio_segments/audio_segments[-1]).astype('int')
+                    
+                    for segment, new_sound in enumerate([ utils.trim_right(utils.scale(new_sentence[norm_segments[i]:norm_segments[i+1]]), .2) for i in range(len(norm_segments)-1) ]):
+
+                        # Do we know this sound?
+                        hammings = [ np.inf ]
+                        new_audio_hash = utils.d_hash(new_sound)
+                        audio_id = 0
+                        if len(NAPs) == 1:
+                            hammings = [ utils.hamming_distance(new_audio_hash, h) for h in NAP_hashes[0] ]
+
+                        if audio_recognizer:
+                            resampled_new_sound = utils.zero_pad(resample(new_sound, float(maxlen)/new_sound.shape[0], 'sinc_best'), maxlen_scaled)
+                            resampled_flattened_new_sound = np.ndarray.flatten(resampled_new_sound)
+                            audio_id = audio_recognizer.predict(resampled_flattened_new_sound)[0]
+                            hammings = [ utils.hamming_distance(new_audio_hash, h) for h in NAP_hashes[audio_id] ]
+
+                        if np.mean(hammings) < HAMMERTIME:
+                            NAPs[audio_id].append(new_sound)
+                            NAP_hashes[audio_id].append(new_audio_hash)
+                            wavs[audio_id].append(filename)
+                            print 'Sound is similar to sound {}, hamming mean {}, previously said by faces {}'.format(audio_id, np.mean(hammings), sound_to_face[audio_id])
+                        else:
+                            print 'New sound, hamming mean {} from sound {}'.format(np.mean(hammings), audio_id)
+                            NAPs.append([new_sound])
+                            NAP_hashes.append([new_audio_hash])
+                            wavs.append([filename])
+                            audio_id = len(NAPs) - 1
+                            sound_to_face[audio_id] = []
+
+                        # The mapping from wavfile and audio ID to the segment within the audio file
+                        wav_segments[(filename, audio_id)] = segment
+                        
+                        # Save the hammings for use in association
+                        audio_hammings = hammings
+
+                        # Scale the sizes of the samples according to the biggest one. The idea is that this scale well. Otherwise, create overlapping bins.
+                        start_time = time.time()
+                        maxlen = max([ m.shape[0] for memory in NAPs for m in memory ])
+                        resampled_memories = [ [ resample(m, float(maxlen)/m.shape[0], 'sinc_best') for m in memory ] for memory in NAPs ]
+                        maxlen_scaled = max([ m.shape[0] for memory in resampled_memories for m in memory ])
+
+                        if len(NAPs) > 1:
+                            resampled_memories = [ [ utils.zero_pad(m, maxlen_scaled) for m in memory ] for memory in resampled_memories ]
+                            resampled_flattened_memories = [ np.ndarray.flatten(m) for memory in resampled_memories for m in memory ]
+                            audio_targets = [ i for i,f in enumerate(NAPs) for _ in f ]
+
+                            audio_recognizer = svm.LinearSVC()
+                            # Is the high dimensionality required? Maybe PCA could help reduce the training time necessary. 
+                            audio_recognizer.fit(resampled_flattened_memories, audio_targets)
+
+                        if not face_id in sound_to_face[audio_id]:
+                            sound_to_face[audio_id].append(face_id)
+                        if not audio_id in face_to_sound[face_id]:
+                            face_to_sound[face_id].append(audio_id)
                         
                     # Send sound id and classification data to associations analysis
                     association.analyze(filename,audio_id,wavs,audio_hammings,sound_to_face,face_to_sound)
@@ -306,6 +333,7 @@ def classifier_brain(host):
 
                 pushbutton['reset'] = True
 
+            # WHY INDEX OUT OF BOUNDS?
             if 'respond_single' in pushbutton:
                 print 'Respond to', pushbutton['filename']
 
@@ -502,6 +530,7 @@ def classifier_brain(host):
                             = pickle.load(file(filename, 'r'))
                 print 'Brain loaded from file {} ({})'.format(filename, utils.filesize(filename))
 
+            # CHECK WHAT TAKES UP SO MUCH SPACE! I suspect the video_producer matrix.
             if 'save' in pushbutton:
                 filename = '{}.{}'.format(pushbutton['save'], me.name)
                 pickle.dump((audio_recognizer, audio_producer, video_producer, NAPs, wavs, maxlen,

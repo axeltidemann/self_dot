@@ -183,11 +183,11 @@ if __name__ == '__main__':
                          'display2': 0,
                          'associate': False,
                          'associate_learn': False, 
-                         'facerecognition': False}
+                         'facerecognition': False,}
 
     mp.Process(target=IO.audio, name='AUDIO').start() 
     mp.Process(target=IO.video, name='VIDEO').start()
-    mp.Process(target=brain.face_extraction, args=('localhost',), name='FACE EXTRACTION').start()
+    mp.Process(target=brain.face_extraction, args=('localhost',False, True,), name='FACE EXTRACTION').start()
     mp.Process(target=Controller, args=(persistent_states,), name='CONTROLLER').start()
     mp.Process(target=brain.classifier_brain, args=('localhost',)).start()
     #mp.Process(target=analyze_associations.analyze, args=('localhost',), name='ANALYZE ASSOCIATIONS').start()
