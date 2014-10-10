@@ -118,7 +118,7 @@ def dream(brain):
     return True # SELF-ORGANIZING OF ALL MEMORIES! EXTRACT CATEGORIES AND FEATURES!
 
             
-def cochlear(filename, db=-40, stride=441, threshold=.025, new_rate=22050, ears=1, channels=71):
+def cochlear(filename, db=-40, stride=441, new_rate=22050, ears=1, channels=71):
     rate, data = wavfile.read(utils.wait_for_wav(filename))
     assert data.dtype == np.int16
     data = data / float(2**15)
@@ -126,6 +126,7 @@ def cochlear(filename, db=-40, stride=441, threshold=.025, new_rate=22050, ears=
     data = data*10**(db/20)
     utils.array_to_csv('{}-audio.txt'.format(filename), data)
     call(['./carfac-cmd', filename, str(len(data)), str(ears), str(channels), str(new_rate), str(stride)])
+    os.remove('{}-audio.txt'.format(filename))
     naps = utils.csv_to_array('{}-output.txt'.format(filename))
     return np.sqrt(np.maximum(0, naps)/np.max(naps))
 
