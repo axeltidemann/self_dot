@@ -12,6 +12,9 @@ import zmq
 from utils import send_array, recv_array
 import myCsoundAudioOptions
 
+# Milliseconds between each image capture
+VIDEO_SAMPLE_TIME = 100
+
 # ØMQ ports
 CAMERA = 5561
 PROJECTOR = 5562
@@ -27,11 +30,10 @@ ROBO = 5570
 FACE = 5572
 BRAIN = 5573
 
+
 def video():
     me = mp.current_process()
     print me.name, 'PID', me.pid
-
-    #cv2.namedWindow('Output', cv2.WINDOW_NORMAL)
 
     cv2.namedWindow('Output', cv2.WND_PROP_FULLSCREEN)
     camera = cv2.VideoCapture(0)
@@ -40,8 +42,8 @@ def video():
     publisher = context.socket(zmq.PUB)
     publisher.bind('tcp://*:{}'.format(CAMERA))
 
-    subscriber = context.socket(zmq.PULL)
-    subscriber.bind('tcp://*:{}'.format(PROJECTOR))
+    projector = context.socket(zmq.PULL)
+    projector.bind('tcp://*:{}'.format(PROJECTOR))
     
     frame_size = (640,360)
 
@@ -50,29 +52,29 @@ def video():
     stateQ.setsockopt(zmq.SUBSCRIBE, b'') 
     poller = zmq.Poller()
     poller.register(stateQ, zmq.POLLIN)
+    poller.register(projector, zmq.POLLIN)
 
     while True:
-        events = dict(poller.poll(timeout=0))
+        events = dict(poller.poll())
+
+        # This probably should be a pushbutton event instead - now this will be done every time the state is updated.
         if stateQ in events:
             state = stateQ.recv_json()        
-
             if state['fullscreen'] > 0:
                 cv2.setWindowProperty('Output', cv2.WND_PROP_FULLSCREEN, cv2.cv.CV_WINDOW_FULLSCREEN)
-                state['fullscreen'] = 0
             if state['display2'] > 0:
                 cv2.moveWindow('Output', 2100, 100)
-                state['display2'] = 0
 
+        if projector in events:
+            cv2.imshow('Output', cv2.resize(recv_array(projector), frame_size))
+        else:
+            cv2.imshow('Output', np.zeros(frame_size[::-1]))
+        
         _, frame = camera.read()
         frame = cv2.resize(frame, frame_size)
         send_array(publisher, frame)
-        
-        try: 
-            cv2.imshow('Output', cv2.resize(recv_array(subscriber, flags=zmq.DONTWAIT), frame_size))
-        except:
-            cv2.imshow('Output', np.zeros(frame_size[::-1]))
 
-        cv2.waitKey(100)
+        cv2.waitKey(VIDEO_SAMPLE_TIME)
 
 def audio():
     me = mp.current_process()

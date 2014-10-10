@@ -189,7 +189,7 @@ if __name__ == '__main__':
     mp.Process(target=brain.face_extraction, args=('localhost',False, True,), name='FACE EXTRACTION').start()
     mp.Process(target=Controller, args=(persistent_states,), name='CONTROLLER').start()
     mp.Process(target=brain.respond, args=('localhost','localhost',), name='RESPONDER').start()
-    mp.Process(target=brain.classifier_brain, args=('localhost',)).start()
+    mp.Process(target=brain.learn, args=('localhost',)).start()
     #mp.Process(target=analyze_associations.analyze, args=('localhost',), name='ANALYZE ASSOCIATIONS').start()
     mp.Process(target=robocontrol.robocontrol, args=('localhost',), name='ROBOCONTROL').start()
 

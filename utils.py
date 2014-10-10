@@ -118,6 +118,7 @@ def split_wav(filename, threshold=100, length=5000, elbow_grease=100, plot=False
     return split_signal(data, threshold=threshold, length=length, elbow_grease=elbow_grease, plot=plot)
 
 
+
 def send_zipped_pickle(socket, obj, flags=0, protocol=-1):
     """Pack and compress an object with pickle and zlib."""
     pobj = pickle.dumps(obj, protocol)
@@ -131,6 +132,14 @@ def recv_zipped_pickle(socket, flags=0):
     zobj = socket.recv(flags)
     pobj = zlib.decompress(zobj)
     return pickle.loads(pobj)
+
+
+def send_pickle(socket, obj, flags=0, protocol=-1):
+    return socket.send(pickle.dumps(obj, protocol), flags=flags)
+
+
+def recv_pickle(socket, flags=0):
+    return pickle.loads(socket.recv(flags))
 
 
 def send_array(socket, A, flags=0, copy=True, track=False):

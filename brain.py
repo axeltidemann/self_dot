@@ -116,7 +116,8 @@ def train_network(x, y, output_dim=100, leak_rate=.9, bias_scaling=.2, reset_sta
 
 def dream(brain):
     return True # SELF-ORGANIZING OF ALL MEMORIES! EXTRACT CATEGORIES AND FEATURES!
-        
+
+            
 def cochlear(filename, db=-40, stride=441, threshold=.025, new_rate=22050, ears=1, channels=71):
     rate, data = wavfile.read(utils.wait_for_wav(filename))
     assert data.dtype == np.int16
@@ -127,6 +128,7 @@ def cochlear(filename, db=-40, stride=441, threshold=.025, new_rate=22050, ears=
     call(['./carfac-cmd', filename, str(len(data)), str(ears), str(channels), str(new_rate), str(stride)])
     naps = utils.csv_to_array('{}-output.txt'.format(filename))
     return np.sqrt(np.maximum(0, naps)/np.max(naps))
+
 
 def respond(control_host, learn_host):
     me = mp.current_process()
@@ -152,21 +154,18 @@ def respond(control_host, learn_host):
     poller.register(eventQ, zmq.POLLIN)
     poller.register(brainQ, zmq.POLLIN)
         
-    # WRITE IMAGES TO DISK!
     while True:
         events = dict(poller.poll())
         if brainQ in events:
-            wavs, wav_segments, sound_to_face, face_to_sound, audio_recognizer, video_producer, maxlen,  maxlen_scaled = utils.recv_zipped_pickle(brainQ)
+            wavs, wav_segments, sound_to_face, face_to_sound, audio_recognizer, video_producer, maxlen,  maxlen_scaled = utils.recv_pickle(brainQ)
 
         if eventQ in events:
             pushbutton = eventQ.recv_json()
-            # WHY INDEX OUT OF BOUNDS?
             if 'respond_single' in pushbutton:
                 print 'Respond to', pushbutton['filename']
 
                 try:
                     NAP = cochlear(pushbutton['filename'])
-
                     NAP_resampled = utils.zero_pad(resample(utils.trim_right(utils.scale(NAP)), float(maxlen)/NAP.shape[0], 'sinc_best'), maxlen_scaled)
 
                     try:
@@ -177,13 +176,12 @@ def respond(control_host, learn_host):
 
                     soundfile = np.random.choice(wavs[audio_id])
 
+                    # segment start and end within sound file, if zero, play whole file
                     segstart, segend = wav_segments[(soundfile, audio_id)]
 
                     voiceChannel = 1
                     voiceType = 1 
                     speed = 1
-                    #segstart = 0 # segment start and end within sound file
-                    #segend = 0 # if zero, play whole file
                     amp = -3 # voice amplitude in dB
                     dur, maxamp = utils.getSoundParmFromFile(soundfile)
                     start = 0
@@ -192,7 +190,9 @@ def respond(control_host, learn_host):
                     print 'Recognized as sound {}'.format(audio_id)
 
                     face_id = np.random.choice(sound_to_face[audio_id])
-                    projection = video_producer[(audio_id, face_id)](NAP[::video_producer[(audio_id, face_id)].stride])
+                    video_time = (1000*dur)/IO.VIDEO_SAMPLE_TIME
+                    stride = int(np.ceil(NAP.shape[0]/video_time))
+                    projection = video_producer[(audio_id, face_id)](NAP[::stride])
 
                     for row in projection:
                         utils.send_array(projector, np.resize(row, FRAME_SIZE[::-1]))
@@ -242,10 +242,9 @@ def respond(control_host, learn_host):
                         voiceChannel = 1
                         voiceType = 0
                         speed = 1
+                        
+                        # segment start and end within sound file, if zero, play whole file
                         segstart, segend = wav_segments[(soundfile, word_id)]
-
-                        #segstart = 0 # segment start and end within sound file
-                        #segend = 0 # if zero, play whole file
                         amp = -3 # voice amplitude in dB
                         dur, maxamp = utils.getSoundParmFromFile(soundfile)
                         sender.send_json('playfile {} {} {} {} {} {} {} {} {}'.format(voiceChannel, voiceType, start, soundfile, speed, segstart, segend, amp, maxamp))
@@ -271,8 +270,9 @@ def respond(control_host, learn_host):
                         if nextTime1 > nextTime2: enableVoice2 = 1 
 
                         face_id = np.random.choice(sound_to_face[word_id])
-
-                        projection = video_producer[(word_id, face_id)](NAP[::video_producer[(word_id, face_id)].stride])
+                        video_time = (1000*dur)/IO.VIDEO_SAMPLE_TIME
+                        stride = int(np.ceil(NAP.shape[0]/video_time))
+                        projection = video_producer[(audio_id, face_id)](NAP[::stride])
 
                         for row in projection:
                             utils.send_array(projector, np.resize(row, FRAME_SIZE[::-1]))
@@ -284,7 +284,7 @@ def respond(control_host, learn_host):
                     utils.print_exception('Sentence response aborted.')
 
 
-def classifier_brain(host):
+def learn(host):
     import Oger
 
     mic, speaker, camera, projector, face, stateQ, eventQ, sender, state, poller, me, brainQ = _connect(host)
@@ -355,7 +355,7 @@ def classifier_brain(host):
             pushbutton = eventQ.recv_json()
             if 'learn' in pushbutton and pushbutton['learn'] == me.name:
                 try:
-                    backup = [ audio_recognizer, face_recognizer, maxlen, maxlen_scaled ] # MORE ROBUST
+                    backup = [ audio_recognizer, face_recognizer, maxlen, maxlen_scaled ]
                     
                     filename = pushbutton['filename']
                     if len(wav_first_segment):
@@ -367,32 +367,36 @@ def classifier_brain(host):
                     new_faces = list(faces)
                     new_faces_hashes = [ utils.d_hash(f) for f in new_faces ]
 
-                    face_id = 0
-                    if len(face_history) == 1:
-                        hammings = [ utils.hamming_distance(f, m) for f in new_faces_hashes for m in face_hashes[0] ]
-                    
-                    if face_recognizer:
-                        predicted_faces = [ face_recognizer.predict(np.ndarray.flatten(f))[0] for f in new_faces ]
-                        uniq = np.unique(predicted_faces)
-                        face_id = uniq[np.argsort([ sum(predicted_faces == u) for u in uniq ])[-1]]
-                        hammings = [ utils.hamming_distance(f, m) for f in new_faces_hashes for m in face_hashes[face_id] ]
+                    face_id = -1
+                    if new_faces:
+                        face_id = 0
+                        if len(face_history) == 1:
+                            hammings = [ utils.hamming_distance(f, m) for f in new_faces_hashes for m in face_hashes[0] ]
 
-                    if np.mean(hammings) < HAMMERTIME:
-                        face_history[face_id].extend(new_faces)
-                        face_hashes[face_id].extend(new_faces_hashes)
-                        print 'Face is similar to face {}, hamming mean {}, has previously said {}'.format(face_id, np.mean(hammings), face_to_sound[face_id])
+                        if face_recognizer:
+                            predicted_faces = [ face_recognizer.predict(np.ndarray.flatten(f))[0] for f in new_faces ]
+                            uniq = np.unique(predicted_faces)
+                            face_id = uniq[np.argsort([ sum(predicted_faces == u) for u in uniq ])[-1]]
+                            hammings = [ utils.hamming_distance(f, m) for f in new_faces_hashes for m in face_hashes[face_id] ]
+
+                        if np.mean(hammings) < HAMMERTIME:
+                            face_history[face_id].extend(new_faces)
+                            face_hashes[face_id].extend(new_faces_hashes)
+                            print 'Face is similar to face {}, hamming mean {}, has previously said {}'.format(face_id, np.mean(hammings), face_to_sound[face_id])
+                        else:
+                            print 'New face, hamming mean {} from face {}'.format(np.mean(hammings), face_id)
+                            face_history.append(new_faces)
+                            face_hashes.append(new_faces_hashes)
+                            face_id = len(face_history) - 1
+                            face_to_sound[face_id] = []
+
+                        if len(face_history) > 1:
+                            x_train = [ np.ndarray.flatten(f) for cluster in face_history for f in cluster ]
+                            face_recognizer = svm.LinearSVC()
+                            targets = [ i for i,f in enumerate(face_history) for _ in f ]
+                            face_recognizer.fit(x_train, targets)
                     else:
-                        print 'New face, hamming mean {} from face {}'.format(np.mean(hammings), face_id)
-                        face_history.append(new_faces)
-                        face_hashes.append(new_faces_hashes)
-                        face_id = len(face_history) - 1
-                        face_to_sound[face_id] = []
-
-                    if len(face_history) > 1:
-                        x_train = [ np.ndarray.flatten(f) for cluster in face_history for f in cluster ]
-                        face_recognizer = svm.LinearSVC()
-                        targets = [ i for i,f in enumerate(face_history) for _ in f ]
-                        face_recognizer.fit(x_train, targets)
+                        print 'Face not detected.'
                         
                     audio_segments = utils.get_segments(utils.wait_for_wav(filename))
                     
@@ -405,7 +409,6 @@ def classifier_brain(host):
                     norm_segments = np.rint(new_sentence.shape[0]*audio_segments/audio_segments[-1]).astype('int')
                     
                     for segment, new_sound in enumerate([ utils.trim_right(utils.scale(new_sentence[norm_segments[i]:norm_segments[i+1]])) for i in range(len(norm_segments)-1) ]):
-
                         # Do we know this sound?
                         hammings = [ np.inf ]
                         new_audio_hash = utils.d_hash(new_sound)
@@ -452,31 +455,33 @@ def classifier_brain(host):
 
                         if not face_id in sound_to_face[audio_id]:
                             sound_to_face[audio_id].append(face_id)
-                        if not audio_id in face_to_sound[face_id]:
+                        if face_id is not -1 and not audio_id in face_to_sound[face_id]:
                             face_to_sound[face_id].append(audio_id)
                         
                     # Send sound id and classification data to associations analysis
                     similar_ids = [ utils.hamming_distance(new_audio_hash, np.random.choice(h)) for h in NAP_hashes ]
-                    #sorted_sounds = np.argsort(similar_ids)
                     association.analyze(filename,audio_id,wavs,similar_ids,sound_to_face,face_to_sound)
 
-                    # Might want to consider scaling the NAP used to train (as well as in the respond) - but it works without, and
-                    # is currently only used for aesthetical reasons.
                     video_segment = np.array(list(video))
+                    if video_segment.shape[0] == 0:
+                        video_segment = np.array([ np.ndarray.flatten(np.zeros(FRAME_SIZE)) for _ in range(10) ])
+                        print 'No video recorded. Using black image as stand-in.'
+
                     NAP_len = new_sentence.shape[0]
                     video_len = video_segment.shape[0]
                     stride = int(max(1,np.floor(float(NAP_len)/video_len)))
+                    
                     x = new_sound[:NAP_len - np.mod(NAP_len, stride*video_len):stride]
+                    if x.shape[0] == 0:
+                        x = new_sound[::stride]
                     y = video_segment[:x.shape[0]]
 
                     tarantino = train_network(x,y)
                     tarantino.stride = stride
                     video_producer[(audio_id, face_id)] = tarantino
 
-                    print 'Learning classifier and video network in {} seconds'.format(time.time() - start_time)
-
-                    utils.send_zipped_pickle(brainQ, [ wavs, wav_segments, sound_to_face, face_to_sound, audio_recognizer, video_producer, maxlen,  maxlen_scaled ])
-                    
+                    utils.send_pickle(brainQ, [ wavs, wav_segments, sound_to_face, face_to_sound, audio_recognizer, video_producer, maxlen, maxlen_scaled ])
+                    print 'Learning classifier and video network in {} seconds'.format(time.time() - start_time)                    
                 except:
                     utils.print_exception('Learning aborted. Backing up.')
                     audio_recognizer, face_recognizer, maxlen, maxlen_scaled = backup
