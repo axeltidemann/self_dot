@@ -167,8 +167,7 @@ class Controller:
             self.publisher.send_json(self.state)
 
         except Exception as e:
-            print 'Something went wrong when parsing the message - try again.'
-            print e
+            print utils.print_exception('Something went wrong when parsing the message - try again.')
 
 if __name__ == '__main__':
 
@@ -189,6 +188,7 @@ if __name__ == '__main__':
     mp.Process(target=IO.video, name='VIDEO').start()
     mp.Process(target=brain.face_extraction, args=('localhost',False, True,), name='FACE EXTRACTION').start()
     mp.Process(target=Controller, args=(persistent_states,), name='CONTROLLER').start()
+    mp.Process(target=brain.respond, args=('localhost','localhost',), name='RESPONDER').start()
     mp.Process(target=brain.classifier_brain, args=('localhost',)).start()
     #mp.Process(target=analyze_associations.analyze, args=('localhost',), name='ANALYZE ASSOCIATIONS').start()
     mp.Process(target=robocontrol.robocontrol, args=('localhost',), name='ROBOCONTROL').start()

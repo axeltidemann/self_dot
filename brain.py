@@ -11,7 +11,6 @@ from subprocess import call
 import time
 import ctypes
 import os
-import analyze_associations2 as association
 
 import numpy as np
 import zmq
@@ -25,6 +24,7 @@ from scipy.signal.signaltools import correlate2d as c2d
 
 import utils
 import IO
+import analyze_associations2 as association
 
 try:
     opencv_prefix = os.environ['VIRTUAL_ENV']
@@ -35,6 +35,7 @@ except:
 FACE_HAAR_CASCADE_PATH = opencv_prefix + '/share/OpenCV/haarcascades/haarcascade_frontalface_default.xml'
 EYE_HAAR_CASCADE_PATH = opencv_prefix + '/share/OpenCV/haarcascades/haarcascade_eye_tree_eyeglasses.xml'
 HAMMERTIME = 10 # Hamming distance match criterion
+FRAME_SIZE = (160, 90) # Neural network image size
 
 # LOOK AT EYES? CAN YOU DETERMINE ANYTHING FROM THEM?
 # PRESENT VISUAL INFORMATION - MOVE UP OR DOWN
@@ -117,7 +118,7 @@ def dream(brain):
     return True # SELF-ORGANIZING OF ALL MEMORIES! EXTRACT CATEGORIES AND FEATURES!
         
 def cochlear(filename, db=-40, stride=441, threshold=.025, new_rate=22050, ears=1, channels=71):
-    rate, data = wavfile.read(filename)
+    rate, data = wavfile.read(utils.wait_for_wav(filename))
     assert data.dtype == np.int16
     data = data / float(2**15)
     data = resample(data, float(new_rate)/rate, 'sinc_best')
@@ -127,11 +128,166 @@ def cochlear(filename, db=-40, stride=441, threshold=.025, new_rate=22050, ears=
     naps = utils.csv_to_array('{}-output.txt'.format(filename))
     return np.sqrt(np.maximum(0, naps)/np.max(naps))
 
+def respond(control_host, learn_host):
+    me = mp.current_process()
+    print me.name, 'PID', me.pid
+
+    context = zmq.Context()
+    
+    eventQ = context.socket(zmq.SUB)
+    eventQ.connect('tcp://{}:{}'.format(control_host, IO.EVENT))
+    eventQ.setsockopt(zmq.SUBSCRIBE, b'') 
+
+    projector = context.socket(zmq.PUSH)
+    projector.connect('tcp://{}:{}'.format(control_host, IO.PROJECTOR)) 
+
+    sender = context.socket(zmq.PUSH)
+    sender.connect('tcp://{}:{}'.format(control_host, IO.EXTERNAL))
+
+    brainQ = context.socket(zmq.SUB)
+    brainQ.connect('tcp://{}:{}'.format(learn_host, IO.BRAIN))
+    brainQ.setsockopt(zmq.SUBSCRIBE, b'') 
+        
+    poller = zmq.Poller()
+    poller.register(eventQ, zmq.POLLIN)
+    poller.register(brainQ, zmq.POLLIN)
+        
+    # WRITE IMAGES TO DISK!
+    while True:
+        events = dict(poller.poll())
+        if brainQ in events:
+            wavs, wav_segments, sound_to_face, face_to_sound, audio_recognizer, video_producer, maxlen,  maxlen_scaled = utils.recv_zipped_pickle(brainQ)
+
+        if eventQ in events:
+            pushbutton = eventQ.recv_json()
+            # WHY INDEX OUT OF BOUNDS?
+            if 'respond_single' in pushbutton:
+                print 'Respond to', pushbutton['filename']
+
+                try:
+                    NAP = cochlear(pushbutton['filename'])
+
+                    NAP_resampled = utils.zero_pad(resample(utils.trim_right(utils.scale(NAP)), float(maxlen)/NAP.shape[0], 'sinc_best'), maxlen_scaled)
+
+                    try:
+                        audio_id = audio_recognizer.predict(np.ndarray.flatten(NAP_resampled))[0]
+                    except:
+                        audio_id = 0
+                        print 'Responding having only heard 1 sound.'
+
+                    soundfile = np.random.choice(wavs[audio_id])
+
+                    segstart, segend = wav_segments[(soundfile, audio_id)]
+
+                    voiceChannel = 1
+                    voiceType = 1 
+                    speed = 1
+                    #segstart = 0 # segment start and end within sound file
+                    #segend = 0 # if zero, play whole file
+                    amp = -3 # voice amplitude in dB
+                    dur, maxamp = utils.getSoundParmFromFile(soundfile)
+                    start = 0
+                    sender.send_json('playfile {} {} {} {} {} {} {} {} {}'.format(voiceChannel, voiceType, start, soundfile, speed, segstart, segend, amp, maxamp))
+
+                    print 'Recognized as sound {}'.format(audio_id)
+
+                    face_id = np.random.choice(sound_to_face[audio_id])
+                    projection = video_producer[(audio_id, face_id)](NAP[::video_producer[(audio_id, face_id)].stride])
+
+                    for row in projection:
+                        utils.send_array(projector, np.resize(row, FRAME_SIZE[::-1]))
+
+                except:
+                    utils.print_exception('Single response aborted.')
+
+            if 'respond_sentence' in pushbutton:
+                print 'SENTENCE Respond to', pushbutton['filename'][-12:]
+
+                try:
+                    NAP = cochlear(pushbutton['filename'])
+
+                    NAP_resampled = utils.zero_pad(resample(utils.trim_right(utils.scale(NAP)), float(maxlen)/NAP.shape[0], 'sinc_best'), maxlen_scaled)
+
+                    try:
+                        audio_id = audio_recognizer.predict(np.ndarray.flatten(NAP_resampled))[0]
+                    except:
+                        audio_id = 0
+                        print 'Responding having only heard 1 sound.'
+
+                    numWords = 4
+                    method = 'boundedAdd'
+                    timeBeforeWeight = 0.0
+                    timeAfterWeight = 0.5
+                    timeDistance = 5.0
+                    durationWeight = 0.1
+                    posInSentenceWeight = 0.5
+                    method2 = 'boundedAdd'
+                    timeBeforeWeight2 = 0.5
+                    timeAfterWeight2 = 0.0
+                    timeDistance2 = 5.0
+                    durationWeight2 = 0.5
+                    posInSentenceWeight2 = 0.5                                                        
+                    sentence, secondaryStream = association.makeSentence(audio_id, numWords, 
+                                                        method, timeBeforeWeight, timeAfterWeight, timeDistance, durationWeight, posInSentenceWeight,
+                                                        method2, timeBeforeWeight2, timeAfterWeight2, timeDistance2, durationWeight2, posInSentenceWeight2)
+
+                    print '*** Play sentence', sentence, secondaryStream
+                    start = 0 
+                    nextTime1 = 0
+                    nextTime2 = 0
+                    enableVoice2 = 1
+                    for i in range(len(sentence)):
+                        word_id = sentence[i]
+                        soundfile = np.random.choice(wavs[word_id])
+                        voiceChannel = 1
+                        voiceType = 0
+                        speed = 1
+                        segstart, segend = wav_segments[(soundfile, word_id)]
+
+                        #segstart = 0 # segment start and end within sound file
+                        #segend = 0 # if zero, play whole file
+                        amp = -3 # voice amplitude in dB
+                        dur, maxamp = utils.getSoundParmFromFile(soundfile)
+                        sender.send_json('playfile {} {} {} {} {} {} {} {} {}'.format(voiceChannel, voiceType, start, soundfile, speed, segstart, segend, amp, maxamp))
+                        #start += dur # if we want to create a 'score section' for Csound, update start time to make segments into a contiguous sentence
+                        nextTime1 += (dur/speed)
+
+                        if enableVoice2:
+                            word_id2 = secondaryStream[i]
+                            soundfile2 = np.random.choice(wavs[word_id2])
+                            voiceChannel2 = 2
+                            voiceType2 = 1
+                            start2 = 0.7 #  set delay between voice 1 and 2
+                            speed2 = 0.7
+                            segstart2, segend2 = wav_segments[(soundfile2, word_id2)]
+                            #segstart2 = 0 # segment start and end within sound file
+                            #segend2 = 0 # if zero, play whole file
+                            amp2 = -3 # voice amplitude in dB
+                            dur2, maxamp2 = utils.getSoundParmFromFile(soundfile2)
+                            sender.send_json('playfile {} {} {} {} {} {} {} {} {}'.format(voiceChannel2, voiceType2, start2, soundfile2, speed2, segstart2, segend2, amp2, maxamp2))
+                            nextTime2 += (dur2/speed2)
+                            enableVoice2 = 0
+                        # trig another word in voice 2 only if word 2 has finished playing (and sync to start of voice 1)
+                        if nextTime1 > nextTime2: enableVoice2 = 1 
+
+                        face_id = np.random.choice(sound_to_face[word_id])
+
+                        projection = video_producer[(word_id, face_id)](NAP[::video_producer[(word_id, face_id)].stride])
+
+                        for row in projection:
+                            utils.send_array(projector, np.resize(row, FRAME_SIZE[::-1]))
+
+                        # as the first crude method of assembling a sentence, just wait for the word duration here
+                        time.sleep(dur)
+
+                except:
+                    utils.print_exception('Sentence response aborted.')
+
 
 def classifier_brain(host):
     import Oger
 
-    mic, speaker, camera, projector, face, stateQ, eventQ, sender, state, poller, me = _connect(host)
+    mic, speaker, camera, projector, face, stateQ, eventQ, sender, state, poller, me, brainQ = _connect(host)
     
     audio = deque()
     video = deque()
@@ -159,9 +315,6 @@ def classifier_brain(host):
 
     maxlen = []
     maxlen_scaled = []
-
-    # This is the size for the neural networks to learn. Differs from original framesize.
-    frame_size = (160, 90) 
         
     # WRITE IMAGES TO DISK!
     while True:
@@ -178,7 +331,7 @@ def classifier_brain(host):
         if camera in events:
             new_video = utils.recv_array(camera)
             if state['record']:
-                frame = cv2.resize(new_video, frame_size)
+                frame = cv2.resize(new_video, FRAME_SIZE)
                 gray_image = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY) / 255.
                 gray_flattened = np.ndarray.flatten(gray_image)
                 video.append(gray_flattened)
@@ -322,140 +475,11 @@ def classifier_brain(host):
 
                     print 'Learning classifier and video network in {} seconds'.format(time.time() - start_time)
 
+                    utils.send_zipped_pickle(brainQ, [ wavs, wav_segments, sound_to_face, face_to_sound, audio_recognizer, video_producer, maxlen,  maxlen_scaled ])
+                    
                 except:
                     utils.print_exception('Learning aborted. Backing up.')
                     audio_recognizer, face_recognizer, maxlen, maxlen_scaled = backup
-
-                pushbutton['reset'] = True
-
-            # WHY INDEX OUT OF BOUNDS?
-            if 'respond_single' in pushbutton:
-                print 'Respond to', pushbutton['filename']
-
-                try:
-                    utils.wait_for_wav(pushbutton['filename'])
-                    NAP = cochlear(pushbutton['filename'])
-
-                    new_audio_hash = utils.d_hash(NAP)
-                    NAP_resampled = utils.zero_pad(resample(utils.trim_right(utils.scale(NAP)), float(maxlen)/NAP.shape[0], 'sinc_best'), maxlen_scaled)
-
-                    try:
-                        audio_id = audio_recognizer.predict(np.ndarray.flatten(NAP_resampled))[0]
-                    except:
-                        audio_id = 0
-                        print 'Responding having only heard 1 sound.'
-                        
-                    soundfile = np.random.choice(wavs[audio_id])
-
-                    segstart, segend = wav_segments[(soundfile, audio_id)]
-
-                    voiceChannel = 1
-                    voiceType = 1 
-                    speed = 1
-                    #segstart = 0 # segment start and end within sound file
-                    #segend = 0 # if zero, play whole file
-                    amp = -3 # voice amplitude in dB
-                    dur, maxamp = utils.getSoundParmFromFile(soundfile)
-                    start = 0
-                    sender.send_json('playfile {} {} {} {} {} {} {} {} {}'.format(voiceChannel, voiceType, start, soundfile, speed, segstart, segend, amp, maxamp))
-
-                    print 'Recognized as sound {}'.format(audio_id)
-                    
-                    face_id = np.random.choice(sound_to_face[audio_id])
-                    projection = video_producer[(audio_id, face_id)](NAP[::video_producer[(audio_id, face_id)].stride])
-
-                    for row in projection:
-                        utils.send_array(projector, np.resize(row, frame_size[::-1]))
-
-                except:
-                    utils.print_exception('Single response aborted.')
-
-                pushbutton['reset'] = True
-
-            if 'respond_sentence' in pushbutton:
-                print 'SENTENCE Respond to', pushbutton['filename'][-12:]
-
-                try:
-                    utils.wait_for_wav(pushbutton['filename'])
-                    NAP = cochlear(pushbutton['filename'])
-
-                    new_audio_hash = utils.d_hash(NAP)
-                    NAP_resampled = utils.zero_pad(resample(utils.trim_right(utils.scale(NAP)), float(maxlen)/NAP.shape[0], 'sinc_best'), maxlen_scaled)
-
-                    try:
-                        audio_id = audio_recognizer.predict(np.ndarray.flatten(NAP_resampled))[0]
-                    except:
-                        audio_id = 0
-                        print 'Responding having only heard 1 sound.'
-                        
-                    numWords = 4
-                    method = 'boundedAdd'
-                    timeBeforeWeight = 0.0
-                    timeAfterWeight = 0.5
-                    timeDistance = 5.0
-                    durationWeight = 0.1
-                    posInSentenceWeight = 0.5
-                    method2 = 'boundedAdd'
-                    timeBeforeWeight2 = 0.5
-                    timeAfterWeight2 = 0.0
-                    timeDistance2 = 5.0
-                    durationWeight2 = 0.5
-                    posInSentenceWeight2 = 0.5                                                        
-                    sentence, secondaryStream = association.makeSentence(audio_id, numWords, 
-                                                        method, timeBeforeWeight, timeAfterWeight, timeDistance, durationWeight, posInSentenceWeight,
-                                                        method2, timeBeforeWeight2, timeAfterWeight2, timeDistance2, durationWeight2, posInSentenceWeight2)
-
-                    print '*** Play sentence', sentence, secondaryStream
-                    start = 0 
-                    nextTime1 = 0
-                    nextTime2 = 0
-                    enableVoice2 = 1
-                    for i in range(len(sentence)):
-                        word_id = sentence[i]
-                        soundfile = np.random.choice(wavs[word_id])
-                        voiceChannel = 1
-                        voiceType = 0
-                        speed = 1
-                        segstart, segend = wav_segments[(soundfile, word_id)]
-
-                        #segstart = 0 # segment start and end within sound file
-                        #segend = 0 # if zero, play whole file
-                        amp = -3 # voice amplitude in dB
-                        dur, maxamp = utils.getSoundParmFromFile(soundfile)
-                        sender.send_json('playfile {} {} {} {} {} {} {} {} {}'.format(voiceChannel, voiceType, start, soundfile, speed, segstart, segend, amp, maxamp))
-                        #start += dur # if we want to create a 'score section' for Csound, update start time to make segments into a contiguous sentence
-                        nextTime1 += (dur/speed)
-                        
-                        if enableVoice2:
-                            word_id2 = secondaryStream[i]
-                            soundfile2 = np.random.choice(wavs[word_id2])
-                            voiceChannel2 = 2
-                            voiceType2 = 1
-                            start2 = 0.7 #  set delay between voice 1 and 2
-                            speed2 = 0.7
-                            segstart2, segend2 = wav_segments[(soundfile2, word_id2)]
-                            #segstart2 = 0 # segment start and end within sound file
-                            #segend2 = 0 # if zero, play whole file
-                            amp2 = -3 # voice amplitude in dB
-                            dur2, maxamp2 = utils.getSoundParmFromFile(soundfile2)
-                            sender.send_json('playfile {} {} {} {} {} {} {} {} {}'.format(voiceChannel2, voiceType2, start2, soundfile2, speed2, segstart2, segend2, amp2, maxamp2))
-                            nextTime2 += (dur2/speed2)
-                            enableVoice2 = 0
-                        # trig another word in voice 2 only if word 2 has finished playing (and sync to start of voice 1)
-                        if nextTime1 > nextTime2: enableVoice2 = 1 
-
-                        face_id = np.random.choice(sound_to_face[word_id])
-                        
-                        projection = video_producer[(word_id, face_id)](NAP[::video_producer[(word_id, face_id)].stride])
-
-                        for row in projection:
-                            utils.send_array(projector, np.resize(row, frame_size[::-1]))
-                        
-                        # as the first crude method of assembling a sentence, just wait for the word duration here
-                        time.sleep(dur)
-
-                except:
-                    utils.print_exception('Sentence response aborted.')
 
                 pushbutton['reset'] = True
 
@@ -582,7 +606,10 @@ def _connect(host):
     snapshot.connect('tcp://{}:{}'.format(host, IO.SNAPSHOT))
     snapshot.send(b'Send me the state, please')
     state = snapshot.recv_json()
-    
+
+    brainQ = context.socket(zmq.PUB)
+    brainQ.bind('tcp://*:{}'.format(IO.BRAIN))
+        
     poller = zmq.Poller()
     poller.register(mic, zmq.POLLIN)
     poller.register(camera, zmq.POLLIN)
@@ -590,7 +617,7 @@ def _connect(host):
     poller.register(stateQ, zmq.POLLIN)
     poller.register(eventQ, zmq.POLLIN)
 
-    return mic, speaker, camera, projector, face, stateQ, eventQ, sender, state, poller, me
+    return mic, speaker, camera, projector, face, stateQ, eventQ, sender, state, poller, me, brainQ
                         
 if __name__ == '__main__':
     classifier_brain(sys.argv[1] if len(sys.argv) == 2 else 'localhost')

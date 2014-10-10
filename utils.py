@@ -5,7 +5,8 @@ import time
 import re
 import linecache
 import sys
-findfloat=re.compile(r"[0-9.]*")
+import cPickle as pickle
+import zlib
 
 import numpy as np
 import zmq
@@ -13,6 +14,8 @@ from scipy.io import wavfile
 import scipy.fftpack
 from sklearn.covariance import EmpiricalCovariance, MinCovDet
 import cv2
+
+findfloat=re.compile(r"[0-9.]*")
 
 # http://goo.gl/zeJZl
 def bytes2human(n, format="%(value)i%(symbol)s"):
@@ -77,6 +80,7 @@ def trim(A, threshold=100):
         left += 1
     return A[left:right]
 
+
 def trim_right(A, threshold=.2):
     ''' Trims right side of the thresholded part of the signal.'''
     maxes = np.max(A, axis=1)
@@ -86,6 +90,7 @@ def trim_right(A, threshold=.2):
         if m < threshold:
             return A[:i+apex]
     return A
+
         
 def split_signal(data, threshold=100, length=5000, elbow_grease=100, plot=False, markers=[]):
     ''' Splits the signal after [length] silence '''
@@ -111,6 +116,21 @@ def split_wav(filename, threshold=100, length=5000, elbow_grease=100, plot=False
     from scipy.io import wavfile
     rate, data = wavfile.read(filename)
     return split_signal(data, threshold=threshold, length=length, elbow_grease=elbow_grease, plot=plot)
+
+
+def send_zipped_pickle(socket, obj, flags=0, protocol=-1):
+    """Pack and compress an object with pickle and zlib."""
+    pobj = pickle.dumps(obj, protocol)
+    zobj = zlib.compress(pobj)
+    print 'Zipped pickle is {} bytes'.format(len(zobj))
+    return socket.send(zobj, flags=flags)
+
+
+def recv_zipped_pickle(socket, flags=0):
+    """Reconstruct a python object sent with zipped_pickle"""
+    zobj = socket.recv(flags)
+    pobj = zlib.decompress(zobj)
+    return pickle.loads(pobj)
 
 
 def send_array(socket, A, flags=0, copy=True, track=False):
