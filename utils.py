@@ -3,6 +3,8 @@ import wave
 import csv
 import time
 import re
+import linecache
+import sys
 findfloat=re.compile(r"[0-9.]*")
 
 import numpy as np
@@ -75,7 +77,7 @@ def trim(A, threshold=100):
         left += 1
     return A[left:right]
 
-def trim_right(A, threshold=100):
+def trim_right(A, threshold=.2):
     ''' Trims right side of the thresholded part of the signal.'''
     maxes = np.max(A, axis=1)
     apex = np.argmax(maxes)
@@ -236,6 +238,14 @@ def getSoundParmFromFile(responsefile):
             dur = float(line[16:])
         if 'Max amp for file:' in line:
             maxamp = float(line[18:])
-    return dur, maxamp, segments
+    return dur, maxamp
 
 
+def print_exception(msg=''):
+    exc_type, exc_obj, tb = sys.exc_info()
+    f = tb.tb_frame
+    lineno = tb.tb_lineno
+    filename = f.f_code.co_filename
+    linecache.checkcache(filename)
+    line = linecache.getline(filename, lineno, f.f_globals)
+    print '{} EXCEPTION IN ({}, LINE {} "{}"): {}'.format(msg, filename, lineno, line.strip(), exc_obj)
