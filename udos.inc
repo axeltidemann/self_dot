@@ -52,20 +52,26 @@
 	endop
 
 ;***************************************************
-opcode FileToPvsBuf, iik, Siiii
-        ;; by joachim heintz 2009
+opcode FileToPvsBuf, iik, Siiiiii
+        ;; by joachim heintz 2009, modified by Oeyvind Brandtsegg 2014
         ;;writes an audio file at the first k-cycle to a fft-buffer (via pvsbuffer)
-        Sfile, ifftsize, ioverlap, iwinsize, iwinshape xin
-        ktimek		timeinstk
+
+        Sfile, ifftsize, ioverlap, iwinsize, iwinshape, istart, iend xin
+
+        ktimek		    timeinstk
 if ktimek == 1 then
-        ilen		filelen	Sfile
-        kcycles	        = ilen * kr; number of k-cycles to write the fft-buffer
-        kcount		init 0
+;        ilen		    filelen	Sfile
+        kcycles	        = (iend-istart) * kr; number of k-cycles to write the fft-buffer
+        kcount		    init 0
+        print istart, iend
+        ;1.712 
+        ;2.638 
+
 loop:
-        ain		soundin	Sfile
-        fftin		pvsanal	ain, ifftsize, ioverlap, iwinsize, iwinshape
-        ibuf, ktim	pvsbuffer fftin, ilen + (ifftsize / sr)
-	loop_lt	kcount, 1, kcycles, loop
-		        xout ibuf, ilen, ktim
+        ain		        diskin	Sfile, 1, istart
+        fftin		    pvsanal	ain, ifftsize, ioverlap, iwinsize, iwinshape
+        ibuf, ktim	    pvsbuffer fftin, (iend-istart) + (ifftsize / sr)
+	                    loop_lt	kcount, 1, kcycles, loop
+		                xout ibuf, (iend-istart), ktim
 endif
 endop
