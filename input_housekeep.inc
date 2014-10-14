@@ -103,18 +103,19 @@ print p1, p2, p3
 	irms		= ampdbfs(irms_dB)
 	isize		= 8192
 	iknee		= isize*0.1
-	giNoiseFloor	ftgen 0, 0, isize, 7, 0, (isize*irms), 0, iknee, 1, (isize*(1-irms))-iknee, 1, 2, 1
+	giNoiseFloor	ftgen 0, 0, isize, 7, 0, (isize*irms)-iknee, 0, iknee, 1, (isize*(1-irms)), 1, 2, 1
 	endin
 
 ;******************************
 ; apply noise gate
 	instr 17
-	a1		chnget "in1"
+	a1		    chnget "in1"
 	krms		rms a1
 	krms		= krms * 1.7
-	kgate		table krms, giNoiseFloor, 1
-	a1		= a1 * kgate
-			chnset a1, "in1"
+	kgate		tablei krms, giNoiseFloor, 1
+	kgate       tonek kgate, 5
+	a1		    = a1 * kgate
+			    chnset a1, "in1"
 	endin
 
 ;******************************
