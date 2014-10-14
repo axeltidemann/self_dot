@@ -492,22 +492,24 @@ def learn(host):
             if 'play_id' in pushbutton:
                 try:
                     items = pushbutton['play_id'].split(' ')
+                    if len(items) < 3: print 'PARAMETER ERROR: play_id audio_id voiceChannel voiceType'
                     play_audio_id = int(items[0])
                     voiceChannel = int(items[1])
+                    voiceType = int(items[2])
                     print 'play_audio_id', play_audio_id, 'voice', voiceChannel
                     print 'wavs[play_audio_id]', wavs[play_audio_id]
-                    print wavs
+                    #print wavs
                     soundfile = np.random.choice(wavs[play_audio_id])
-                    voiceChannel = 1
-                    voiceType = 1
+                    
                     speed = 1
-                    segstart, segend = wav_segments[(soundfile, audio_id)]
+                    #print 'wav_segments', wav_segments
+                    segstart, segend = wav_segments[(soundfile, play_audio_id)]
                     #segstart = 0 # segment start and end within sound file
                     #segend = 0 # if zero, play whole file
                     amp = -3 # voice amplitude in dB
                     dur, maxamp = utils.getSoundParmFromFile(soundfile)
                     start = 0
-                    sender.send_json('playfile {} {} {} {} {} {} {} {} {}'.format(voiceChannel, voiceType, start, response, speed, segstart, segend, amp, maxamp))
+                    sender.send_json('playfile {} {} {} {} {} {} {} {} {}'.format(voiceChannel, voiceType, start, soundfile, speed, segstart, segend, amp, maxamp))
                 except:
                     utils.print_exception('play_id aborted.')
 
