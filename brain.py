@@ -88,11 +88,15 @@ def face_extraction(host, extended_search=False, show=False):
         if faces:
             faces_sorted = sorted(faces, key=lambda x: x[2]*x[3], reverse=True)
             x,y,w,h = faces_sorted[0]
+            # Relative scaled difference from face to center of image, use these values to move the head of self
+            x_diff = (x + w/2. - rows/2.)/rows
+            y_diff = (y + h/2. - cols/2.)/cols
             utils.send_array(publisher, cv2.resize(frame[y:y+h, x:x+w], (100,100)))
     
         if show:
             if faces:
                 cv2.rectangle(frame, (x,y), (x+w,y+h), (0, 0, 255), 2)
+                cv2.line(frame, (x + w/2, y + h/2), (rows/2, cols/2), (255,0,0), 2)
                 cv2.waitKey(1)
             cv2.imshow('Faces', frame)
 
