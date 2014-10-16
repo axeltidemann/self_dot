@@ -311,7 +311,7 @@ def audio():
                         reverbSend = -23 # reverb send in dB
                     else:
                         delaySend = -96
-                        reverbSend = -35 
+                        reverbSend = -96 
                     csMessage = 'i %i %f 1 "%s" %f %f %f %f %i %f %f %f' %(instr, start, soundfile, segstart, segend, amp, maxamp, voiceChannel, delaySend, reverbSend, speed)
                     #print 'csMessage', csMessage                 
                     cs.InputMessage(csMessage)
