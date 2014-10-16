@@ -110,6 +110,9 @@ def audio():
     snapshot.send(b'Send me the state, please')
     state = snapshot.recv_json()
 
+    sender = context.socket(zmq.PUSH)
+    sender.connect('tcp://localhost:{}'.format(EXTERNAL))
+
     poller = zmq.Poller()
     poller.register(subscriber, zmq.POLLIN)
     poller.register(stateQ, zmq.POLLIN)
@@ -237,9 +240,9 @@ def audio():
                                                     
         if state['autolearn'] or state['autorespond_single'] or state['autorespond_sentence']:
             if audioStatusTrig > 0:
-                send('startrec', context)
+                sender.send_json('startrec')
             if audioStatusTrig < 0:
-                send('stoprec', context)
+                sender.send_json('stoprec')
                 if filename:
                     if state['autolearn']:
                         interaction.append('learnwav {}'.format(os.path.abspath(filename)))
@@ -249,10 +252,10 @@ def audio():
                         interaction.append('respondwav_sentence {}'.format(os.path.abspath(filename)))
 
         if interaction:
-            send('calculate_cochlear {}'.format(os.path.abspath(filename)), context)
+            sender.send_json('calculate_cochlear {}'.format(os.path.abspath(filename)))
 
             for command in interaction:
-                send(command, context)
+                sender.send_json(command)
 
         if eventQ in events:
             pushbutton = eventQ.recv_json()
