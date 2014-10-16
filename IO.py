@@ -232,30 +232,27 @@ def audio():
             markerfile.close()
             print 'stopping memoryRec'
             #assoc.send_json(markerfileName)
-                                
-        if state['autolearn']:
-            if audioStatusTrig > 0:
-                send('startrec', context)
-            if audioStatusTrig < 0:
-                send('stoprec', context)
-                if filename:
-                    send('learnwav {}'.format(os.path.abspath(filename)), context)
 
-        if state['autorespond_single']:
+        interaction = []
+                                                    
+        if state['autolearn'] or state['autorespond_single'] or state['autorespond_sentence']:
             if audioStatusTrig > 0:
                 send('startrec', context)
             if audioStatusTrig < 0:
                 send('stoprec', context)
                 if filename:
-                    send('respondwav_single {}'.format(os.path.abspath(filename)), context) 
+                    if state['autolearn']:
+                        interaction.append('learnwav {}'.format(os.path.abspath(filename)))
+                    if state['autorespond_single']:
+                        interaction.append('respondwav_single {}'.format(os.path.abspath(filename)))
+                    if state['autorespond_sentence']:
+                        interaction.append('respondwav_sentence {}'.format(os.path.abspath(filename)))
 
-        if state['autorespond_sentence']:
-            if audioStatusTrig > 0:
-                send('startrec', context)
-            if audioStatusTrig < 0:
-                send('stoprec', context)
-                if filename:
-                    send('respondwav_sentence {}'.format(os.path.abspath(filename)), context) 
+        if interaction:
+            send('calculate_cochlear {}'.format(os.path.abspath(filename)), context)
+
+            for command in interaction:
+                send(command, context)
 
         if eventQ in events:
             pushbutton = eventQ.recv_json()

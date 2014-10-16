@@ -158,7 +158,10 @@ def respond(control_host, learn_host):
     poller = zmq.Poller()
     poller.register(eventQ, zmq.POLLIN)
     poller.register(brainQ, zmq.POLLIN)
-        
+
+    # import matplotlib.pyplot as plt
+    # plt.ion()
+    
     while True:
         events = dict(poller.poll())
         if brainQ in events:
@@ -170,7 +173,11 @@ def respond(control_host, learn_host):
                 print 'Respond to', pushbutton['filename']
 
                 try:
-                    NAP = cochlear(pushbutton['filename'])
+                    NAP = utils.trim_right(utils.scale(utils.load_cochlear(pushbutton['filename'])))
+                    
+                    # plt.imshow(NAP.T, aspect='auto')
+                    # plt.draw()
+                    
                     NAP_resampled = utils.zero_pad(resample(utils.trim_right(utils.scale(NAP)), float(maxlen)/NAP.shape[0], 'sinc_best'), maxlen_scaled)
 
                     try:
@@ -209,7 +216,7 @@ def respond(control_host, learn_host):
                 print 'SENTENCE Respond to', pushbutton['filename'][-12:]
 
                 try:
-                    NAP = cochlear(pushbutton['filename'])
+                    NAP = utils.trim_right(utils.scale(utils.load_cochlear(pushbutton['filename'])))
 
                     NAP_resampled = utils.zero_pad(resample(utils.trim_right(utils.scale(NAP)), float(maxlen)/NAP.shape[0], 'sinc_best'), maxlen_scaled)
 
@@ -320,7 +327,10 @@ def learn(host):
 
     maxlen = []
     maxlen_scaled = []
-        
+
+    # import matplotlib.pyplot as plt
+    # plt.ion()
+            
     # WRITE IMAGES TO DISK!
     while True:
         events = dict(poller.poll())
@@ -406,15 +416,16 @@ def learn(host):
                     audio_segments = utils.get_segments(utils.wait_for_wav(filename))
                     
                     print 'Learning {} duration {} seconds with {} segments'.format(filename, audio_segments[-1], len(audio_segments)-1)
-                    start_time = time.time()
-                    new_sentence = cochlear(filename)
-                    print 'Calculating cochlear neural activation patterns took {} seconds'.format(time.time() - start_time)
+                    new_sentence = utils.load_cochlear(filename)
 
                     filename = pushbutton['filename'] if len(wav_first_segment) else filename
                     norm_segments = np.rint(new_sentence.shape[0]*audio_segments/audio_segments[-1]).astype('int')
                     
                     for segment, new_sound in enumerate([ utils.trim_right(utils.scale(new_sentence[norm_segments[i]:norm_segments[i+1]])) for i in range(len(norm_segments)-1) ]):
                         # Do we know this sound?
+                        # plt.imshow(new_sound.T, aspect='auto')
+                        # plt.draw()
+                        
                         hammings = [ np.inf ]
                         new_audio_hash = utils.d_hash(new_sound)
                         audio_id = 0

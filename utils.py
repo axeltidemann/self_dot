@@ -15,7 +15,15 @@ import scipy.fftpack
 from sklearn.covariance import EmpiricalCovariance, MinCovDet
 import cv2
 
+from brain import cochlear
 findfloat=re.compile(r"[0-9.]*")
+
+
+def write_cochlear(wav_file):
+    array_to_csv('{}-cochlear.txt'.format(wav_file), cochlear(wav_file))
+
+def load_cochlear(wav_file):
+    return csv_to_array('{}-cochlear.txt'.format(wav_file))
 
 # http://goo.gl/zeJZl
 def bytes2human(n, format="%(value)i%(symbol)s"):
