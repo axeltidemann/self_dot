@@ -35,6 +35,8 @@
 ; live audio input
 	instr 4
 	a1,a2	    inch 1,2
+		        chnmix a1, "in1clean"
+		        chnmix a2, "in2clean"
 
 	aref		chnget "MyOutput"
     aenv        follow2 aref, 0.001, 0.9    ; amp of output
@@ -67,7 +69,9 @@ print p1, p2, p3, p4
 ; find stereo position and merge mic 1 and 2
 	instr 11
 #include "panalyzer.inc"
-		chnset aLeft+aRight, "in1"
+        ain1    chnget "in1"
+        ain2    chnget "in2"
+		        chnset ain1+ain2, "in1"
 	endin
 
 ;******************************
@@ -100,21 +104,22 @@ print p1, p2, p3
 ; set audio input noise gate
 	instr 16
 	irms_dB		chnget "inputNoisefloor"
-	irms		= ampdbfs(irms_dB)
+	irms		= ampdbfs(irms_dB)*0.9
 	isize		= 8192
-	iknee		= isize*0.1
+	iknee		= isize*0.2
 	giNoiseFloor	ftgen 0, 0, isize, 7, 0, (isize*irms), 0, iknee, 1, (isize*(1-irms))-iknee, 1, 2, 1
 	endin
 
 ;******************************
 ; apply noise gate
 	instr 17
-	a1		chnget "in1"
+	a1		    chnget "in1"
 	krms		rms a1
 	krms		= krms * 1.7
-	kgate		table krms, giNoiseFloor, 1
-	a1		= a1 * kgate
-			chnset a1, "in1"
+	kgate		tablei krms, giNoiseFloor, 1
+	kgate       tonek kgate, 5
+	a1		    = a1 * kgate
+			    chnset a1, "in1"
 	endin
 
 ;******************************

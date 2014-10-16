@@ -7,10 +7,10 @@
         instr 34
         ; We write the sound file in Csound, and the text file in Python
         Swavname        strget p4
-	;print p1, p2, p3	
-	;puts Swavname, 1
+	    ;print p1, p2, p3	
+	    ;puts Swavname, 1
         a1              chnget "rec_in1"
-                	fout Swavname, 14, a1
+                	    fout Swavname, 14, a1
                         
         ; for writing transient marker txt file
         ktime           timeinsts
@@ -29,7 +29,6 @@
         kactive         = 1-krelease
                         chnset kactive, "memRecActive"          ; tell Python that we're recording
 
-; temporarily removed since it does interfere with fout on 6.02 (Axel on osx)
         ; write pitch data to a separate file
         istrlen         strlen Swavname
         Spitchfile      strsub Swavname, 0, istrlen-4
