@@ -17,7 +17,6 @@ from zmq.utils.jsonapi import dumps
 import IO
 import utils
 import brain
-import analyze_associations
 import robocontrol
 
 class Controller:
@@ -190,7 +189,6 @@ if __name__ == '__main__':
     mp.Process(target=Controller, args=(persistent_states,), name='CONTROLLER').start()
     mp.Process(target=brain.respond, args=('localhost','localhost',), name='RESPONDER').start()
     mp.Process(target=brain.learn, args=('localhost',)).start()
-    #mp.Process(target=analyze_associations.analyze, args=('localhost',), name='ANALYZE ASSOCIATIONS').start()
     mp.Process(target=robocontrol.robocontrol, args=('localhost',), name='ROBOCONTROL').start()
 
     try:

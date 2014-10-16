@@ -28,6 +28,7 @@ import numpy
 import math
 import utils
 
+wavSegments = {}        # {(wavefile, id):[segstart,segend], (wavefile, id):[segstart,segend], ...} 
 wavs_as_words = []      # list of wave files for each word (audio id) [[w1,w2,w3],[w4],...]
 wordTime = {}           # {id1:[time1, time2, t3...]], id2: ...}
 time_word = []          # [[time,id1],[time,id2],...]
@@ -38,13 +39,15 @@ neighborAfter = {}      # as above, but only including words that immediately fo
 wordFace = {}           # {id1:[face1,face2,...], id2:[...]}
 faceWord ={}            # [face1:[id1,id2...], face2:[...]}
 
-def analyze(filename,audio_id,wavs,similar_ids,sound_to_face,face_to_sound):
-    #print_us(filename,audio_id,wavs,audio_hammings,sound_to_face,face_to_sound)
+def analyze(filename,audio_id,wav_segments,wavs,similar_ids,sound_to_face,face_to_sound):
+    #print_us(filename,audio_id,wav_segments,wavs,audio_hammings,sound_to_face,face_to_sound)
 
     markerfile = filename[:-4]+'.txt'
     startTime, totalDur, segments = parseFile(markerfile)
     
+    global wavs_as_words, wavSegments, wordFace,faceWord
     wavs_as_words = copy.copy(wavs)
+    wavSegments = copy.copy(wav_segments)
     time_word.append((startTime, audio_id))
     wordTime.setdefault(audio_id, []).append(startTime)
     duration_word.append((totalDur, audio_id))

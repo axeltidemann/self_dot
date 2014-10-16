@@ -465,7 +465,7 @@ def learn(host):
                         
                     # Send sound id and classification data to associations analysis
                     similar_ids = [ utils.hamming_distance(new_audio_hash, np.random.choice(h)) for h in NAP_hashes ]
-                    association.analyze(filename,audio_id,wavs,similar_ids,sound_to_face,face_to_sound)
+                    association.analyze(filename,audio_id,wav_segments,wavs,similar_ids,sound_to_face,face_to_sound)
 
                     video_segment = np.array(list(video))
                     if video_segment.shape[0] == 0:
@@ -538,14 +538,18 @@ def learn(host):
             if 'showme' in pushbutton:
                 # just for inspecting the contents of objects while running 
                 print 'printing '+pushbutton['showme']
-                o = compile('print '+pushbutton['showme'], '<string>','exec')
-                eval(o)
+                try:
+                    o = compile('print '+pushbutton['showme'], '<string>','exec')
+                    eval(o)
+                except Exception, e:
+                    print e, 'showme print failed.'
 
             if 'load' in pushbutton:
                 filename = pushbutton['load']
                 audio_recognizer, audio_producer, video_producer, NAPs, wavs, maxlen,\
                             sound_to_face,\
                             face_to_sound,\
+                            wav_segments,\
                             association.wavs_as_words,\
                             association.wordTime,\
                             association.time_word,\
@@ -564,6 +568,7 @@ def learn(host):
                 pickle.dump((audio_recognizer, audio_producer, video_producer, NAPs, wavs, maxlen,
                 sound_to_face,
                 face_to_sound,
+                wav_segments,
                 association.wavs_as_words,
                 association.wordTime,
                 association.time_word,
