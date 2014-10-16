@@ -34,7 +34,8 @@ except:
     
 FACE_HAAR_CASCADE_PATH = opencv_prefix + '/share/OpenCV/haarcascades/haarcascade_frontalface_default.xml'
 EYE_HAAR_CASCADE_PATH = opencv_prefix + '/share/OpenCV/haarcascades/haarcascade_eye_tree_eyeglasses.xml'
-HAMMERTIME = 10 # Hamming distance match criterion
+AUDIO_HAMMERTIME = 8 # Hamming distance match criterion
+FACE_HAMMERTIME = 10
 FRAME_SIZE = (160, 90) # Neural network image size
 
 # LOOK AT EYES? CAN YOU DETERMINE ANYTHING FROM THEM?
@@ -130,12 +131,13 @@ def cochlear(filename, db=-40, stride=441, new_rate=22050, ears=1, channels=71):
     data = data*10**(db/20)
     utils.array_to_csv('{}-audio.txt'.format(filename), data)
     call(['./carfac-cmd', filename, str(len(data)), str(ears), str(channels), str(new_rate), str(stride)])
-    os.remove('{}-audio.txt'.format(filename))
     naps = utils.csv_to_array('{}-output.txt'.format(filename))
+    os.remove('{}-audio.txt'.format(filename))
+    os.remove('{}-output.txt'.format(filename))
     return np.sqrt(np.maximum(0, naps)/np.max(naps))
 
 
-def respond(control_host, learn_host):
+def respond(control_host, learn_host, debug=False):
     me = mp.current_process()
     print me.name, 'PID', me.pid
 
@@ -158,7 +160,11 @@ def respond(control_host, learn_host):
     poller = zmq.Poller()
     poller.register(eventQ, zmq.POLLIN)
     poller.register(brainQ, zmq.POLLIN)
-        
+
+    if debug:
+        import matplotlib.pyplot as plt
+        plt.ion()
+    
     while True:
         events = dict(poller.poll())
         if brainQ in events:
@@ -170,7 +176,12 @@ def respond(control_host, learn_host):
                 print 'Respond to', pushbutton['filename']
 
                 try:
-                    NAP = cochlear(pushbutton['filename'])
+                    NAP = utils.trim_right(utils.scale(utils.load_cochlear(pushbutton['filename'])))
+
+                    if debug:            
+                        plt.imshow(NAP.T, aspect='auto')
+                        plt.draw()
+                    
                     NAP_resampled = utils.zero_pad(resample(utils.trim_right(utils.scale(NAP)), float(maxlen)/NAP.shape[0], 'sinc_best'), maxlen_scaled)
 
                     try:
@@ -209,7 +220,7 @@ def respond(control_host, learn_host):
                 print 'SENTENCE Respond to', pushbutton['filename'][-12:]
 
                 try:
-                    NAP = cochlear(pushbutton['filename'])
+                    NAP = utils.trim_right(utils.scale(utils.load_cochlear(pushbutton['filename'])))
 
                     NAP_resampled = utils.zero_pad(resample(utils.trim_right(utils.scale(NAP)), float(maxlen)/NAP.shape[0], 'sinc_best'), maxlen_scaled)
 
@@ -289,7 +300,7 @@ def respond(control_host, learn_host):
                     utils.print_exception('Sentence response aborted.')
 
 
-def learn(host):
+def learn(host, debug=False):
     import Oger
 
     mic, speaker, camera, projector, face, stateQ, eventQ, sender, state, poller, me, brainQ = _connect(host)
@@ -298,10 +309,6 @@ def learn(host):
     video = deque()
     faces = deque()
 
-    audio_first_segment = []
-    video_first_segment = []
-    wav_first_segment = []
-    
     NAPs = []
     wavs = []
     wav_segments = {}
@@ -320,8 +327,11 @@ def learn(host):
 
     maxlen = []
     maxlen_scaled = []
-        
-    # WRITE IMAGES TO DISK!
+
+    if debug:
+        import matplotlib.pyplot as plt
+        plt.ion()
+            
     while True:
         events = dict(poller.poll())
         
@@ -361,11 +371,7 @@ def learn(host):
             if 'learn' in pushbutton and pushbutton['learn'] == me.name:
                 try:
                     backup = [ audio_recognizer, face_recognizer, maxlen, maxlen_scaled ]
-                    
                     filename = pushbutton['filename']
-                    if len(wav_first_segment):
-                        print 'Learning to associate {} -> {}'.format(wav_first_segment, filename)
-                        filename = wav_first_segment
 
                     # Do we know this face?
                     hammings = [ np.inf ]
@@ -384,7 +390,7 @@ def learn(host):
                             face_id = uniq[np.argsort([ sum(predicted_faces == u) for u in uniq ])[-1]]
                             hammings = [ utils.hamming_distance(f, m) for f in new_faces_hashes for m in face_hashes[face_id] ]
 
-                        if np.mean(hammings) < HAMMERTIME:
+                        if np.mean(hammings) < FACE_HAMMERTIME:
                             face_history[face_id].extend(new_faces)
                             face_hashes[face_id].extend(new_faces_hashes)
                             print 'Face is similar to face {}, hamming mean {}, has previously said {}'.format(face_id, np.mean(hammings), face_to_sound[face_id])
@@ -406,15 +412,15 @@ def learn(host):
                     audio_segments = utils.get_segments(utils.wait_for_wav(filename))
                     
                     print 'Learning {} duration {} seconds with {} segments'.format(filename, audio_segments[-1], len(audio_segments)-1)
-                    start_time = time.time()
-                    new_sentence = cochlear(filename)
-                    print 'Calculating cochlear neural activation patterns took {} seconds'.format(time.time() - start_time)
-
-                    filename = pushbutton['filename'] if len(wav_first_segment) else filename
+                    new_sentence = utils.load_cochlear(filename)
                     norm_segments = np.rint(new_sentence.shape[0]*audio_segments/audio_segments[-1]).astype('int')
                     
                     for segment, new_sound in enumerate([ utils.trim_right(utils.scale(new_sentence[norm_segments[i]:norm_segments[i+1]])) for i in range(len(norm_segments)-1) ]):
                         # Do we know this sound?
+                        if debug:
+                            plt.imshow(new_sound.T, aspect='auto')
+                            plt.draw()
+                        
                         hammings = [ np.inf ]
                         new_audio_hash = utils.d_hash(new_sound)
                         audio_id = 0
@@ -427,7 +433,7 @@ def learn(host):
                             audio_id = audio_recognizer.predict(resampled_flattened_new_sound)[0]
                             hammings = [ utils.hamming_distance(new_audio_hash, h) for h in NAP_hashes[audio_id] ]
 
-                        if np.mean(hammings) < HAMMERTIME:
+                        if np.mean(hammings) < AUDIO_HAMMERTIME:
                             NAPs[audio_id].append(new_sound)
                             NAP_hashes[audio_id].append(new_audio_hash)
                             wavs[audio_id].append(filename)
@@ -486,7 +492,11 @@ def learn(host):
                     video_producer[(audio_id, face_id)] = tarantino
 
                     brainQ.send_pyobj([ wavs, wav_segments, sound_to_face, face_to_sound, audio_recognizer, video_producer, maxlen, maxlen_scaled ])
-                    print 'Learning classifier and video network in {} seconds'.format(time.time() - start_time)                    
+                    print 'Learning classifier and video network in {} seconds'.format(time.time() - start_time)
+
+                    pickle.dump(new_faces, open('{}-faces.npy'.format(filename), 'w'))
+                    pickle.dump(y, open('{}-video.npy'.format(filename), 'w'))
+
                 except:
                     utils.print_exception('Learning aborted. Backing up.')
                     audio_recognizer, face_recognizer, maxlen, maxlen_scaled = backup
@@ -517,20 +527,7 @@ def learn(host):
                 except:
                     utils.print_exception('play_id aborted.')
 
-
             if 'reset' in pushbutton:
-                audio.clear()
-                video.clear()
-                faces.clear()
-                audio_first_segment = []
-                video_first_segment = []
-                wav_first_segment = []
-            
-            if 'setmarker' in pushbutton:
-                wav_first_segment = pushbutton['setmarker']
-                audio_first_segment = np.array(list(audio))
-                video_first_segment = np.array(list(video))
-                print 'FACES NEW FIRST SEGMENT FIXME'
                 audio.clear()
                 video.clear()
                 faces.clear()

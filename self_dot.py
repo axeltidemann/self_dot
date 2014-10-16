@@ -61,6 +61,12 @@ class Controller:
         print '[self.] received:', message
 
         try:
+            if 'calculate_cochlear' in message:
+                _, wav_file = message.split()
+                t0 = time.time()
+                utils.write_cochlear(wav_file)
+                print 'Calculating cochlear neural activation patterns took {} seconds'.format(time.time() - t0)
+            
             if 'register' in message and 'BRAIN' in message:
                 _, name, free = message.split()
                 self.state['brains'][name] = int(free)
@@ -99,22 +105,12 @@ class Controller:
                 self.state['brains'][name] -= 1
                 print '{} has now {} available slots'.format(name, self.state['brains'][name])
 
-            if 'associate' in message:
-                _, state = message.split()
-                self.state['associate'] = state in ['True', '1']
-                self.state['associate_learn'] = False
-                                            
             if 'learnwav' in message:
                 _, filename = message.split()
-                if self.state['associate'] and not self.state['associate_learn']:
-                    self.event.send_json({ 'setmarker': filename })
-                    self.state['associate_learn'] = True
-                else: 
-                    d = self.state['brains']
-                    winner = max(d, key=d.get)
-                    print '{} chosen to learn, has {} available slots'.format(winner, self.state['brains'][winner])
-                    self.event.send_json({ 'learn': winner, 'filename': filename })
-                    self.state['associate_learn'] = False
+                d = self.state['brains']
+                winner = max(d, key=d.get)
+                print '{} chosen to learn, has {} available slots'.format(winner, self.state['brains'][winner])
+                self.event.send_json({ 'learn': winner, 'filename': filename })
 
             if 'respondwav_single' in message:
                 _, filename = message.split()
@@ -123,9 +119,6 @@ class Controller:
             if 'respondwav_sentence' in message:
                 _, filename = message.split()
                 self.event.send_json({ 'respond_sentence': True, 'filename': filename })
-
-            if message == 'setmarker':
-                self.event.send_json({ 'setmarker': True })
 
             if 'autolearn' in message:
                 self.state['autolearn'] = message[10:] in ['True', '1']
@@ -179,13 +172,11 @@ if __name__ == '__main__':
                          'roboActive': False,
                          'fullscreen': 0,
                          'display2': 0,
-                         'associate': False,
-                         'associate_learn': False, 
                          'facerecognition': False,}
 
     mp.Process(target=IO.audio, name='AUDIO').start() 
     mp.Process(target=IO.video, name='VIDEO').start()
-    mp.Process(target=brain.face_extraction, args=('localhost',False, True,), name='FACE EXTRACTION').start()
+    mp.Process(target=brain.face_extraction, args=('localhost',False,True,), name='FACE EXTRACTION').start()
     mp.Process(target=Controller, args=(persistent_states,), name='CONTROLLER').start()
     mp.Process(target=brain.respond, args=('localhost','localhost',), name='RESPONDER').start()
     mp.Process(target=brain.learn, args=('localhost',)).start()
