@@ -63,7 +63,7 @@ if ktimek == 1 then
 ;        ilen		    filelen	Sfile
         kcycles	        = (iend-istart) * kr; number of k-cycles to write the fft-buffer
         kcount		    init 0
-        print istart, iend
+        ;print istart, iend
         ;1.712 
         ;2.638 
 

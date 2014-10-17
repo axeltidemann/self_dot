@@ -18,6 +18,7 @@ import IO
 import utils
 import brain
 import robocontrol
+import association
 
 class Controller:
     def __init__(self, init_state):
@@ -92,6 +93,9 @@ class Controller:
 
             if 'play_id' in message:
                 self.event.send_json({ 'play_id': message[8:] })
+
+            if 'test_assoc' in message:
+                self.event.send_json({ 'test_assoc': message[11:] })
 
             if 'memoryRecording' in message:
                 self.state['memoryRecording'] = message[16:] in ['True', '1']
@@ -181,6 +185,7 @@ if __name__ == '__main__':
     mp.Process(target=brain.respond, args=('localhost','localhost',), name='RESPONDER').start()
     mp.Process(target=brain.learn, args=('localhost',)).start()
     mp.Process(target=robocontrol.robocontrol, args=('localhost',), name='ROBOCONTROL').start()
+    mp.Process(target=association.association, args=('localhost',), name='ASSOCIATION').start()
 
     try:
         raw_input('')

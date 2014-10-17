@@ -24,12 +24,14 @@ STATE = 5565
 EXTERNAL = 5566
 SNAPSHOT = 5567
 EVENT = 5568
-#ASSOCIATIONS = 5569
+#5569 available 
 ROBO = 5570
 #ROBOBACK = 5571
 FACE = 5572
 BRAIN = 5573
-
+ASSOCIATION_IN = 5574 
+# 5575 not available(?)
+ASSOCIATION_OUT = 5576
 
 def video():
     me = mp.current_process()
@@ -85,7 +87,7 @@ def audio():
     publisher.bind('tcp://*:{}'.format(MIC))
 
     #assoc = context.socket(zmq.PUB)
-    #assoc.bind('tcp://*:{}'.format(ASSOCIATIONS))
+    #assoc.bind('tcp://*:{}'.format(ASSOCIATION_IN))
 
     robocontrol = context.socket(zmq.PUB)
     robocontrol.bind('tcp://*:{}'.format(ROBO))
@@ -108,6 +110,7 @@ def audio():
     snapshot = context.socket(zmq.REQ)
     snapshot.connect('tcp://localhost:{}'.format(SNAPSHOT))
     snapshot.send(b'Send me the state, please')
+
     state = snapshot.recv_json()
 
     sender = context.socket(zmq.PUSH)

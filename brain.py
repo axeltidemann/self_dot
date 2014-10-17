@@ -24,7 +24,7 @@ from scipy.signal.signaltools import correlate2d as c2d
 
 import utils
 import IO
-import analyze_associations2 as association
+import association
 
 try:
     opencv_prefix = os.environ['VIRTUAL_ENV']
@@ -156,7 +156,13 @@ def respond(control_host, learn_host, debug=False):
     brainQ = context.socket(zmq.SUB)
     brainQ.connect('tcp://{}:{}'.format(learn_host, IO.BRAIN))
     brainQ.setsockopt(zmq.SUBSCRIBE, b'') 
-        
+    
+    association_in = context.socket(zmq.PUSH)
+    association_in.connect('tcp://{}:{}'.format(learn_host, IO.ASSOCIATION_IN))
+
+    association_out = context.socket(zmq.PULL)
+    association_out.bind('tcp://*:{}'.format(IO.ASSOCIATION_OUT))
+    
     poller = zmq.Poller()
     poller.register(eventQ, zmq.POLLIN)
     poller.register(brainQ, zmq.POLLIN)
@@ -243,9 +249,14 @@ def respond(control_host, learn_host, debug=False):
                     timeDistance2 = 5.0
                     durationWeight2 = 0.5
                     posInSentenceWeight2 = 0.5                                                        
-                    sentence, secondaryStream = association.makeSentence(audio_id, numWords, 
+                    #sentence, secondaryStream = association.makeSentence(audio_id, numWords, 
+                    #                                    method, timeBeforeWeight, timeAfterWeight, timeDistance, durationWeight, posInSentenceWeight,
+                    #                                    method2, timeBeforeWeight2, timeAfterWeight2, timeDistance2, durationWeight2, posInSentenceWeight2)
+                    association_in.send_pyobj(['makeSentence',audio_id, numWords, 
                                                         method, timeBeforeWeight, timeAfterWeight, timeDistance, durationWeight, posInSentenceWeight,
-                                                        method2, timeBeforeWeight2, timeAfterWeight2, timeDistance2, durationWeight2, posInSentenceWeight2)
+                                                        method2, timeBeforeWeight2, timeAfterWeight2, timeDistance2, durationWeight2, posInSentenceWeight2])
+                    print 'respond_sentence waiting for association output...'
+                    sentence, secondaryStream = association_out.recv_pyobj()
 
                     print '*** Play sentence', sentence, secondaryStream
                     start = 0 
@@ -303,7 +314,7 @@ def respond(control_host, learn_host, debug=False):
 def learn(host, debug=False):
     import Oger
 
-    mic, speaker, camera, projector, face, stateQ, eventQ, sender, state, poller, me, brainQ = _connect(host)
+    mic, speaker, camera, projector, face, stateQ, eventQ, sender, state, poller, me, brainQ, association_in = _connect(host)
     
     audio = deque()
     video = deque()
@@ -471,7 +482,7 @@ def learn(host, debug=False):
                         
                     # Send sound id and classification data to associations analysis
                     similar_ids = [ utils.hamming_distance(new_audio_hash, np.random.choice(h)) for h in NAP_hashes ]
-                    association.analyze(filename,audio_id,wav_segments,wavs,similar_ids,sound_to_face,face_to_sound)
+                    association_in.send_pyobj(['analyze',filename,audio_id,wav_segments,wavs,similar_ids,sound_to_face,face_to_sound])
 
                     video_segment = np.array(list(video))
                     if video_segment.shape[0] == 0:
@@ -503,6 +514,10 @@ def learn(host, debug=False):
 
                 pushbutton['reset'] = True
 
+            if 'test_assoc' in pushbutton:
+                print 'test_assoc', pushbutton
+                association_in1.send_pyobj(wav_segments)
+            
             if 'play_id' in pushbutton:
                 try:
                     items = pushbutton['play_id'].split(' ')
@@ -623,6 +638,9 @@ def _connect(host):
 
     brainQ = context.socket(zmq.PUB)
     brainQ.bind('tcp://*:{}'.format(IO.BRAIN))
+    
+    association_in = context.socket(zmq.PUSH)
+    association_in.connect('tcp://{}:{}'.format(host, IO.ASSOCIATION_IN))
         
     poller = zmq.Poller()
     poller.register(mic, zmq.POLLIN)
@@ -631,7 +649,7 @@ def _connect(host):
     poller.register(stateQ, zmq.POLLIN)
     poller.register(eventQ, zmq.POLLIN)
 
-    return mic, speaker, camera, projector, face, stateQ, eventQ, sender, state, poller, me, brainQ
+    return mic, speaker, camera, projector, face, stateQ, eventQ, sender, state, poller, me, brainQ, association_in
                         
 if __name__ == '__main__':
     classifier_brain(sys.argv[1] if len(sys.argv) == 2 else 'localhost')

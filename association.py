@@ -19,7 +19,9 @@ faceWord = all words said by this face
 '''
 
 
-import re 
+import multiprocessing as mp
+import zmq
+import IO
 import re
 findfloat=re.compile(r"[0-9.]*")
 import copy
@@ -27,6 +29,7 @@ import random
 import numpy
 import math
 import utils
+import time
 
 wavSegments = {}        # {(wavefile, id):[segstart,segend], (wavefile, id):[segstart,segend], ...} 
 wavs_as_words = []      # list of wave files for each word (audio id) [[w1,w2,w3],[w4],...]
@@ -39,7 +42,46 @@ neighborAfter = {}      # as above, but only including words that immediately fo
 wordFace = {}           # {id1:[face1,face2,...], id2:[...]}
 faceWord ={}            # [face1:[id1,id2...], face2:[...]}
 
+
+def association(host):
+    me = mp.current_process()
+    print me.name, 'PID', me.pid
+
+    context = zmq.Context()
+
+    assoc_in = context.socket(zmq.PULL)
+    assoc_in.bind('tcp://*:{}'.format(IO.ASSOCIATION_IN))
+
+    assoc_out = context.socket(zmq.PUSH)
+    assoc_out.connect('tcp://{}:{}'.format(host, IO.ASSOCIATION_OUT))        
+
+    poller = zmq.Poller()
+    poller.register(assoc_in, zmq.POLLIN)
+    
+    while True:
+        #print 'assoc is running %i', time.time()
+        #time.sleep(.1)
+        events = dict(poller.poll(timeout=0))
+        if assoc_in in events:
+            thing = assoc_in.recv_pyobj()
+            try:
+                func = thing[0]
+                if func == 'analyze':
+                    dummy,filename,audio_id,wav_segments,wavs,similar_ids,sound_to_face,face_to_sound = thing
+                    analyze(filename,audio_id,wav_segments,wavs,similar_ids,sound_to_face,face_to_sound)
+                if func == 'makeSentence':
+                    dummy,audio_id,numWords,method,timeBeforeWeight,timeAfterWeight,timeDistance,\
+                    durationWeight,posInSentenceWeight,method2,timeBeforeWeight2,timeAfterWeight2,\
+                    timeDistance2,durationWeight2,posInSentenceWeight2 = thing
+                    makeSentence(assoc_out,audio_id,numWords,method,timeBeforeWeight,timeAfterWeight,timeDistance,\
+                    durationWeight,posInSentenceWeight,method2,timeBeforeWeight2,timeAfterWeight2,\
+                    timeDistance2,durationWeight2,posInSentenceWeight2)
+            except Exception, e:
+                print e, 'association receive failed on receiving:', thing
+
+ 
 def analyze(filename,audio_id,wav_segments,wavs,similar_ids,sound_to_face,face_to_sound):
+    #print 'assoc analyze', filename,audio_id,wav_segments,wavs,similar_ids,sound_to_face,face_to_sound
     #print_us(filename,audio_id,wav_segments,wavs,audio_hammings,sound_to_face,face_to_sound)
 
     markerfile = filename[:-4]+'.txt'
@@ -57,6 +99,75 @@ def analyze(filename,audio_id,wav_segments,wavs,similar_ids,sound_to_face,face_t
     wordFace = copy.copy(sound_to_face)
     faceWord = copy.copy(face_to_sound)
     
+def makeSentence(assoc_out, predicate, numWords, method,
+                timeBeforeWeight, timeAfterWeight, timeDistance, 
+                durationWeight, posInSentenceWeight,
+                method2, 
+                timeBeforeWeight2, timeAfterWeight2, timeDistance2, 
+                durationWeight2, posInSentenceWeight2):
+
+    print 'makeSentence predicate', predicate
+    #print 'stuff we need:'
+    #print  wavs_as_words, wavSegments, time_word, wordTime, duration_word, similarWords, wordFace, faceWord
+    #print '***'
+    
+    sentence = [predicate]
+    secondaryStream = []
+    #timeThen = time.time()
+    for i in range(numWords):
+        posInSentence = i/float(numWords-1)
+        posInSentenceWidth = 0.2
+        if posInSentence < 0.5:
+            preferredDuration = posInSentence*20 # longer words in the middle of a sentence (just as a test...)
+        else:
+            preferredDuration = (1-posInSentence)*20
+        preferredDurationWidth = 3
+        prevPredicate = predicate # save it for the secondary association
+        predicate = generate(predicate, method, 
+                            timeBeforeWeight, timeAfterWeight, timeDistance, 
+                            posInSentence, posInSentenceWidth, posInSentenceWeight, 
+                            preferredDuration, preferredDurationWidth, durationWeight)
+        sentence.append(predicate)
+        # secondary association for the same predicate
+        posInSentence2 = posInSentence
+        posInSentenceWidth2 = posInSentenceWidth
+        preferredDuration2 = preferredDuration*3
+        preferredDurationWidth2 = preferredDurationWidth
+        secondaryAssoc = generate(prevPredicate, method2, 
+                            timeBeforeWeight2, timeAfterWeight2, timeDistance2, 
+                            posInSentence2, posInSentenceWidth2, posInSentenceWeight2, 
+                            preferredDuration2, preferredDurationWidth2, durationWeight2)
+        secondaryStream.append(secondaryAssoc)
+    print 'sentence', sentence
+    print 'secondaryStream', secondaryStream
+    #print 'processing time for %i words: %f secs'%(numWords, time.time() - timeThen)
+    #return sentence, secondaryStream
+    assoc_out.send_pyobj([sentence, secondaryStream])
+    
+def generate(predicate, method, 
+            timeBeforeWeight, timeAfterWeight, timeDistance, 
+            posInSentence, posInSentenceWidth, posInSentenceWeight, 
+            preferredDuration, preferredDurationWidth, durationWeight):
+    # get the lists we need
+    #print 'get lists for predicate', predicate
+    timeContextBefore, timeContextAfter = getTimeContext(predicate, timeDistance) 
+    timeContextBefore = normalizeItemScore(timeContextBefore)
+    timeContextAfter = normalizeItemScore(timeContextAfter)
+    durationContext = getCandidatesFromContext(duration_word, preferredDuration, preferredDurationWidth)
+    #print 'generate lengths:', len(timeContextBefore), len(timeContextAfter), len(durationContext)
+    # merge them
+    if method == 'add': method = weightedSum
+    if method == 'boundedAdd': method = boundedSum
+    temp = method(timeContextBefore, timeBeforeWeight, timeContextAfter, timeAfterWeight)
+    temp = method(temp, 1.0, durationContext, durationWeight) 
+    #print 'generate temp', temp       
+    # select the one with the highest score
+    if len(temp) < 1:
+        nextWord = predicate
+        print '** WARNING: ASSOCIATION GENERATE HAS NO VALID ASSOCIATIONS, RETURNING PREDICATE'
+    else:
+        nextWord = select(temp, 'highest')
+    return nextWord
     
 def parseFile(markerfile):
     f = open(markerfile, 'r')
@@ -97,66 +208,6 @@ def print_us(filename,audio_id,wavs,audio_hammings,sound_to_face,face_to_sound):
     print face_to_sound
     print '\n***' 
     
-def makeSentence(predicate, numWords, method,
-                timeBeforeWeight, timeAfterWeight, timeDistance, 
-                durationWeight, posInSentenceWeight,
-                method2, 
-                timeBeforeWeight2, timeAfterWeight2, timeDistance2, 
-                durationWeight2, posInSentenceWeight2):
-
-    print 'makeSentence predicate', predicate
-    
-    sentence = [predicate]
-    secondaryStream = []
-    #timeThen = time.time()
-    for i in range(numWords):
-        posInSentence = i/float(numWords-1)
-        posInSentenceWidth = 0.2
-        if posInSentence < 0.5:
-            preferredDuration = posInSentence*20 # longer words in the middle of a sentence (just as a test...)
-        else:
-            preferredDuration = (1-posInSentence)*20
-        preferredDurationWidth = 3
-        prevPredicate = predicate # save it for the secondary association
-        predicate = generate(predicate, method, 
-                            timeBeforeWeight, timeAfterWeight, timeDistance, 
-                            posInSentence, posInSentenceWidth, posInSentenceWeight, 
-                            preferredDuration, preferredDurationWidth, durationWeight)
-        sentence.append(predicate)
-        # secondary association for the same predicate
-        posInSentence2 = posInSentence
-        posInSentenceWidth2 = posInSentenceWidth
-        preferredDuration2 = preferredDuration*3
-        preferredDurationWidth2 = preferredDurationWidth
-        secondaryAssoc = generate(prevPredicate, method2, 
-                            timeBeforeWeight2, timeAfterWeight2, timeDistance2, 
-                            posInSentence2, posInSentenceWidth2, posInSentenceWeight2, 
-                            preferredDuration2, preferredDurationWidth2, durationWeight2)
-        secondaryStream.append(secondaryAssoc)
-    #print 'sentence', sentence
-    #print 'secondaryStream', secondaryStream
-    #print 'processing time for %i words: %f secs'%(numWords, time.time() - timeThen)
-    return sentence, secondaryStream
-    
-def generate(predicate, method, 
-            timeBeforeWeight, timeAfterWeight, timeDistance, 
-            posInSentence, posInSentenceWidth, posInSentenceWeight, 
-            preferredDuration, preferredDurationWidth, durationWeight):
-    # get the lists we need
-    timeContextBefore, timeContextAfter = getTimeContext(predicate, timeDistance) 
-    timeContextBefore = normalizeItemScore(timeContextBefore)
-    timeContextAfter = normalizeItemScore(timeContextAfter)
-    durationContext = getCandidatesFromContext(duration_word, preferredDuration, preferredDurationWidth)
-    #print 'generate lengths:', len(timeContextBefore), len(timeContextAfter), len(durationContext)
-    # merge them
-    if method == 'add': method = weightedSum
-    if method == 'boundedAdd': method = boundedSum
-    temp = method(timeContextBefore, timeBeforeWeight, timeContextAfter, timeAfterWeight)
-    temp = method(temp, 1.0, durationContext, durationWeight) 
-    print 'generate temp', temp       
-    # select the one with the highest score
-    nextWord = select(temp, 'highest')
-    return nextWord
 
 def getTimeContext(predicate, distance):
     '''
@@ -208,6 +259,7 @@ def getTimeContext(predicate, distance):
             invTime = (distance-item[0]*quantize)
             invertedTimeContextAfter.append([item[1], invTime])
     else: invertedTimeContextAfter = []
+    #print 'time OK', invertedTimeContextBefore, invertedTimeContextAfter
     return invertedTimeContextBefore, invertedTimeContextAfter
 
 def getCandidatesFromContext(context, position, width):
@@ -347,4 +399,4 @@ def select(items, method):
         random.choice(words)
 
 if __name__ == '__main__':
-    analyze()
+    print 'run as main'
