@@ -425,7 +425,8 @@ def learn(host, debug=False):
                     print 'Learning {} duration {} seconds with {} segments'.format(filename, audio_segments[-1], len(audio_segments)-1)
                     new_sentence = utils.load_cochlear(filename)
                     norm_segments = np.rint(new_sentence.shape[0]*audio_segments/audio_segments[-1]).astype('int')
-                    
+
+                    segment_ids = []
                     for segment, new_sound in enumerate([ utils.trim_right(utils.scale(new_sentence[norm_segments[i]:norm_segments[i+1]])) for i in range(len(norm_segments)-1) ]):
                         # Do we know this sound?
                         if debug:
@@ -459,6 +460,7 @@ def learn(host, debug=False):
 
                         # The mapping from wavfile and audio ID to the segment within the audio file
                         wav_segments[(filename, audio_id)] = [ audio_segments[segment], audio_segments[segment+1] ]
+                        segment_ids.append(audio_id)
                         
                         # Scale the sizes of the samples according to the biggest one. The idea is that this scale well. Otherwise, create overlapping bins.
                         start_time = time.time()
@@ -480,9 +482,11 @@ def learn(host, debug=False):
                         if face_id is not -1 and not audio_id in face_to_sound[face_id]:
                             face_to_sound[face_id].append(audio_id)
                         
-                    # Send sound id and classification data to associations analysis
-                    similar_ids = [ utils.hamming_distance(new_audio_hash, np.random.choice(h)) for h in NAP_hashes ]
-                    association_in.send_pyobj(['analyze',filename,audio_id,wav_segments,wavs,similar_ids,sound_to_face,face_to_sound])
+                        # Send sound id and classification data to associations analysis
+                        similar_ids = [ utils.hamming_distance(new_audio_hash, np.random.choice(h)) for h in NAP_hashes ]
+                        if segment == len(audio_segments)-2: sentenceflag = 1
+                        else: sentenceflag = 0
+                        association_in.send_pyobj(['analyze',sentenceflag,filename,segment,audio_id,wav_segments,segment_ids,wavs,similar_ids,sound_to_face,face_to_sound])
 
                     video_segment = np.array(list(video))
                     if video_segment.shape[0] == 0:
@@ -561,17 +565,18 @@ def learn(host, debug=False):
                 audio_recognizer, audio_producer, video_producer, NAPs, wavs, maxlen,\
                             sound_to_face,\
                             face_to_sound,\
-                            wav_segments,\
-                            association.wavs_as_words,\
-                            association.wordTime,\
-                            association.time_word,\
-                            association.duration_word,\
-                            association.similarWords,\
-                            association.neighbors,\
-                            association.neighborAfter,\
-                            association.wordFace,\
-                            association.faceWord\
+                            wav_segments\
                             = pickle.load(file(filename, 'r'))
+                            # to ble able to save and load these, we must pull them from the associations process
+                            #association.wavs_as_words,\
+                            #association.wordTime,\
+                            #association.time_word,\
+                            #association.duration_word,\
+                            #association.similarWords,\
+                            #association.neighbors,\
+                            #association.neighborAfter,\
+                            #association.wordFace,\
+                            #association.faceWord\
                 print 'Brain loaded from file {} ({})'.format(filename, utils.filesize(filename))
 
             # CHECK WHAT TAKES UP SO MUCH SPACE! I suspect the video_producer matrix.
@@ -580,17 +585,18 @@ def learn(host, debug=False):
                 pickle.dump((audio_recognizer, audio_producer, video_producer, NAPs, wavs, maxlen,
                 sound_to_face,
                 face_to_sound,
-                wav_segments,
-                association.wavs_as_words,
-                association.wordTime,
-                association.time_word,
-                association.duration_word,
-                association.similarWords,
-                association.neighbors,
-                association.neighborAfter,
-                association.wordFace,
-                association.faceWord)
-                , file(filename, 'w'))
+                wav_segments),
+                file(filename, 'w'))
+                # to ble able to save and load these, we must pull them from the associations process
+                #association.wavs_as_words,
+                #association.wordTime,
+                #association.time_word,
+                #association.duration_word,
+                #association.similarWords,
+                #association.neighbors,
+                #association.neighborAfter,
+                #association.wordFace,
+                #association.faceWord)
                 print '{} saved as file {} ({})'.format(me.name, filename, utils.filesize(filename))
                 
 

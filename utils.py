@@ -239,7 +239,7 @@ def scale(image):
     return (image - np.min(image))/(np.max(image) - np.min(image))
 
 
-def get_segments(wavfile, threshold=.5):
+def get_segments(wavfile, threshold=.25):
     ''' Find segments in audio descriptor file. Transients closer together than the threshold will be excluded.'''
     audio_info = open(wavfile[:-4]+'.txt')
     segments = []

@@ -31,8 +31,8 @@ import math
 import utils
 import time
 
-wavSegments = {}        # {(wavefile, id):[segstart,segend], (wavefile, id):[segstart,segend], ...} 
-wavs_as_words = []      # list of wave files for each word (audio id) [[w1,w2,w3],[w4],...]
+#wavSegments = {}        # {(wavefile, id):[segstart,segend], (wavefile, id):[segstart,segend], ...} 
+#wavs_as_words = []      # list of wave files for each word (audio id) [[w1,w2,w3],[w4],...]
 wordTime = {}           # {id1:[time1, time2, t3...]], id2: ...}
 time_word = []          # [[time,id1],[time,id2],...]
 duration_word = []      # [[dur, id1], [dur,id2]
@@ -41,6 +41,10 @@ neighbors = {}          # {id1: [[neighb_id1, how_many_times], [neighb_id2, how_
 neighborAfter = {}      # as above, but only including words that immediately follow this word (not immediately preceding)
 wordFace = {}           # {id1:[face1,face2,...], id2:[...]}
 faceWord ={}            # [face1:[id1,id2...], face2:[...]}
+
+sentencePosition_item = [] # give each word a score for how much it belongs in the beginning of a sentence or in the end of a sentence   
+wordsInSentence = {}    # list ids that has occured in the same sentence {id:[[id1,numtimes],[id2,numtimes],[id3,nt]], idN:[...]}
+
 
 
 def association(host):
@@ -67,8 +71,8 @@ def association(host):
             try:
                 func = thing[0]
                 if func == 'analyze':
-                    dummy,filename,audio_id,wav_segments,wavs,similar_ids,sound_to_face,face_to_sound = thing
-                    analyze(filename,audio_id,wav_segments,wavs,similar_ids,sound_to_face,face_to_sound)
+                    dummy,sentenceflag,filename,segment,audio_id,wav_segments,segment_ids,wavs,similar_ids,sound_to_face,face_to_sound = thing
+                    analyze(sentenceflag,filename,segment,audio_id,wav_segments,segment_ids,wavs,similar_ids,sound_to_face,face_to_sound)
                 if func == 'makeSentence':
                     dummy,audio_id,numWords,method,timeBeforeWeight,timeAfterWeight,timeDistance,\
                     durationWeight,posInSentenceWeight,method2,timeBeforeWeight2,timeAfterWeight2,\
@@ -80,24 +84,44 @@ def association(host):
                 print e, 'association receive failed on receiving:', thing
 
  
-def analyze(filename,audio_id,wav_segments,wavs,similar_ids,sound_to_face,face_to_sound):
-    #print 'assoc analyze', filename,audio_id,wav_segments,wavs,similar_ids,sound_to_face,face_to_sound
-    #print_us(filename,audio_id,wav_segments,wavs,audio_hammings,sound_to_face,face_to_sound)
+def analyze(sentenceflag,filename,segment,audio_id,wav_segments,segment_ids,wavs,similar_ids,sound_to_face,face_to_sound):
+    print '*** *** assoc analyze',sentenceflag,filename[-12:],audio_id, similar_ids#,wav_segments#,wavs,similar_ids,sound_to_face,face_to_sound
 
-    markerfile = filename[:-4]+'.txt'
-    startTime, totalDur, segments = parseFile(markerfile)
-    
-    global wavs_as_words, wavSegments, wordFace,faceWord
-    wavs_as_words = copy.copy(wavs)
-    wavSegments = copy.copy(wav_segments)
-    time_word.append((startTime, audio_id))
-    wordTime.setdefault(audio_id, []).append(startTime)
-    duration_word.append((totalDur, audio_id))
-    similarWords[audio_id] = utils.scale(numpy.array(similar_ids))
-    #neighbors = 
-    #neighborAfter = 
+    global wordFace,faceWord
     wordFace = copy.copy(sound_to_face)
     faceWord = copy.copy(face_to_sound)
+
+    markerfile = filename[:-4]+'.txt'
+    startTime, totalDur, segmentTimes = parseFile(markerfile)
+
+    # get timing and duration for segment
+    segmentStart = segmentTimes[segment]+startTime
+    if len(segmentTimes) == segment+1:
+        segmentDur = totalDur-segmentTimes[segment]
+    else:
+        segmentDur = segmentTimes[segment+1]-segmentTimes[segment]
+    time_word.append((segmentStart, audio_id))
+    wordTime.setdefault(audio_id, []).append(segmentStart)
+    duration_word.append((segmentDur, audio_id))
+
+    if max(similar_ids) == 0:
+        similarScaler = 1
+    else:
+        similarScaler = 1/float(max(similar_ids))
+    similarWords[audio_id] = scale(similar_ids, similarScaler)
+    
+
+    # analysis of the segment's relationship to the sentence it occured in
+    if sentenceflag == 1:
+        #print 'segment_ids', segment_ids
+        updateWordsInSentence(segment_ids)
+        #print 'wordsInSentence', wordsInSentence
+        updateNeighbors(segment_ids)
+        updateNeighborAfter(segment_ids)
+        updatePositionMembership(segment_ids)
+
+    #posInSentenceContext = getCandidatesFromContext(l.sentencePosition_item, posInSentence, posInSentenceWidth)
+
     
 def makeSentence(assoc_out, predicate, numWords, method,
                 timeBeforeWeight, timeAfterWeight, timeDistance, 
@@ -138,8 +162,8 @@ def makeSentence(assoc_out, predicate, numWords, method,
                             posInSentence2, posInSentenceWidth2, posInSentenceWeight2, 
                             preferredDuration2, preferredDurationWidth2, durationWeight2)
         secondaryStream.append(secondaryAssoc)
-    print 'sentence', sentence
-    print 'secondaryStream', secondaryStream
+    #print 'sentence', sentence
+    #print 'secondaryStream', secondaryStream
     #print 'processing time for %i words: %f secs'%(numWords, time.time() - timeThen)
     #return sentence, secondaryStream
     assoc_out.send_pyobj([sentence, secondaryStream])
@@ -181,9 +205,68 @@ def parseFile(markerfile):
             enable = 0
             totalDur = float(line[16:])
         if enable:
-            segments.append(float(line)+startTime) 
+            segments.append(float(line)) 
         if 'Sub segment start times:' in line: enable = 1
     return startTime, totalDur, segments
+
+def updateWordsInSentence(sentence):
+    a = 0
+    for word in sentence:
+        v = wordsInSentence.setdefault(word, [])
+        b = 0
+        for other in sentence:
+            if a != b: #don't count itself as an occurence
+                otherInSentence = 0
+                for word_score in v:
+                    if other == word_score[0]:
+                        word_score[1] += 1
+                        otherInSentence = 1
+                if otherInSentence == 0:
+                    v.append([other, 1])
+            b += 1
+        a += 1
+
+def updateNeighbors(sentence):    
+    if len(sentence) == 1:
+        return
+    for i in range(len(sentence)):
+        v = neighbors.setdefault(sentence[i], [])
+        if i == 0: neighborPos = [i+1]
+        elif i == len(sentence)-1: neighborPos = [i-1] 
+        else: neighborPos = [i-1,i+1]
+        for n in neighborPos:
+            alreadyHere = 0
+            for word_score in v:
+                if sentence[n] == word_score[0]:
+                    word_score[1] += 1
+                    alreadyHere = 1
+            if alreadyHere == 0:
+                v.append([sentence[n], 1])
+
+def updateNeighborAfter(sentence): 
+    if len(sentence) == 1:
+        return
+    for i in range(len(sentence)-1):
+        v = neighborAfter.setdefault(sentence[i], [])
+        if sentence[i+1] in [v[j][0] for j in range(len(v))]:
+            for word_score in v:
+                if sentence[i+1] == word_score[0]:
+                    word_score[1] += 1
+        else:
+            v.append([sentence[i+1], 1])
+
+# give each word a score for how much it belongs in the beginning of a sentence or in the end of a sentence   
+# The resulting list here just gives the position (= the score for belonging in the end of a sentence).
+# The score for membership in the beginning of a sentence is simply (1-endscore)
+def updatePositionMembership(sentence):
+    global sentencePosition_item
+    lenSent = len(sentence)
+    for i in range(lenSent):
+        if lenSent == 1: position = 1.0
+        else: position = int((i/float(lenSent-1))*10)/10.0
+        sentencePosition_item.append((position,sentence[i]))
+    sentencePosition_item = list(set(sentencePosition_item))
+    sentencePosition_item.sort()
 
 
 def print_us(filename,audio_id,wavs,audio_hammings,sound_to_face,face_to_sound):
