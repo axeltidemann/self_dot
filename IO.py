@@ -325,8 +325,10 @@ def audio():
                 except Exception, e:
                     print e, 'Playfile aborted.'
 
-# Setup so it can be accessed from processes which don't have a zmq context, i.e. for one-shot messaging
+# Setup so it can be accessed from processes which don't have a zmq context, i.e. for one-shot messaging.
+# Do not use this in contexts where timing is important, i.e. create a proper socket similar to this one.
 def send(message, context=None, host='localhost', port=EXTERNAL):
+    print 'This send() should only be used in simple circumstances, i.e. not in something that runs in performance-critical code!'
     context = context or zmq.Context()
     sender = context.socket(zmq.PUSH)
     sender.connect('tcp://{}:{}'.format(host, port))
