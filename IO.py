@@ -22,7 +22,7 @@ MIC = 5563
 SPEAKER = 5564
 STATE = 5565
 EXTERNAL = 5566
-SNAPSHOT = 5567
+#5567 available
 EVENT = 5568
 #5569 available 
 ROBO = 5570
@@ -51,11 +51,14 @@ def video():
 
     stateQ = context.socket(zmq.SUB)
     stateQ.connect('tcp://localhost:{}'.format(STATE))
-    stateQ.setsockopt(zmq.SUBSCRIBE, b'') 
+    stateQ.setsockopt(zmq.SUBSCRIBE, b'')
+    
     poller = zmq.Poller()
     poller.register(stateQ, zmq.POLLIN)
     poller.register(projector, zmq.POLLIN)
 
+    state = stateQ.recv_json()
+    
     while True:
         events = dict(poller.poll(timeout=0))
 
@@ -106,12 +109,6 @@ def audio():
     eventQ = context.socket(zmq.SUB)
     eventQ.connect('tcp://localhost:{}'.format(EVENT))
     eventQ.setsockopt(zmq.SUBSCRIBE, b'') 
-
-    snapshot = context.socket(zmq.REQ)
-    snapshot.connect('tcp://localhost:{}'.format(SNAPSHOT))
-    snapshot.send(b'Send me the state, please')
-
-    state = snapshot.recv_json()
 
     sender = context.socket(zmq.PUSH)
     sender.connect('tcp://localhost:{}'.format(EXTERNAL))
@@ -174,6 +171,9 @@ def audio():
 
     filename = []
     counter = 0
+
+    state = stateQ.recv_json()
+    
     while not stopflag:
         counter += 1
         stopflag = perfKsmps()

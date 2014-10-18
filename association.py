@@ -65,7 +65,7 @@ def association(host):
     while True:
         #print 'assoc is running %i', time.time()
         #time.sleep(.1)
-        events = dict(poller.poll(timeout=0))
+        events = dict(poller.poll())
         if assoc_in in events:
             thing = assoc_in.recv_pyobj()
             try:

@@ -26,37 +26,22 @@ class Controller:
         print me.name, 'PID', me.pid
 
         self.state = init_state
+        
         context = zmq.Context()
+        
         self.publisher = context.socket(zmq.PUB)
         self.publisher.bind('tcp://*:{}'.format(IO.STATE))
         
         self.event = context.socket(zmq.PUB)
         self.event.bind('tcp://*:{}'.format(IO.EVENT))
 
-        subscriber = context.socket(zmq.PULL)
-        subscriber.bind('tcp://*:{}'.format(IO.EXTERNAL))
+        incoming = context.socket(zmq.PULL)
+        incoming.bind('tcp://*:{}'.format(IO.EXTERNAL))
 
-        snapshot = context.socket(zmq.ROUTER)
-        snapshot.bind('tcp://*:{}'.format(IO.SNAPSHOT))
-
-        print 'Communication channel listening on port {}'.format(IO.EXTERNAL)
-
-        poller = zmq.Poller()
-        poller.register(subscriber, zmq.POLLIN)
-        poller.register(snapshot, zmq.POLLIN)
-
+        self.parse('GO!')
+        
         while True:
-            events = dict(poller.poll())
-
-            if subscriber in events:
-                self.parse(subscriber.recv_json())
-                
-            if snapshot in events:
-                address, _, message = snapshot.recv_multipart()
-                snapshot.send_multipart([ address, 
-                                          b'',
-                                          dumps(self.state) ])
-                
+            self.parse(incoming.recv_json())
 
     def parse(self, message):
         print '[self.] received:', message
@@ -111,10 +96,11 @@ class Controller:
 
             if 'learnwav' in message:
                 _, filename = message.split()
-                d = self.state['brains']
-                winner = max(d, key=d.get)
-                print '{} chosen to learn, has {} available slots'.format(winner, self.state['brains'][winner])
-                self.event.send_json({ 'learn': winner, 'filename': filename })
+                # d = self.state['brains']
+                # winner = max(d, key=d.get)
+                # print '{} chosen to learn, has {} available slots'.format(winner, self.state['brains'][winner])
+                # self.event.send_json({ 'learn': winner, 'filename': filename })
+                self.event.send_json({ 'learn': True, 'filename': filename })
 
             if 'respondwav_single' in message:
                 _, filename = message.split()
@@ -181,12 +167,14 @@ if __name__ == '__main__':
     mp.Process(target=IO.audio, name='AUDIO').start() 
     mp.Process(target=IO.video, name='VIDEO').start()
     mp.Process(target=brain.face_extraction, args=('localhost',False,True,), name='FACE EXTRACTION').start()
-    mp.Process(target=Controller, args=(persistent_states,), name='CONTROLLER').start()
     mp.Process(target=brain.respond, args=('localhost','localhost',), name='RESPONDER').start()
-    mp.Process(target=brain.learn, args=('localhost',)).start()
+    #mp.Process(target=brain.learn, args=('localhost',)).start()
+    mp.Process(target=brain.learn_audio, args=('localhost',), name='AUDIO LEARN').start()
+    mp.Process(target=brain.learn_video, args=('localhost',), name='VIDEO LEARN').start()
+    mp.Process(target=brain.learn_faces, args=('localhost',), name='FACES LEARN').start()
     mp.Process(target=robocontrol.robocontrol, args=('localhost',), name='ROBOCONTROL').start()
     mp.Process(target=association.association, args=('localhost',), name='ASSOCIATION').start()
-
+    mp.Process(target=Controller, args=(persistent_states,), name='CONTROLLER').start()
     try:
         raw_input('')
     except KeyboardInterrupt:
