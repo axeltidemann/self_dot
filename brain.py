@@ -36,7 +36,7 @@ FACE_HAAR_CASCADE_PATH = opencv_prefix + '/share/OpenCV/haarcascades/haarcascade
 EYE_HAAR_CASCADE_PATH = opencv_prefix + '/share/OpenCV/haarcascades/haarcascade_eye_tree_eyeglasses.xml'
 AUDIO_HAMMERTIME = 8 # Hamming distance match criterion
 FACE_HAMMERTIME = 10
-FRAME_SIZE = (160, 90) # Neural network image size
+FRAME_SIZE = (160,120) # Neural network image size, 1/4 of full frame size.
 
 # LOOK AT EYES? CAN YOU DETERMINE ANYTHING FROM THEM?
 # PRESENT VISUAL INFORMATION - MOVE UP OR DOWN

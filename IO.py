@@ -14,6 +14,7 @@ import myCsoundAudioOptions
 
 # Milliseconds between each image capture
 VIDEO_SAMPLE_TIME = 100
+FRAME_SIZE = (640,480)
 
 # ØMQ ports
 CAMERA = 5561
@@ -47,8 +48,6 @@ def video():
     projector = context.socket(zmq.PULL)
     projector.bind('tcp://*:{}'.format(PROJECTOR))
     
-    frame_size = (640,480)
-
     stateQ = context.socket(zmq.SUB)
     stateQ.connect('tcp://localhost:{}'.format(STATE))
     stateQ.setsockopt(zmq.SUBSCRIBE, b'')
@@ -71,12 +70,12 @@ def video():
                 cv2.moveWindow('Output', 2100, 100)
 
         if projector in events:
-            cv2.imshow('Output', cv2.resize(recv_array(projector), frame_size))
+            cv2.imshow('Output', cv2.resize(recv_array(projector), FRAME_SIZE))
         else:
-            cv2.imshow('Output', np.zeros(frame_size[::-1]))
+            cv2.imshow('Output', np.zeros(FRAME_SIZE[::-1]))
         
         _, frame = camera.read()
-        frame = cv2.resize(frame, frame_size)
+        frame = cv2.resize(frame, FRAME_SIZE)
         send_array(publisher, frame)
 
         cv2.waitKey(VIDEO_SAMPLE_TIME)
