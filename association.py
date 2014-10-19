@@ -71,8 +71,8 @@ def association(host):
             try:
                 func = thing[0]
                 if func == 'analyze':
-                    dummy,sentenceflag,filename,segment,audio_id,wav_segments,segment_ids,wavs,similar_ids,sound_to_face,face_to_sound = thing
-                    analyze(sentenceflag,filename,segment,audio_id,wav_segments,segment_ids,wavs,similar_ids,sound_to_face,face_to_sound)
+                    _,filename,segment,audio_id,wav_segments,segment_ids,wavs,similar_ids,sound_to_face,face_to_sound = thing
+                    analyze(filename,segment,audio_id,wav_segments,segment_ids,wavs,similar_ids,sound_to_face,face_to_sound)
                 if func == 'makeSentence':
                     dummy,audio_id,numWords,method,timeBeforeWeight,timeAfterWeight,timeDistance,\
                     durationWeight,posInSentenceWeight,method2,timeBeforeWeight2,timeAfterWeight2,\
@@ -84,8 +84,8 @@ def association(host):
                 print e, 'association receive failed on receiving:', thing
 
  
-def analyze(sentenceflag,filename,segment,audio_id,wav_segments,segment_ids,wavs,similar_ids,sound_to_face,face_to_sound):
-    print '*** *** assoc analyze',sentenceflag,filename[-12:],audio_id, similar_ids#,wav_segments#,wavs,similar_ids,sound_to_face,face_to_sound
+def analyze(filename,segment,audio_id,wav_segments,segment_ids,wavs,similar_ids,sound_to_face,face_to_sound):
+    print '*** *** assoc analyze',filename[-12:],audio_id, similar_ids#,wav_segments#,wavs,similar_ids,sound_to_face,face_to_sound
 
     global wordFace,faceWord
     wordFace = copy.copy(sound_to_face)
@@ -112,13 +112,13 @@ def analyze(sentenceflag,filename,segment,audio_id,wav_segments,segment_ids,wavs
     
 
     # analysis of the segment's relationship to the sentence it occured in
-    if sentenceflag == 1:
-        #print 'segment_ids', segment_ids
-        updateWordsInSentence(segment_ids)
-        #print 'wordsInSentence', wordsInSentence
-        updateNeighbors(segment_ids)
-        updateNeighborAfter(segment_ids)
-        updatePositionMembership(segment_ids)
+    #if sentenceflag == 1:
+    #print 'segment_ids', segment_ids
+    updateWordsInSentence(segment_ids)
+    #print 'wordsInSentence', wordsInSentence
+    updateNeighbors(segment_ids)
+    updateNeighborAfter(segment_ids)
+    updatePositionMembership(segment_ids)
 
     #posInSentenceContext = getCandidatesFromContext(l.sentencePosition_item, posInSentence, posInSentenceWidth)
 

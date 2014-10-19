@@ -47,7 +47,7 @@ def video():
     projector = context.socket(zmq.PULL)
     projector.bind('tcp://*:{}'.format(PROJECTOR))
     
-    frame_size = (640,360)
+    frame_size = (640,480)
 
     stateQ = context.socket(zmq.SUB)
     stateQ.connect('tcp://localhost:{}'.format(STATE))

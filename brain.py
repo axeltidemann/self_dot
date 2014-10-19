@@ -197,6 +197,7 @@ def respond(control_host, learn_host, debug=False):
 
             if all(register[wav_file]):
                 print 'Audio - video - face recognizers related to {} arrived at responder'.format(wav_file)
+                # segment_ids: list of audio_ids in sentence
                 _, _, segment_ids, wavs, wav_segments, audio_recognizer, maxlen, maxlen_scaled, NAP_hashes = register[wav_file][0]
                 _, _, tarantino = register[wav_file][1]
                 _, _, face_id, face_recognizer = register[wav_file][2]          
@@ -217,6 +218,8 @@ def respond(control_host, learn_host, debug=False):
                             face_to_sound.append([audio_id])
 
                 del register[wav_file]
+                
+                # association_in.send_pyobj(['analyze',wav_file,segment,audio_id,wav_segments,segment_ids,wavs,similar_ids,sound_to_face,face_to_sound])
                 # ØYVIND: her burde assosiasjonslæringen fyres av. Jeg lurer på om det kan være hensiktsmessig å gjøre dette "en gang for alle" istedet for
                 # hver audio_id som det er blitt gjort fram til nå? Her har du hvertfall muligheten til det. Hvis det heller skal gjøres for hver audio_id, må det
                 # flyttes inn i loopen ovenfor. Det er kanskje enklest å bare ringe meg når du finner ut hva som vil funke best, her må det jo regnes ut en hash også.
@@ -267,7 +270,7 @@ def respond(control_host, learn_host, debug=False):
                     voiceType = 1 
                     speed = 1
                     amp = -3 # voice amplitude in dB
-                    dur, maxamp = utils.getSoundParmFromFile(soundfile)
+                    dur, maxamp = utils.getSoundParmFromFile(soundfile) # COORDINATION!
                     start = 0
                     sender.send_json('playfile {} {} {} {} {} {} {} {} {}'.format(voiceChannel, voiceType, start, soundfile, speed, segstart, segend, amp, maxamp))
 

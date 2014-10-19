@@ -83,6 +83,14 @@ def robocontrol(host):
                 if pan1 < 10: pan1 += 180
                 if pan1 > 200: pan1 -= 180
                 ser.write('p %03dn'%pan1)
+            if axis == 'tilt':
+                print 'head 1 tilposition', value
+                # send til position to head (eg. 'p 60')
+                tilt1 += int((value-0.5)*3)
+                if tilt1 < 10: tilt1 = 10
+                if tilt1 > 90: tilt1 = 90
+                ser.write('t %03dn'%tilt1)
+            
         if robohead == 2:
             if axis == 'pan' and value == -1:
                 seed = (random.random()-0.5)*2

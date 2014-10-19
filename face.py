@@ -13,7 +13,7 @@ import Oger
 import mdp
 import cv2
  
-HAAR_CASCADE_PATH = "/Users/tidemann/.virtualenvs/self_dot/share/OpenCV/haarcascades/haarcascade_frontalface_default.xml"
+HAAR_CASCADE_PATH = "/usr/local/share/OpenCV/haarcascades/haarcascade_frontalface_default.xml"
 #HAAR_CASCADE_PATH = "C:/zip/2011_laptop/opencv/opencv/sources/data/haarcascades/haarcascade_frontalface_default.xml"
 
 frame = []
