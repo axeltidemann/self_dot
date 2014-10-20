@@ -219,12 +219,19 @@ def respond(control_host, learn_host, debug=False):
 
                 del register[wav_file]
                 
-                # association_in.send_pyobj(['analyze',wav_file,segment,audio_id,wav_segments,segment_ids,wavs,similar_ids,sound_to_face,face_to_sound])
-                # ØYVIND: her burde assosiasjonslæringen fyres av. Jeg lurer på om det kan være hensiktsmessig å gjøre dette "en gang for alle" istedet for
-                # hver audio_id som det er blitt gjort fram til nå? Her har du hvertfall muligheten til det. Hvis det heller skal gjøres for hver audio_id, må det
-                # flyttes inn i loopen ovenfor. Det er kanskje enklest å bare ringe meg når du finner ut hva som vil funke best, her må det jo regnes ut en hash også.
-                # Hvis du vil kjøre på med hashing og looping slik det var før, kan dette være et slags utgangspunkt. Men husk på at omtrent alle av variablene her nå er
-                # "ferdigutregnet", slik var de ikke før. Så kanskje det kan gjøre litt smartere?
+                similar_ids = []
+                for audio_id in segment_ids:
+                    new_audio_hash = NAP_hashes[audio_id][-1]
+                    similar_ids_for_this_audio_id = [ utils.hamming_distance(new_audio_hash, np.random.choice(h)) for h in NAP_hashes ]
+                    similar_ids.append(similar_ids_for_this_audio_id)
+                    
+                association_in.send_pyobj(['analyze',wav_file,wav_segments,segment_ids,wavs,similar_ids,sound_to_face,face_to_sound])
+                
+                # OYVIND: her burde assosiasjonslaringen fyres av. Jeg lurer pa om det kan vare hensiktsmessig a gjore dette "en gang for alle" istedet for
+                # hver audio_id som det er blitt gjort fram til na? Her har du hvertfall muligheten til det. Hvis det heller skal gjores for hver audio_id, ma det
+                # flyttes inn i loopen ovenfor. Det er kanskje enklest a bare ringe meg nar du finner ut hva som vil funke best, her ma det jo regnes ut en hash ogsa.
+                # Hvis du vil kjore pa med hashing og looping slik det var for, kan dette vare et slags utgangspunkt. Men husk pa at omtrent alle av variablene her na er
+                # "ferdigutregnet", slik var de ikke for. Sa kanskje det kan gjore litt smartere?
 
                 # audio_segments = utils.get_segments(wav_file)
 
@@ -516,7 +523,7 @@ def learn_audio(host, debug=False):
 
                     t1 = time.time()
                     brainQ.send_pyobj(['audio_learn', filename, segment_ids, wavs, wav_segments, audio_recognizer, maxlen, maxlen_scaled, NAP_hashes])
-                    print 'Audio learned in {} seconds, ØMQ time {} seconds'.format(t1 - t0, time.time() - t1)
+                    print 'Audio learned in {} seconds, ZMQ time {} seconds'.format(t1 - t0, time.time() - t1)
                 except:
                     utils.print_exception('Audio learning aborted.') # Check to see if backup is needed.
 
@@ -586,7 +593,7 @@ def learn_video(host, debug=False):
 
                     t1 = time.time()
                     brainQ.send_pyobj([ 'video_learn', filename, tarantino ])
-                    print 'Video learned in {} seconds, ØMQ time {} seconds'.format(t1 - t0, time.time() - t1)
+                    print 'Video learned in {} seconds, ZMQ time {} seconds'.format(t1 - t0, time.time() - t1)
                 except:
                     utils.print_exception('Video learning aborted.')
 
@@ -683,7 +690,7 @@ def learn_faces(host, debug=False):
 
                     t1 = time.time()
                     brainQ.send_pyobj([ 'face_learn', filename, face_id, face_recognizer ])
-                    print 'Faces learned in {} seconds, ØMQ time {} seconds'.format(t1 - t0, time.time() - t1)
+                    print 'Faces learned in {} seconds, ZMQ time {} seconds'.format(t1 - t0, time.time() - t1)
                 except:
                     utils.print_exception('Face learning aborted.')
 

@@ -71,8 +71,8 @@ def association(host):
             try:
                 func = thing[0]
                 if func == 'analyze':
-                    _,filename,segment,audio_id,wav_segments,segment_ids,wavs,similar_ids,sound_to_face,face_to_sound = thing
-                    analyze(filename,segment,audio_id,wav_segments,segment_ids,wavs,similar_ids,sound_to_face,face_to_sound)
+                    _,wav_file,wav_segments,segment_ids,wavs,similar_ids,sound_to_face,face_to_sound = thing
+                    analyze(wav_file,wav_segments,segment_ids,wavs,similar_ids,sound_to_face,face_to_sound)
                 if func == 'makeSentence':
                     dummy,audio_id,numWords,method,timeBeforeWeight,timeAfterWeight,timeDistance,\
                     durationWeight,posInSentenceWeight,method2,timeBeforeWeight2,timeAfterWeight2,\
@@ -83,45 +83,56 @@ def association(host):
             except Exception, e:
                 print e, 'association receive failed on receiving:', thing
 
- 
-def analyze(filename,segment,audio_id,wav_segments,segment_ids,wavs,similar_ids,sound_to_face,face_to_sound):
-    print '*** *** assoc analyze',filename[-12:],audio_id, similar_ids#,wav_segments#,wavs,similar_ids,sound_to_face,face_to_sound
-
+def analyze(wav_file,wav_segments,segment_ids,wavs,similar_ids,sound_to_face,face_to_sound):
+    #print '*** *** assoc analyze:'
+    #print 'wav_file',wav_file
+    #print 'wav_segments',wav_segments
+    #print 'segment_ids',segment_ids
+    #print 'wavs',wavs
+    #print 'similar_ids',similar_ids
+    #print 'sound_to_face',sound_to_face
+    #print 'face_to_sound', face_to_sound
+    
     global wordFace,faceWord
     wordFace = copy.copy(sound_to_face)
     faceWord = copy.copy(face_to_sound)
 
-    markerfile = filename[:-4]+'.txt'
-    startTime, totalDur, segmentTimes = parseFile(markerfile)
-
-    # get timing and duration for segment
-    segmentStart = segmentTimes[segment]+startTime
-    if len(segmentTimes) == segment+1:
-        segmentDur = totalDur-segmentTimes[segment]
-    else:
-        segmentDur = segmentTimes[segment+1]-segmentTimes[segment]
-    time_word.append((segmentStart, audio_id))
-    wordTime.setdefault(audio_id, []).append(segmentStart)
-    duration_word.append((segmentDur, audio_id))
-
-    if max(similar_ids) == 0:
-        similarScaler = 1
-    else:
-        similarScaler = 1/float(max(similar_ids))
-    similarWords[audio_id] = scale(similar_ids, similarScaler)
+    markerfile = wav_file[:-4]+'.txt'
+    startTime, totalDur = parseFile(markerfile) # COORDINATION! with utils.getSoundParmFromFile
     
-
+    for i in range(len(segment_ids)):
+        audio_id = segment_ids[i]
+        
+        # get timing and duration for segment    
+        segmentStart = wav_segments[(wav_file,audio_id)][0]
+        segmentDur = wav_segments[(wav_file,audio_id)][1]-segmentStart
+        print '**** segmentStart', segmentStart, startTime
+        segmentStart += startTime
+        time_word.append((segmentStart, audio_id))
+        wordTime.setdefault(audio_id, []).append(segmentStart)
+        duration_word.append((segmentDur, audio_id))   
+        
+        similar_ids_this = similar_ids[i]
+        if max(similar_ids_this) == 0:
+            similarScaler = 1
+        else:
+            similarScaler = 1/float(max(similar_ids_this))
+        similarWords[audio_id] = scale(similar_ids_this, similarScaler)
+    
     # analysis of the segment's relationship to the sentence it occured in
-    #if sentenceflag == 1:
-    #print 'segment_ids', segment_ids
     updateWordsInSentence(segment_ids)
-    #print 'wordsInSentence', wordsInSentence
     updateNeighbors(segment_ids)
     updateNeighborAfter(segment_ids)
-    updatePositionMembership(segment_ids)
-
+    updatePositionMembership(segment_ids) 
+    #print '** segment_ids', segment_ids
+    #print '** wordsInSentence', wordsInSentence
+    #for item in time_word:
+    #    print '* time_word', item
+    #print 'wordTime', wordTime
+    #for item in duration_word:
+    #    print '* duration_word', item
+    
     #posInSentenceContext = getCandidatesFromContext(l.sentencePosition_item, posInSentence, posInSentenceWidth)
-
     
 def makeSentence(assoc_out, predicate, numWords, method,
                 timeBeforeWeight, timeAfterWeight, timeDistance, 
@@ -195,7 +206,7 @@ def generate(predicate, method,
     
 def parseFile(markerfile):
     f = open(markerfile, 'r')
-    segments = []
+    #segments = []
     enable = 0
     startTime = 0
     for line in f:
@@ -204,10 +215,10 @@ def parseFile(markerfile):
         if 'Total duration:'  in line: 
             enable = 0
             totalDur = float(line[16:])
-        if enable:
-            segments.append(float(line)) 
+        #if enable:
+        #    segments.append(float(line)) 
         if 'Sub segment start times:' in line: enable = 1
-    return startTime, totalDur, segments
+    return startTime, totalDur
 
 def updateWordsInSentence(sentence):
     a = 0
