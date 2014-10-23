@@ -37,8 +37,6 @@ class Controller:
 
         incoming = context.socket(zmq.PULL)
         incoming.bind('tcp://*:{}'.format(IO.EXTERNAL))
-
-        self.parse('GO!')
         
         while True:
             self.parse(incoming.recv_json())

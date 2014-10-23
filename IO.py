@@ -91,8 +91,8 @@ def audio():
     #assoc = context.socket(zmq.PUB)
     #assoc.bind('tcp://*:{}'.format(ASSOCIATION_IN))
 
-    robocontrol = context.socket(zmq.PUB)
-    robocontrol.bind('tcp://*:{}'.format(ROBO))
+    robocontrol = context.socket(zmq.PUSH)
+    robocontrol.connect('tcp://localhost:{}'.format(ROBO))
 
     #roboback = context.socket(zmq.SUB)
     #roboback.connect('tcp://localhost:{}'.format(ROBOBACK))
