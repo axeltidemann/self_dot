@@ -9,6 +9,7 @@ import random
 
 # connect to arduino
 import serial
+import numpy as np
 
 class NoSerial:
     def readline(self):
@@ -61,9 +62,8 @@ def robocontrol(host):
 
     context = zmq.Context()
 
-    robo = context.socket(zmq.SUB)
-    robo.connect('tcp://{}:{}'.format(host, IO.ROBO))
-    robo.setsockopt(zmq.SUBSCRIBE, b'')
+    robo = context.socket(zmq.PULL)
+    robo.bind('tcp://*:{}'.format(IO.ROBO))
 
     #roboback = context.socket(zmq.PUB)
     #roboback.bind('tcp://*:{}'.format(IO.ROBOBACK))
@@ -80,15 +80,16 @@ def robocontrol(host):
                 print 'head 1 panposition', value
                 # send pan position to head (eg. 'p 60')
                 pan1 += int((value-0.5)*80)
+                #pan1 += int((value)*80)
                 if pan1 < 10: pan1 += 180
                 if pan1 > 200: pan1 -= 180
                 ser.write('p %03dn'%pan1)
             if axis == 'tilt':
-                print 'head 1 tilposition', value
+                print 'head 1 tiltposition', value
                 # send til position to head (eg. 'p 60')
-                tilt1 += int((value-0.5)*3)
-                if tilt1 < 10: tilt1 = 10
-                if tilt1 > 90: tilt1 = 90
+                #tilt1 += int((value-0.5)*3)
+                tilt1 += int((value)*3)
+                tilt1 = np.clip(tilt1, 10, 90)
                 ser.write('t %03dn'%tilt1)
             
         if robohead == 2:

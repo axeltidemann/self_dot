@@ -56,11 +56,21 @@ def face_extraction(host, extended_search=False, show=False):
     publisher = context.socket(zmq.PUB)
     publisher.bind('tcp://*:{}'.format(IO.FACE))
 
+    robocontrol = context.socket(zmq.PUSH)
+    robocontrol.connect('tcp://localhost:{}'.format(IO.ROBO))
+
     if show:
         cv2.namedWindow('Faces', cv2.WINDOW_NORMAL)
-
+    i = 0
+    j = 1
     while True:
         frame = utils.recv_array(camera).copy() # Weird, but necessary to do a copy.
+
+        if j%3 == 0: # Every third frame we do face extraction.
+            j = 1
+        else:
+            j += 1
+            continue
 
         rows = frame.shape[1]
         cols = frame.shape[0]
@@ -91,8 +101,14 @@ def face_extraction(host, extended_search=False, show=False):
             x,y,w,h = faces_sorted[0]
             # Relative scaled difference from face to center of image, use these values to move the head of self
             x_diff = (x + w/2. - rows/2.)/rows
+            x_diff = (x_diff + 1)/2 # Because it responds to 0-1, not -1 - 1
             y_diff = (y + h/2. - cols/2.)/cols
             utils.send_array(publisher, cv2.resize(frame[y:y+h, x:x+w], (100,100)))
+            i += 1
+            if i%5 == 0:
+                robocontrol.send_json([ 1, 'pan', x_diff])
+                i = 0
+            # robocontrol.send_json([ 1, 'tilt', -y_diff])
     
         if show:
             if faces:
@@ -136,6 +152,16 @@ def cochlear(filename, db=-40, stride=441, new_rate=22050, ears=1, channels=71):
     os.remove('{}-output.txt'.format(filename))
     return np.sqrt(np.maximum(0, naps)/np.max(naps))
 
+
+def _predict_audio_id(audio_recognizer, NAP_resampled):
+    x_test = audio_recognizer.rPCA.transform(np.ndarray.flatten(NAP_resampled))
+    return audio_recognizer.predict(x_test)[0]
+
+
+def _NAP_resampled(wav_file, maxlen, maxlen_scaled):
+    NAP = utils.trim_right(utils.scale(utils.load_cochlear(wav_file)))
+    return utils.zero_pad(resample(utils.trim_right(utils.scale(NAP)), float(maxlen)/NAP.shape[0], 'sinc_best'), maxlen_scaled), NAP
+                    
 
 def respond(control_host, learn_host, debug=False):
     me = mp.current_process()
@@ -254,16 +280,14 @@ def respond(control_host, learn_host, debug=False):
                 print 'Respond to', pushbutton['filename']
 
                 try:
-                    NAP = utils.trim_right(utils.scale(utils.load_cochlear(pushbutton['filename'])))
+                    NAP_resampled, NAP = _NAP_resampled(pushbutton['filename'], maxlen, maxlen_scaled)
 
                     if debug:            
-                        plt.imshow(NAP.T, aspect='auto')
+                        plt.imshow(NAP_resampled.T, aspect='auto')
                         plt.draw()
                     
-                    NAP_resampled = utils.zero_pad(resample(utils.trim_right(utils.scale(NAP)), float(maxlen)/NAP.shape[0], 'sinc_best'), maxlen_scaled)
-
                     try:
-                        audio_id = audio_recognizer.predict(np.ndarray.flatten(NAP_resampled))[0]
+                        audio_id = _predict_audio_id(audio_recognizer, NAP_resampled)
                     except:
                         audio_id = 0
                         print 'Responding having only heard 1 sound.'
@@ -298,12 +322,10 @@ def respond(control_host, learn_host, debug=False):
                 print 'SENTENCE Respond to', pushbutton['filename'][-12:]
 
                 try:
-                    NAP = utils.trim_right(utils.scale(utils.load_cochlear(pushbutton['filename'])))
-
-                    NAP_resampled = utils.zero_pad(resample(utils.trim_right(utils.scale(NAP)), float(maxlen)/NAP.shape[0], 'sinc_best'), maxlen_scaled)
+                    NAP_resampled, NAP = _NAP_resampled(pusbutton['filename'], maxlen, maxlen_scaled)
 
                     try:
-                        audio_id = audio_recognizer.predict(np.ndarray.flatten(NAP_resampled))[0]
+                        audio_id = _predict_audio_id(audio_recognizer, NAP_resampled)
                     except:
                         audio_id = 0
                         print 'Responding having only heard 1 sound.'
@@ -487,8 +509,8 @@ def learn_audio(host, debug=False):
 
                         if audio_recognizer:
                             resampled_new_sound = utils.zero_pad(resample(new_sound, float(maxlen)/new_sound.shape[0], 'sinc_best'), maxlen_scaled)
-                            resampled_flattened_new_sound = np.ndarray.flatten(resampled_new_sound)
-                            audio_id = audio_recognizer.predict(resampled_flattened_new_sound)[0]
+                            x_test = audio_recognizer.rPCA.transform(np.ndarray.flatten(resampled_new_sound))
+                            audio_id = audio_recognizer.predict(x_test)[0]
                             hammings = [ utils.hamming_distance(new_audio_hash, h) for h in NAP_hashes[audio_id] ]
 
                         if np.mean(hammings) < AUDIO_HAMMERTIME:
@@ -515,17 +537,20 @@ def learn_audio(host, debug=False):
                         if len(NAPs) > 1:
                             resampled_memories = [ [ utils.zero_pad(m, maxlen_scaled) for m in memory ] for memory in resampled_memories ]
                             resampled_flattened_memories = [ np.ndarray.flatten(m) for memory in resampled_memories for m in memory ]
-                            audio_targets = [ i for i,f in enumerate(NAPs) for _ in f ]
+                            targets = [ i for i,f in enumerate(NAPs) for _ in f ]
+                            
+                            rPCA = RandomizedPCA(n_components=100)
+                            x_train = rPCA.fit_transform(resampled_flattened_memories)
 
                             audio_recognizer = svm.LinearSVC()
-                            # Is the high dimensionality required? Maybe PCA could help reduce the training time necessary. 
-                            audio_recognizer.fit(resampled_flattened_memories, audio_targets)
+                            audio_recognizer.fit(x_train, targets)
+                            audio_recognizer.rPCA = rPCA
 
                     t1 = time.time()
                     brainQ.send_pyobj(['audio_learn', filename, segment_ids, wavs, wav_segments, audio_recognizer, maxlen, maxlen_scaled, NAP_hashes])
                     print 'Audio learned in {} seconds, ZMQ time {} seconds'.format(t1 - t0, time.time() - t1)
                 except:
-                    utils.print_exception('Audio learning aborted.') # Check to see if backup is needed.
+                    utils.print_exception('Audio learning aborted.')
 
                 audio.clear()
 
@@ -665,7 +690,8 @@ def learn_faces(host, debug=False):
                             hammings = [ utils.hamming_distance(f, m) for f in new_faces_hashes for m in face_hashes[0] ]
 
                         if face_recognizer:
-                            predicted_faces = [ face_recognizer.predict(np.ndarray.flatten(f))[0] for f in new_faces ]
+                            x_test = [ face_recognizer.rPCA.transform(np.ndarray.flatten(f)) for f in new_faces ]
+                            predicted_faces = [ face_recognizer.predict(x)[0] for x in x_test ]
                             uniq = np.unique(predicted_faces)
                             face_id = uniq[np.argsort([ sum(predicted_faces == u) for u in uniq ])[-1]]
                             hammings = [ utils.hamming_distance(f, m) for f in new_faces_hashes for m in face_hashes[face_id] ]
@@ -681,10 +707,16 @@ def learn_faces(host, debug=False):
                             face_id = len(face_history) - 1
 
                         if len(face_history) > 1:
+                            # Possible fast version: train only on last face.
+
                             x_train = [ np.ndarray.flatten(f) for cluster in face_history for f in cluster ]
-                            face_recognizer = svm.LinearSVC()
                             targets = [ i for i,f in enumerate(face_history) for _ in f ]
+
+                            rPCA = RandomizedPCA(n_components=100)
+                            x_train = rPCA.fit_transform(x_train)
+                            face_recognizer = svm.LinearSVC()
                             face_recognizer.fit(x_train, targets)
+                            face_recognizer.rPCA = rPCA
                     else:
                         print 'Face not detected.'
 
