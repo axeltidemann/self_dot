@@ -39,8 +39,8 @@ duration_word = []      # [[dur, id1], [dur,id2]
 similarWords = {}       # {id1: [distance to audio id 0, distance to audio id 1, ...], id2: [distance to audio id 0, distance to audio id 1, ...]
 neighbors = {}          # {id1: [[neighb_id1, how_many_times], [neighb_id2, how_many_times]...], id2:[[n,h],[n,h]...]}
 neighborAfter = {}      # as above, but only including words that immediately follow this word (not immediately preceding)
-wordFace = {}           # {id1:[face1,face2,...], id2:[...]}
-faceWord ={}            # [face1:[id1,id2...], face2:[...]}
+wordFace = {}           # {id1:[face1,numtimes],[face2,numtimes],...], id2:[...]}
+faceWord ={}            # [face1:[id1,,numtimes],[id2,numtimes],[...], face2:[...]}
 
 sentencePosition_item = [] # give each word a score for how much it belongs in the beginning of a sentence or in the end of a sentence   
 wordsInSentence = {}    # list ids that has occured in the same sentence {id:[[id1,numtimes],[id2,numtimes],[id3,nt]], idN:[...]}
@@ -71,31 +71,27 @@ def association(host):
             try:
                 func = thing[0]
                 if func == 'analyze':
-                    _,wav_file,wav_segments,segment_ids,wavs,similar_ids,sound_to_face,face_to_sound = thing
-                    analyze(wav_file,wav_segments,segment_ids,wavs,similar_ids,sound_to_face,face_to_sound)
+                    _,wav_file,wav_segments,segment_ids,wavs,similar_ids,wordFace,faceWord = thing
+                    analyze(wav_file,wav_segments,segment_ids,wavs,similar_ids,wordFace,faceWord)
                 if func == 'makeSentence':
-                    dummy,audio_id,numWords,method,timeBeforeWeight,timeAfterWeight,timeDistance,\
-                    durationWeight,posInSentenceWeight,method2,timeBeforeWeight2,timeAfterWeight2,\
-                    timeDistance2,durationWeight2,posInSentenceWeight2 = thing
-                    makeSentence(assoc_out,audio_id,numWords,method,timeBeforeWeight,timeAfterWeight,timeDistance,\
-                    durationWeight,posInSentenceWeight,method2,timeBeforeWeight2,timeAfterWeight2,\
-                    timeDistance2,durationWeight2,posInSentenceWeight2)
+                    _,audio_id,numWords,method,neighborsWeight, wordsInSentenceWeight, similarWordsWeight,\
+                    wordFaceWeight,faceWordWeight,\
+                    timeBeforeWeight,timeAfterWeight,timeDistance,durationWeight,posInSentenceWeight,\
+                    method2,neighborsWeight2, wordsInSentenceWeight2, similarWordsWeight2,\
+                    wordFaceWeight2,faceWordWeight2,\
+                    timeBeforeWeight2,timeAfterWeight2,timeDistance2,durationWeight2,posInSentenceWeight2 = thing
+                    makeSentence(assoc_out, audio_id, numWords, method, neighborsWeight, wordsInSentenceWeight, similarWordsWeight,\
+                    wordFaceWeight,faceWordWeight,timeBeforeWeight, timeAfterWeight, timeDistance, durationWeight, posInSentenceWeight,\
+                    method2, neighborsWeight2, wordsInSentenceWeight2, similarWordsWeight2,\
+                    wordFaceWeight2,faceWordWeight2,timeBeforeWeight2, timeAfterWeight2, timeDistance2, durationWeight2,posInSentenceWeight2)                    
             except Exception, e:
                 print e, 'association receive failed on receiving:', thing
 
-def analyze(wav_file,wav_segments,segment_ids,wavs,similar_ids,sound_to_face,face_to_sound):
-    #print '*** *** assoc analyze:'
-    #print 'wav_file',wav_file
-    #print 'wav_segments',wav_segments
-    #print 'segment_ids',segment_ids
-    #print 'wavs',wavs
-    #print 'similar_ids',similar_ids
-    #print 'sound_to_face',sound_to_face
-    #print 'face_to_sound', face_to_sound
+def analyze(wav_file,wav_segments,segment_ids,wavs,similar_ids,_wordFace,_faceWord):
     
     global wordFace,faceWord
-    wordFace = copy.copy(sound_to_face)
-    faceWord = copy.copy(face_to_sound)
+    wordFace = copy.copy(_wordFace)
+    faceWord = copy.copy(_faceWord)
 
     markerfile = wav_file[:-4]+'.txt'
     startTime, totalDur = parseFile(markerfile) # COORDINATION! with utils.getSoundParmFromFile
@@ -106,9 +102,12 @@ def analyze(wav_file,wav_segments,segment_ids,wavs,similar_ids,sound_to_face,fac
         # get timing and duration for segment    
         segmentStart = wav_segments[(wav_file,audio_id)][0]
         segmentDur = wav_segments[(wav_file,audio_id)][1]-segmentStart
-        print '**** segmentStart', segmentStart, startTime
         segmentStart += startTime
         time_word.append((segmentStart, audio_id))
+        wordTime.setdefault(audio_id, []).append(segmentStart)
+        duration_word.append((segmentDur, audio_id))   
+        
+        similar_ids_this = similar_ids[i]
         wordTime.setdefault(audio_id, []).append(segmentStart)
         duration_word.append((segmentDur, audio_id))   
         
@@ -124,28 +123,18 @@ def analyze(wav_file,wav_segments,segment_ids,wavs,similar_ids,sound_to_face,fac
     updateNeighbors(segment_ids)
     updateNeighborAfter(segment_ids)
     updatePositionMembership(segment_ids) 
-    #print '** segment_ids', segment_ids
-    #print '** wordsInSentence', wordsInSentence
-    #for item in time_word:
-    #    print '* time_word', item
-    #print 'wordTime', wordTime
-    #for item in duration_word:
-    #    print '* duration_word', item
-    
-    #posInSentenceContext = getCandidatesFromContext(l.sentencePosition_item, posInSentence, posInSentenceWidth)
-    
-def makeSentence(assoc_out, predicate, numWords, method,
+        
+def makeSentence(assoc_out, predicate, numWords, method, neighborsWeight, wordsInSentenceWeight, similarWordsWeight, 
+                wordFaceWeight,faceWordWeight,
                 timeBeforeWeight, timeAfterWeight, timeDistance, 
                 durationWeight, posInSentenceWeight,
-                method2, 
+                method2, neighborsWeight2, wordsInSentenceWeight2, similarWordsWeight2, 
+                wordFaceWeight2,faceWordWeight2,
                 timeBeforeWeight2, timeAfterWeight2, timeDistance2, 
-                durationWeight2, posInSentenceWeight2):
+                durationWeight2,posInSentenceWeight2):
 
     print 'makeSentence predicate', predicate
-    #print 'stuff we need:'
-    #print  wavs_as_words, wavSegments, time_word, wordTime, duration_word, similarWords, wordFace, faceWord
-    #print '***'
-    
+
     sentence = [predicate]
     secondaryStream = []
     #timeThen = time.time()
@@ -159,6 +148,8 @@ def makeSentence(assoc_out, predicate, numWords, method,
         preferredDurationWidth = 3
         prevPredicate = predicate # save it for the secondary association
         predicate = generate(predicate, method, 
+                            neighborsWeight, wordsInSentenceWeight, similarWordsWeight, 
+                            wordFaceWeight,faceWordWeight,
                             timeBeforeWeight, timeAfterWeight, timeDistance, 
                             posInSentence, posInSentenceWidth, posInSentenceWeight, 
                             preferredDuration, preferredDurationWidth, durationWeight)
@@ -168,32 +159,55 @@ def makeSentence(assoc_out, predicate, numWords, method,
         posInSentenceWidth2 = posInSentenceWidth
         preferredDuration2 = preferredDuration*3
         preferredDurationWidth2 = preferredDurationWidth
-        secondaryAssoc = generate(prevPredicate, method2, 
+        secondaryAssoc = generate(prevPredicate, method2,
+                            neighborsWeight2, wordsInSentenceWeight2, similarWordsWeight2, 
+                            wordFaceWeight2,faceWordWeight2, 
                             timeBeforeWeight2, timeAfterWeight2, timeDistance2, 
                             posInSentence2, posInSentenceWidth2, posInSentenceWeight2, 
                             preferredDuration2, preferredDurationWidth2, durationWeight2)
         secondaryStream.append(secondaryAssoc)
-    #print 'sentence', sentence
-    #print 'secondaryStream', secondaryStream
     #print 'processing time for %i words: %f secs'%(numWords, time.time() - timeThen)
-    #return sentence, secondaryStream
     assoc_out.send_pyobj([sentence, secondaryStream])
     
 def generate(predicate, method, 
+            neighborsWeight, wordsInSentenceWeight, similarWordsWeight, 
+            wordFaceWeight,faceWordWeight,
             timeBeforeWeight, timeAfterWeight, timeDistance, 
             posInSentence, posInSentenceWidth, posInSentenceWeight, 
             preferredDuration, preferredDurationWidth, durationWeight):
+
     # get the lists we need
     #print 'get lists for predicate', predicate
+    _neighbors = normalizeItemScore(copy.copy(neighbors[predicate]))
+    _wordsInSentence = normalizeItemScore(copy.copy(wordsInSentence[predicate]))
+    _wordFace = normalizeItemScore(copy.copy(wordFace[predicate]))
+    # temporary solution to using faces
+    faces = [item[0] for item in _wordFace]
+    if -1 in faces: faces.remove(-1)
+    face = random.choice(faces)
+    print 'using face', face, 'we might want to update face/word selection'
+    #print 'faceWord', faceWord
+    _faceWord = normalizeItemScore(copy.copy(faceWord[face]))
+    _similarWords = normalizeItemScore(copy.copy(formatAsMembership(similarWords[predicate])))
+    #print '_similarWords', _similarWords
     timeContextBefore, timeContextAfter = getTimeContext(predicate, timeDistance) 
+    #print '***timeContextAfter',timeContextAfter
     timeContextBefore = normalizeItemScore(timeContextBefore)
     timeContextAfter = normalizeItemScore(timeContextAfter)
+    posInSentenceContext = getCandidatesFromContext(sentencePosition_item, posInSentence, posInSentenceWidth)
     durationContext = getCandidatesFromContext(duration_word, preferredDuration, preferredDurationWidth)
+        
     #print 'generate lengths:', len(timeContextBefore), len(timeContextAfter), len(durationContext)
     # merge them
     if method == 'add': method = weightedSum
     if method == 'boundedAdd': method = boundedSum
-    temp = method(timeContextBefore, timeBeforeWeight, timeContextAfter, timeAfterWeight)
+    temp = method(_neighbors, neighborsWeight, _wordsInSentence, wordsInSentenceWeight)
+    temp = method(temp, 1.0, _wordFace, wordFaceWeight)
+    temp = method(temp, 1.0, _faceWord, faceWordWeight)
+    #temp = method(temp, 1.0, _similarWords, similarWordsWeight)
+    temp = method(temp, 1.0, timeContextBefore, timeBeforeWeight)
+    temp = method(temp, 1.0, timeContextAfter, timeAfterWeight)
+    temp = method(temp, 1.0, posInSentenceContext, posInSentenceWeight)
     temp = method(temp, 1.0, durationContext, durationWeight) 
     #print 'generate temp', temp       
     # select the one with the highest score
@@ -239,6 +253,7 @@ def updateWordsInSentence(sentence):
 
 def updateNeighbors(sentence):    
     if len(sentence) == 1:
+        v = neighbors.setdefault(sentence[0], [])
         return
     for i in range(len(sentence)):
         v = neighbors.setdefault(sentence[i], [])
@@ -256,6 +271,7 @@ def updateNeighbors(sentence):
 
 def updateNeighborAfter(sentence): 
     if len(sentence) == 1:
+        v = neighborAfter.setdefault(sentence[0], [])
         return
     for i in range(len(sentence)-1):
         v = neighborAfter.setdefault(sentence[i], [])
@@ -479,6 +495,13 @@ def clip(a, clipVal):
     else:
         a = list(numpy.array(numpy.clip(a, 0, abs(clipVal)))*-1)
     return a
+
+def formatAsMembership(a):
+    i = 0
+    membership = []
+    for item in a:
+        membership.append([i,item])
+    return membership
 
 def select(items, method):
     words = [items[i][0] for i in range(len(items))]

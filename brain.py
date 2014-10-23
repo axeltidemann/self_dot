@@ -167,7 +167,9 @@ def respond(control_host, learn_host, debug=False):
     poller.register(brainQ, zmq.POLLIN)
 
     sound_to_face = []
+    wordFace = {}
     face_to_sound = []
+    faceWord = {}
     register = {}
     video_producer = {}
     
@@ -205,17 +207,35 @@ def respond(control_host, learn_host, debug=False):
                 for audio_id in segment_ids:
                     video_producer[(audio_id, face_id)] = tarantino
                     # By eliminating the last logical sentence, you can effectively get a statistical storage of audio_id.
-                    if audio_id < len(sound_to_face) and not face_id in sound_to_face[audio_id]: 
+                    if audio_id < len(sound_to_face) and not face_id in sound_to_face[audio_id]: # sound heard before, but not said by this face 
                         sound_to_face[audio_id].append(face_id)
+                        #wordFace[audio_id].append([face_id,1])
                     else:
                         sound_to_face.append([face_id])
+                    wordFace.setdefault(audio_id, [[face_id,0]])
+                    found = 0
+                    for item in wordFace[audio_id]:
+                        if item[0] == face_id:
+                            item[1] += 1
+                            found = 1
+                    if found == 0:
+                        wordFace[audio_id].append([face_id,1])
 
                     # We can't go from a not known face to any of the sounds, that's just the way it is.
                     if face_id is not -1:
-                        if face_id < len(face_to_sound) and not audio_id in face_to_sound[face_id]:
+                        if face_id < len(face_to_sound) and not audio_id in face_to_sound[face_id]: #face seen before, but the sound is new
                             face_to_sound[face_id].append(audio_id)
+                            #faceWord[face_id].append([audio_id,1])
                         else:
                             face_to_sound.append([audio_id])
+                        faceWord.setdefault(face_id, [[audio_id,0]])
+                        found = 0
+                        for item in faceWord[face_id]:
+                            if item[0] == audio_id:
+                                item[1] += 1
+                                found = 1
+                        if found == 0:
+                            faceWord[face_id].append([audio_id,1])
 
                 del register[wav_file]
                 
@@ -224,30 +244,10 @@ def respond(control_host, learn_host, debug=False):
                     new_audio_hash = NAP_hashes[audio_id][-1]
                     similar_ids_for_this_audio_id = [ utils.hamming_distance(new_audio_hash, np.random.choice(h)) for h in NAP_hashes ]
                     similar_ids.append(similar_ids_for_this_audio_id)
-                    
-                association_in.send_pyobj(['analyze',wav_file,wav_segments,segment_ids,wavs,similar_ids,sound_to_face,face_to_sound])
-                
-                # OYVIND: her burde assosiasjonslaringen fyres av. Jeg lurer pa om det kan vare hensiktsmessig a gjore dette "en gang for alle" istedet for
-                # hver audio_id som det er blitt gjort fram til na? Her har du hvertfall muligheten til det. Hvis det heller skal gjores for hver audio_id, ma det
-                # flyttes inn i loopen ovenfor. Det er kanskje enklest a bare ringe meg nar du finner ut hva som vil funke best, her ma det jo regnes ut en hash ogsa.
-                # Hvis du vil kjore pa med hashing og looping slik det var for, kan dette vare et slags utgangspunkt. Men husk pa at omtrent alle av variablene her na er
-                # "ferdigutregnet", slik var de ikke for. Sa kanskje det kan gjore litt smartere?
-
-                # audio_segments = utils.get_segments(wav_file)
-
-                # new_sentence = utils.load_cochlear(wav_file)
-                # norm_segments = np.rint(new_sentence.shape[0]*audio_segments/audio_segments[-1]).astype('int')
-
-                # segment_ids = []
-                # for segment, new_sound in enumerate([ utils.trim_right(utils.scale(new_sentence[norm_segments[i]:norm_segments[i+1]])) for i in range(len(norm_segments)-1) ]):
-                #     new_audio_hash = utils.d_hash(new_sound)
-                
-                #     Send sound id and classification data to associations analysis
-                #     similar_ids = [ utils.hamming_distance(new_audio_hash, np.random.choice(h)) for h in NAP_hashes ]
-                #     if segment == len(audio_segments)-2: sentenceflag = 1
-                #     else: sentenceflag = 0
-                #     association_in.send_pyobj(['analyze',sentenceflag,filename,segment,audio_id,wav_segments,segment_ids,wavs,similar_ids,sound_to_face,face_to_sound])
-                
+                #print '**wordFace', wordFace
+                print '**faceWord', faceWord
+                association_in.send_pyobj(['analyze',wav_file,wav_segments,segment_ids,wavs,similar_ids,wordFace,faceWord])
+                                
         if eventQ in events:
             pushbutton = eventQ.recv_json()
             if 'respond_single' in pushbutton:
@@ -307,25 +307,35 @@ def respond(control_host, learn_host, debug=False):
                     except:
                         audio_id = 0
                         print 'Responding having only heard 1 sound.'
-
+            
                     numWords = 4
                     method = 'boundedAdd'
+                    neighborsWeight = 0.2
+                    wordsInSentenceWeight = 0.5
+                    similarWordsWeight = 0.5
+                    wordFaceWeight = 0.5
+                    faceWordWeight = 0.5
                     timeBeforeWeight = 0.0
                     timeAfterWeight = 0.5
                     timeDistance = 5.0
                     durationWeight = 0.1
                     posInSentenceWeight = 0.5
                     method2 = 'boundedAdd'
+                    neighborsWeight2 = 0.2
+                    wordsInSentenceWeight2 = 0.5
+                    similarWordsWeight2 = 0.5
+                    wordFaceWeight2 = 0.5
+                    faceWordWeight2 = 0.5
                     timeBeforeWeight2 = 0.5
                     timeAfterWeight2 = 0.0
                     timeDistance2 = 5.0
                     durationWeight2 = 0.5
-                    posInSentenceWeight2 = 0.5                                                        
-                    #sentence, secondaryStream = association.makeSentence(audio_id, numWords, 
-                    #                                    method, timeBeforeWeight, timeAfterWeight, timeDistance, durationWeight, posInSentenceWeight,
-                    #                                    method2, timeBeforeWeight2, timeAfterWeight2, timeDistance2, durationWeight2, posInSentenceWeight2)
-                    association_in.send_pyobj(['makeSentence',audio_id, numWords, method, timeBeforeWeight, timeAfterWeight, timeDistance, durationWeight, posInSentenceWeight,
-                                                        method2, timeBeforeWeight2, timeAfterWeight2, timeDistance2, durationWeight2, posInSentenceWeight2])
+                    posInSentenceWeight2 = 0.5   
+                    association_in.send_pyobj(['makeSentence',audio_id, numWords, method, neighborsWeight, wordsInSentenceWeight, similarWordsWeight,\
+                                                wordFaceWeight,faceWordWeight,timeBeforeWeight, timeAfterWeight, timeDistance, durationWeight, posInSentenceWeight,\
+                                                method2, neighborsWeight2, wordsInSentenceWeight2, similarWordsWeight2,\
+                                                wordFaceWeight2,faceWordWeight2,timeBeforeWeight2, timeAfterWeight2, timeDistance2, durationWeight2, posInSentenceWeight2])
+                    
                     print 'respond_sentence waiting for association output...'
                     sentence, secondaryStream = association_out.recv_pyobj()
 
