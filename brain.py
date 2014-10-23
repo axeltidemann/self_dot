@@ -355,7 +355,9 @@ def respond(control_host, learn_host, debug=False):
                         # segment start and end within sound file, if zero, play whole file
                         segstart, segend = wav_segments[(soundfile, word_id)]
                         amp = -3 # voice amplitude in dB
-                        dur, maxamp = utils.getSoundParmFromFile(soundfile)
+                        totaldur, maxamp = utils.getSoundParmFromFile(soundfile)
+                        dur = segend-segstart
+                        if dur < 0: dur = totalDur
                         sender.send_json('playfile {} {} {} {} {} {} {} {} {}'.format(voiceChannel, voiceType, start, soundfile, speed, segstart, segend, amp, maxamp))
                         #start += dur # if we want to create a 'score section' for Csound, update start time to make segments into a contiguous sentence
                         nextTime1 += (dur/speed)

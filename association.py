@@ -53,7 +53,7 @@ similarWordsWeight = 0.5
 wordFaceWeight = 0.5
 faceWordWeight = 0.5
 timeBeforeWeight = 0.0
-timeAfterWeight = 0.5
+timeAfterWeight = 0.6
 timeDistance = 5.0
 durationWeight = 0.1
 posInSentenceWeight = 0.5
@@ -108,13 +108,64 @@ def association(host):
 def setParam(param,value):
     #param is a string, so we must compile the statement to set the variable
     print 'setParam:', param, value
+    global numWords,neighborsWeight,wordsInSentenceWeight,similarWordsWeight,wordFaceWeight,faceWordWeight
+    global timeBeforeWeight,timeAfterWeight,timeDistance,durationWeight,posInSentenceWeight
+    global neighborsWeight2,wordsInSentenceWeight2,similarWordsWeight2,wordFaceWeight2,faceWordWeight2
+    global timeBeforeWeight2,timeAfterWeight2,timeDistance2,durationWeight2,posInSentenceWeight2   
+
+    if param == 'numWords': numWords = int(value)
+    if param == 'neighborsWeight':neighborsWeight = float(value)
+    if param == 'wordsInSentenceWeight':wordsInSentenceWeight = float(value)
+    if param == 'similarWordsWeight':similarWordsWeight = float(value)
+    if param == 'wordFaceWeight':wordFaceWeight = float(value)
+    if param == 'faceWordWeight':faceWordWeight = float(value)
+    if param == 'timeBeforeWeight':timeBeforeWeight = float(value)
+    if param == 'timeAfterWeight':timeAfterWeight = float(value)
+    if param == 'timeDistance':timeDistance = float(value)
+    if param == 'durationWeight':durationWeight = float(value)
+    if param == 'posInSentenceWeight':posInSentenceWeight = float(value)
+    if param == 'neighborsWeight2':neighborsWeight2 = float(value)
+    if param == 'wordsInSentenceWeight2':wordsInSentenceWeight2 = float(value)
+    if param == 'similarWordsWeight2':similarWordsWeight2 = float(value)
+    if param == 'wordFaceWeight2':wordFaceWeight2 = float(value)
+    if param == 'faceWordWeight2':faceWordWeight2 = float(value)
+    if param == 'timeBeforeWeight2':timeBeforeWeight2 = float(value)
+    if param == 'timeAfterWeight2':timeAfterWeight2 = float(value)
+    if param == 'timeDistance2':timeDistance2 = float(value)
+    if param == 'durationWeight2':durationWeight2 = float(value)
+    if param == 'posInSentenceWeight2':posInSentenceWeight2 = float(value)
+    if param == 'all':
+        numWords = 5
+        neighborsWeight = 0.0
+        wordsInSentenceWeight = 0.0
+        similarWordsWeight = 0.0
+        wordFaceWeight = 0.0
+        faceWordWeight = 0.0
+        timeBeforeWeight = 0.0
+        timeAfterWeight = 0.0
+        timeDistance = 4.0
+        durationWeight = 0.0
+        posInSentenceWeight = 0.0
+        neighborsWeight2 = 0.0
+        wordsInSentenceWeight2 = 0.0
+        similarWordsWeight2 = 0.0
+        wordFaceWeight2 = 0.0
+        faceWordWeight2 = 0.0
+        timeBeforeWeight2 = 0.0
+        timeAfterWeight2 = 0.0
+        timeDistance2 = 4.0
+        durationWeight2 = 0.0
+        posInSentenceWeight2 = 0.0
+
+    '''
     g = 'global '+param
-    s = param+'='+value
+    s = param+'='+float(value)
     p = 'print "'+param+' set to ",'+param
     exec(compile(g,'string','exec'))
     exec(compile(s,'string','exec'))
     exec(compile(p,'string','exec'))
-
+    '''
+    
 def analyze(wav_file,wav_segments,segment_ids,wavs,similar_ids,_wordFace,_faceWord):
     
     global wordFace,faceWord
@@ -154,7 +205,7 @@ def analyze(wav_file,wav_segments,segment_ids,wavs,similar_ids,_wordFace,_faceWo
         
 def makeSentence(assoc_out, predicate):
 
-    print 'makeSentence predicate', predicate
+    print 'makeSentence predicate', predicate, 'numWords', numWords, 'similarWordsWeight', similarWordsWeight
 
     sentence = [predicate]
     secondaryStream = []
@@ -225,7 +276,7 @@ def generate(predicate, method,
     temp = method(_neighbors, neighborsWeight, _wordsInSentence, wordsInSentenceWeight)
     temp = method(temp, 1.0, _wordFace, wordFaceWeight)
     temp = method(temp, 1.0, _faceWord, faceWordWeight)
-    #temp = method(temp, 1.0, _similarWords, similarWordsWeight)
+    temp = method(temp, 1.0, _similarWords, similarWordsWeight)
     temp = method(temp, 1.0, timeContextBefore, timeBeforeWeight)
     temp = method(temp, 1.0, timeContextAfter, timeAfterWeight)
     temp = method(temp, 1.0, posInSentenceContext, posInSentenceWeight)
