@@ -307,7 +307,7 @@ def respond(control_host, learn_host, debug=False):
                     except:
                         audio_id = 0
                         print 'Responding having only heard 1 sound.'
-            
+                    '''
                     numWords = 4
                     method = 'boundedAdd'
                     neighborsWeight = 0.2
@@ -335,7 +335,8 @@ def respond(control_host, learn_host, debug=False):
                                                 wordFaceWeight,faceWordWeight,timeBeforeWeight, timeAfterWeight, timeDistance, durationWeight, posInSentenceWeight,\
                                                 method2, neighborsWeight2, wordsInSentenceWeight2, similarWordsWeight2,\
                                                 wordFaceWeight2,faceWordWeight2,timeBeforeWeight2, timeAfterWeight2, timeDistance2, durationWeight2, posInSentenceWeight2])
-                    
+                    '''
+                    association_in.send_pyobj(['makeSentence',audio_id])
                     print 'respond_sentence waiting for association output...'
                     sentence, secondaryStream = association_out.recv_pyobj()
 
@@ -391,10 +392,17 @@ def respond(control_host, learn_host, debug=False):
                 except:
                     utils.print_exception('Sentence response aborted.')
                     
-            if 'test_assoc' in pushbutton:
-                print 'test_assoc', pushbutton
-                association_in.send_pyobj(wav_segments)
+            if 'testSentence' in pushbutton:
+                print 'testSentence', pushbutton
+                association_in.send_pyobj(['makeSentence',int(pushbutton['testSentence'])])
+                print 'testSentence waiting for association output...'
+                sentence, secondaryStream = association_out.recv_pyobj()
+                print '*** Test sentence', sentence, secondaryStream
             
+            if 'assoc_setParam' in pushbutton:
+                parm, value = pushbutton['assoc_setParam'].split()
+                association_in.send_pyobj(['setParam', parm, value ])
+
             if 'play_id' in pushbutton:
                 try:
                     items = pushbutton['play_id'].split(' ')

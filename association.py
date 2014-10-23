@@ -45,6 +45,29 @@ faceWord ={}            # [face1:[id1,,numtimes],[id2,numtimes],[...], face2:[..
 sentencePosition_item = [] # give each word a score for how much it belongs in the beginning of a sentence or in the end of a sentence   
 wordsInSentence = {}    # list ids that has occured in the same sentence {id:[[id1,numtimes],[id2,numtimes],[id3,nt]], idN:[...]}
 
+numWords = 4
+method = 'boundedAdd'
+neighborsWeight = 0.2
+wordsInSentenceWeight = 0.5
+similarWordsWeight = 0.5
+wordFaceWeight = 0.5
+faceWordWeight = 0.5
+timeBeforeWeight = 0.0
+timeAfterWeight = 0.5
+timeDistance = 5.0
+durationWeight = 0.1
+posInSentenceWeight = 0.5
+method2 = 'boundedAdd'
+neighborsWeight2 = 0.2
+wordsInSentenceWeight2 = 0.5
+similarWordsWeight2 = 0.5
+wordFaceWeight2 = 0.5
+faceWordWeight2 = 0.5
+timeBeforeWeight2 = 0.5
+timeAfterWeight2 = 0.0
+timeDistance2 = 5.0
+durationWeight2 = 0.5
+posInSentenceWeight2 = 0.5   
 
 
 def association(host):
@@ -74,18 +97,23 @@ def association(host):
                     _,wav_file,wav_segments,segment_ids,wavs,similar_ids,wordFace,faceWord = thing
                     analyze(wav_file,wav_segments,segment_ids,wavs,similar_ids,wordFace,faceWord)
                 if func == 'makeSentence':
-                    _,audio_id,numWords,method,neighborsWeight, wordsInSentenceWeight, similarWordsWeight,\
-                    wordFaceWeight,faceWordWeight,\
-                    timeBeforeWeight,timeAfterWeight,timeDistance,durationWeight,posInSentenceWeight,\
-                    method2,neighborsWeight2, wordsInSentenceWeight2, similarWordsWeight2,\
-                    wordFaceWeight2,faceWordWeight2,\
-                    timeBeforeWeight2,timeAfterWeight2,timeDistance2,durationWeight2,posInSentenceWeight2 = thing
-                    makeSentence(assoc_out, audio_id, numWords, method, neighborsWeight, wordsInSentenceWeight, similarWordsWeight,\
-                    wordFaceWeight,faceWordWeight,timeBeforeWeight, timeAfterWeight, timeDistance, durationWeight, posInSentenceWeight,\
-                    method2, neighborsWeight2, wordsInSentenceWeight2, similarWordsWeight2,\
-                    wordFaceWeight2,faceWordWeight2,timeBeforeWeight2, timeAfterWeight2, timeDistance2, durationWeight2,posInSentenceWeight2)                    
+                    _,audio_id = thing
+                    makeSentence(assoc_out, audio_id)                    
+                if func == 'setParam':
+                    _,param,value = thing
+                    setParam(param,value)                    
             except Exception, e:
                 print e, 'association receive failed on receiving:', thing
+
+def setParam(param,value):
+    #param is a string, so we must compile the statement to set the variable
+    print 'setParam:', param, value
+    g = 'global '+param
+    s = param+'='+value
+    p = 'print "'+param+' set to ",'+param
+    exec(compile(g,'string','exec'))
+    exec(compile(s,'string','exec'))
+    exec(compile(p,'string','exec'))
 
 def analyze(wav_file,wav_segments,segment_ids,wavs,similar_ids,_wordFace,_faceWord):
     
@@ -124,14 +152,7 @@ def analyze(wav_file,wav_segments,segment_ids,wavs,similar_ids,_wordFace,_faceWo
     updateNeighborAfter(segment_ids)
     updatePositionMembership(segment_ids) 
         
-def makeSentence(assoc_out, predicate, numWords, method, neighborsWeight, wordsInSentenceWeight, similarWordsWeight, 
-                wordFaceWeight,faceWordWeight,
-                timeBeforeWeight, timeAfterWeight, timeDistance, 
-                durationWeight, posInSentenceWeight,
-                method2, neighborsWeight2, wordsInSentenceWeight2, similarWordsWeight2, 
-                wordFaceWeight2,faceWordWeight2,
-                timeBeforeWeight2, timeAfterWeight2, timeDistance2, 
-                durationWeight2,posInSentenceWeight2):
+def makeSentence(assoc_out, predicate):
 
     print 'makeSentence predicate', predicate
 

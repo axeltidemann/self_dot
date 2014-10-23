@@ -79,8 +79,11 @@ class Controller:
             if 'play_id' in message:
                 self.event.send_json({ 'play_id': message[8:] })
 
-            if 'test_assoc' in message:
-                self.event.send_json({ 'test_assoc': message[11:] })
+            if 'testSentence' in message:
+                self.event.send_json({ 'testSentence': message[13:] })
+
+            if 'assoc_setParam' in message:
+                self.event.send_json({ 'assoc_setParam': message[15:] })
 
             if 'memoryRecording' in message:
                 self.state['memoryRecording'] = message[16:] in ['True', '1']
