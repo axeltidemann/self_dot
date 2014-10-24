@@ -322,42 +322,14 @@ def respond(control_host, learn_host, debug=False):
                 print 'SENTENCE Respond to', pushbutton['filename'][-12:]
 
                 try:
-                    NAP_resampled, NAP = _NAP_resampled(pusbutton['filename'], maxlen, maxlen_scaled)
+                    NAP_resampled, NAP = _NAP_resampled(pushbutton['filename'], maxlen, maxlen_scaled)
 
                     try:
                         audio_id = _predict_audio_id(audio_recognizer, NAP_resampled)
                     except:
                         audio_id = 0
                         print 'Responding having only heard 1 sound.'
-                    '''
-                    numWords = 4
-                    method = 'boundedAdd'
-                    neighborsWeight = 0.2
-                    wordsInSentenceWeight = 0.5
-                    similarWordsWeight = 0.5
-                    wordFaceWeight = 0.5
-                    faceWordWeight = 0.5
-                    timeBeforeWeight = 0.0
-                    timeAfterWeight = 0.5
-                    timeDistance = 5.0
-                    durationWeight = 0.1
-                    posInSentenceWeight = 0.5
-                    method2 = 'boundedAdd'
-                    neighborsWeight2 = 0.2
-                    wordsInSentenceWeight2 = 0.5
-                    similarWordsWeight2 = 0.5
-                    wordFaceWeight2 = 0.5
-                    faceWordWeight2 = 0.5
-                    timeBeforeWeight2 = 0.5
-                    timeAfterWeight2 = 0.0
-                    timeDistance2 = 5.0
-                    durationWeight2 = 0.5
-                    posInSentenceWeight2 = 0.5   
-                    association_in.send_pyobj(['makeSentence',audio_id, numWords, method, neighborsWeight, wordsInSentenceWeight, similarWordsWeight,\
-                                                wordFaceWeight,faceWordWeight,timeBeforeWeight, timeAfterWeight, timeDistance, durationWeight, posInSentenceWeight,\
-                                                method2, neighborsWeight2, wordsInSentenceWeight2, similarWordsWeight2,\
-                                                wordFaceWeight2,faceWordWeight2,timeBeforeWeight2, timeAfterWeight2, timeDistance2, durationWeight2, posInSentenceWeight2])
-                    '''
+
                     association_in.send_pyobj(['makeSentence',audio_id])
                     print 'respond_sentence waiting for association output...'
                     sentence, secondaryStream = association_out.recv_pyobj()
@@ -391,11 +363,11 @@ def respond(control_host, learn_host, debug=False):
                             voiceType2 = 1
                             start2 = 0.7 #  set delay between voice 1 and 2
                             speed2 = 0.7
-                            segstart2, segend2 = wav_segments[(soundfile2, word_id2)]
-                            #segstart2 = 0 # segment start and end within sound file
-                            #segend2 = 0 # if zero, play whole file
                             amp2 = -3 # voice amplitude in dB
-                            dur2, maxamp2 = utils.getSoundParmFromFile(soundfile2)
+                            segstart2, segend2 = wav_segments[(soundfile2, word_id2)]
+                            dur2 = segend2-segstart2
+                            totalDur2, maxamp2 = utils.getSoundParmFromFile(soundfile2)
+                            if dur2 < 0: dur2 = totalDur2
                             sender.send_json('playfile {} {} {} {} {} {} {} {} {}'.format(voiceChannel2, voiceType2, start2, soundfile2, speed2, segstart2, segend2, amp2, maxamp2))
                             nextTime2 += (dur2/speed2)
                             enableVoice2 = 0

@@ -47,27 +47,27 @@ wordsInSentence = {}    # list ids that has occured in the same sentence {id:[[i
 
 numWords = 4
 method = 'boundedAdd'
-neighborsWeight = 0.2
-wordsInSentenceWeight = 0.5
-similarWordsWeight = 0.5
-wordFaceWeight = 0.5
-faceWordWeight = 0.5
+neighborsWeight = 0.04
+wordsInSentenceWeight = 0.0
+similarWordsWeight = 0.3
+wordFaceWeight = 0.0
+faceWordWeight = 0.0
 timeBeforeWeight = 0.0
-timeAfterWeight = 0.6
+timeAfterWeight = 0.7
 timeDistance = 5.0
-durationWeight = 0.1
-posInSentenceWeight = 0.5
+durationWeight = 0.0
+posInSentenceWeight = 0.0
 method2 = 'boundedAdd'
-neighborsWeight2 = 0.2
-wordsInSentenceWeight2 = 0.5
-similarWordsWeight2 = 0.5
-wordFaceWeight2 = 0.5
-faceWordWeight2 = 0.5
-timeBeforeWeight2 = 0.5
-timeAfterWeight2 = 0.0
+neighborsWeight2 = 0.04
+wordsInSentenceWeight2 = 0.0
+similarWordsWeight2 = 0.3
+wordFaceWeight2 = 0.0
+faceWordWeight2 = 0.0
+timeBeforeWeight2 = 0.0
+timeAfterWeight2 = 0.7
 timeDistance2 = 5.0
-durationWeight2 = 0.5
-posInSentenceWeight2 = 0.5   
+durationWeight2 = 0.0
+posInSentenceWeight2 = 0.0   
 
 
 def association(host):
@@ -91,6 +91,7 @@ def association(host):
         events = dict(poller.poll())
         if assoc_in in events:
             thing = assoc_in.recv_pyobj()
+            print 'thing', thing 
             try:
                 func = thing[0]
                 if func == 'analyze':
@@ -105,67 +106,8 @@ def association(host):
             except Exception, e:
                 print e, 'association receive failed on receiving:', thing
 
-def setParam(param,value):
-    #param is a string, so we must compile the statement to set the variable
-    print 'setParam:', param, value
-    global numWords,neighborsWeight,wordsInSentenceWeight,similarWordsWeight,wordFaceWeight,faceWordWeight
-    global timeBeforeWeight,timeAfterWeight,timeDistance,durationWeight,posInSentenceWeight
-    global neighborsWeight2,wordsInSentenceWeight2,similarWordsWeight2,wordFaceWeight2,faceWordWeight2
-    global timeBeforeWeight2,timeAfterWeight2,timeDistance2,durationWeight2,posInSentenceWeight2   
-
-    if param == 'numWords': numWords = int(value)
-    if param == 'neighborsWeight':neighborsWeight = float(value)
-    if param == 'wordsInSentenceWeight':wordsInSentenceWeight = float(value)
-    if param == 'similarWordsWeight':similarWordsWeight = float(value)
-    if param == 'wordFaceWeight':wordFaceWeight = float(value)
-    if param == 'faceWordWeight':faceWordWeight = float(value)
-    if param == 'timeBeforeWeight':timeBeforeWeight = float(value)
-    if param == 'timeAfterWeight':timeAfterWeight = float(value)
-    if param == 'timeDistance':timeDistance = float(value)
-    if param == 'durationWeight':durationWeight = float(value)
-    if param == 'posInSentenceWeight':posInSentenceWeight = float(value)
-    if param == 'neighborsWeight2':neighborsWeight2 = float(value)
-    if param == 'wordsInSentenceWeight2':wordsInSentenceWeight2 = float(value)
-    if param == 'similarWordsWeight2':similarWordsWeight2 = float(value)
-    if param == 'wordFaceWeight2':wordFaceWeight2 = float(value)
-    if param == 'faceWordWeight2':faceWordWeight2 = float(value)
-    if param == 'timeBeforeWeight2':timeBeforeWeight2 = float(value)
-    if param == 'timeAfterWeight2':timeAfterWeight2 = float(value)
-    if param == 'timeDistance2':timeDistance2 = float(value)
-    if param == 'durationWeight2':durationWeight2 = float(value)
-    if param == 'posInSentenceWeight2':posInSentenceWeight2 = float(value)
-    if param == 'all':
-        numWords = 5
-        neighborsWeight = 0.0
-        wordsInSentenceWeight = 0.0
-        similarWordsWeight = 0.0
-        wordFaceWeight = 0.0
-        faceWordWeight = 0.0
-        timeBeforeWeight = 0.0
-        timeAfterWeight = 0.0
-        timeDistance = 4.0
-        durationWeight = 0.0
-        posInSentenceWeight = 0.0
-        neighborsWeight2 = 0.0
-        wordsInSentenceWeight2 = 0.0
-        similarWordsWeight2 = 0.0
-        wordFaceWeight2 = 0.0
-        faceWordWeight2 = 0.0
-        timeBeforeWeight2 = 0.0
-        timeAfterWeight2 = 0.0
-        timeDistance2 = 4.0
-        durationWeight2 = 0.0
-        posInSentenceWeight2 = 0.0
-
-    '''
-    g = 'global '+param
-    s = param+'='+float(value)
-    p = 'print "'+param+' set to ",'+param
-    exec(compile(g,'string','exec'))
-    exec(compile(s,'string','exec'))
-    exec(compile(p,'string','exec'))
-    '''
     
+
 def analyze(wav_file,wav_segments,segment_ids,wavs,similar_ids,_wordFace,_faceWord):
     
     global wordFace,faceWord
@@ -586,6 +528,174 @@ def select(items, method):
         return words[scores.index(min(scores))]
     else:
         random.choice(words)
+
+def setParam(param,value):
+    #param is a string, so we must compile the statement to set the variable
+    print 'setParam:', param, value
+    global numWords,neighborsWeight,wordsInSentenceWeight,similarWordsWeight,wordFaceWeight,faceWordWeight
+    global timeBeforeWeight,timeAfterWeight,timeDistance,durationWeight,posInSentenceWeight
+    global neighborsWeight2,wordsInSentenceWeight2,similarWordsWeight2,wordFaceWeight2,faceWordWeight2
+    global timeBeforeWeight2,timeAfterWeight2,timeDistance2,durationWeight2,posInSentenceWeight2   
+
+    if param == 'numWords': numWords = int(value)
+    if param == 'neighborsWeight':neighborsWeight = float(value)
+    if param == 'wordsInSentenceWeight':wordsInSentenceWeight = float(value)
+    if param == 'similarWordsWeight':similarWordsWeight = float(value)
+    if param == 'wordFaceWeight':wordFaceWeight = float(value)
+    if param == 'faceWordWeight':faceWordWeight = float(value)
+    if param == 'timeBeforeWeight':timeBeforeWeight = float(value)
+    if param == 'timeAfterWeight':timeAfterWeight = float(value)
+    if param == 'timeDistance':timeDistance = float(value)
+    if param == 'durationWeight':durationWeight = float(value)
+    if param == 'posInSentenceWeight':posInSentenceWeight = float(value)
+    if param == 'neighborsWeight2':neighborsWeight2 = float(value)
+    if param == 'wordsInSentenceWeight2':wordsInSentenceWeight2 = float(value)
+    if param == 'similarWordsWeight2':similarWordsWeight2 = float(value)
+    if param == 'wordFaceWeight2':wordFaceWeight2 = float(value)
+    if param == 'faceWordWeight2':faceWordWeight2 = float(value)
+    if param == 'timeBeforeWeight2':timeBeforeWeight2 = float(value)
+    if param == 'timeAfterWeight2':timeAfterWeight2 = float(value)
+    if param == 'timeDistance2':timeDistance2 = float(value)
+    if param == 'durationWeight2':durationWeight2 = float(value)
+    if param == 'posInSentenceWeight2':posInSentenceWeight2 = float(value)
+    if param == 'zero':
+        numWords = 5
+        neighborsWeight = 0.0
+        wordsInSentenceWeight = 0.0
+        similarWordsWeight = 0.0
+        wordFaceWeight = 0.0
+        faceWordWeight = 0.0
+        timeBeforeWeight = 0.0
+        timeAfterWeight = 0.0
+        timeDistance = 4.0
+        durationWeight = 0.0
+        posInSentenceWeight = 0.0
+        neighborsWeight2 = 0.0
+        wordsInSentenceWeight2 = 0.0
+        similarWordsWeight2 = 0.0
+        wordFaceWeight2 = 0.0
+        faceWordWeight2 = 0.0
+        timeBeforeWeight2 = 0.0
+        timeAfterWeight2 = 0.0
+        timeDistance2 = 4.0
+        durationWeight2 = 0.0
+        posInSentenceWeight2 = 0.0
+
+    if param == 'identical':
+        numWords = 5
+        neighborsWeight = 0.04
+        wordsInSentenceWeight = 0.0
+        similarWordsWeight = 0.3
+        wordFaceWeight = 0.0
+        faceWordWeight = 0.0
+        timeBeforeWeight = 0.0
+        timeAfterWeight = 0.7
+        timeDistance = 5.0
+        durationWeight = 0.0
+        posInSentenceWeight = 0.0
+        neighborsWeight2 = 0.04
+        wordsInSentenceWeight2 = 0.0
+        similarWordsWeight2 = 0.3
+        wordFaceWeight2 = 0.0
+        faceWordWeight2 = 0.0
+        timeBeforeWeight2 = 0.0
+        timeAfterWeight2 = 0.7
+        timeDistance2 = 5.0
+        durationWeight2 = 0.0
+        posInSentenceWeight2 = 0.0
+
+    if param == 'nidentical':
+        numWords = 5
+        neighborsWeight = 0.04
+        wordsInSentenceWeight = 0.0
+        similarWordsWeight = 0.3
+        wordFaceWeight = 0.0
+        faceWordWeight = 0.0
+        timeBeforeWeight = 0.0
+        timeAfterWeight = 0.7
+        timeDistance = 5.0
+        durationWeight = 0.3
+        posInSentenceWeight = 0.3
+        neighborsWeight2 = 0.04
+        wordsInSentenceWeight2 = 0.0
+        similarWordsWeight2 = 0.3
+        wordFaceWeight2 = 0.0
+        faceWordWeight2 = 0.0
+        timeBeforeWeight2 = 0.0
+        timeAfterWeight2 = 0.7
+        timeDistance2 = 5.0
+        durationWeight2 = 0.3
+        posInSentenceWeight2 = 0.3
+
+    if param == 'backwards':
+        numWords = 5
+        neighborsWeight = 0.2
+        wordsInSentenceWeight = 0.1
+        similarWordsWeight = 0.1
+        wordFaceWeight = 0.0
+        faceWordWeight = 0.0
+        timeBeforeWeight = 0.0
+        timeAfterWeight = 0.8
+        timeDistance = 5.0
+        durationWeight = 0.0
+        posInSentenceWeight = 0.0
+        neighborsWeight2 = 0.2
+        wordsInSentenceWeight2 = 0.1
+        similarWordsWeight2 = 0.1
+        wordFaceWeight2 = 0.0
+        faceWordWeight2 = 0.0
+        timeBeforeWeight2 = 0.8
+        timeAfterWeight2 = 0.0
+        timeDistance2 = 5.0
+        durationWeight2 = 0.0
+        posInSentenceWeight2 = 0.0
+    
+    if param == 'similar':
+        numWords = 5
+        neighborsWeight = 0.2
+        wordsInSentenceWeight = 0.1
+        similarWordsWeight = 0.1
+        wordFaceWeight = 0.0
+        faceWordWeight = 0.0
+        timeBeforeWeight = 0.0
+        timeAfterWeight = 0.8
+        timeDistance = 5.0
+        durationWeight = 0.0
+        posInSentenceWeight = 0.0
+        neighborsWeight2 = 0.0
+        wordsInSentenceWeight2 = 0.0
+        similarWordsWeight2 = 0.9
+        wordFaceWeight2 = 0.0
+        faceWordWeight2 = 0.0
+        timeBeforeWeight2 = 0.0
+        timeAfterWeight2 = 0.0
+        timeDistance2 = 5.0
+        durationWeight2 = 0.0
+        posInSentenceWeight2 = 0.0
+    
+    if param == 'notsimilar':
+        numWords = 5
+        neighborsWeight = 0.2
+        wordsInSentenceWeight = 0.1
+        similarWordsWeight = 0.1
+        wordFaceWeight = 0.0
+        faceWordWeight = 0.0
+        timeBeforeWeight = 0.0
+        timeAfterWeight = 0.8
+        timeDistance = 5.0
+        durationWeight = 0.0
+        posInSentenceWeight = 0.0
+        neighborsWeight2 = 0.0
+        wordsInSentenceWeight2 = 0.0
+        similarWordsWeight2 = -0.9
+        wordFaceWeight2 = 0.0
+        faceWordWeight2 = 0.0
+        timeBeforeWeight2 = 0.0
+        timeAfterWeight2 = 0.0
+        timeDistance2 = 5.0
+        durationWeight2 = 0.0
+        posInSentenceWeight2 = 0.0
+
 
 if __name__ == '__main__':
     print 'run as main'
