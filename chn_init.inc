@@ -8,9 +8,9 @@
 	chnset -15, "td_AmpAdjust"	; approximate amp compensation for EQ
 	
 	; transient detect parameters
-	chnset 1.3, "in_envelopeRelease"    ; envelope follower release
-    chnset 4, "transientThresh"         ; transient trig threshold 
-	chnset 7, "transientDecThresh"       ; retrig threshold, how much must the level decay from its local max before allowing new transient trig
+	chnset 2.5, "in_envelopeRelease"    ; envelope follower release
+    chnset 5, "transientThresh"         ; transient trig threshold 
+	chnset 8, "transientDecThresh"       ; retrig threshold, how much must the level decay from its local max before allowing new transient trig
 
     ; these three are active only for the "secondary synth" voices, and for send between effects (i.e. only the send from delay to reverb)
 	chnset -1, "SecondaryDryLevel"          ; in dB

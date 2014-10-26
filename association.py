@@ -91,7 +91,7 @@ def association(host):
         events = dict(poller.poll())
         if assoc_in in events:
             thing = assoc_in.recv_pyobj()
-            print 'thing', thing 
+            #print 'thing', thing 
             try:
                 func = thing[0]
                 if func == 'analyze':
@@ -109,13 +109,15 @@ def association(host):
     
 
 def analyze(wav_file,wav_segments,segment_ids,wavs,similar_ids,_wordFace,_faceWord):
+    print 'analyze', wav_file
     
     global wordFace,faceWord
     wordFace = copy.copy(_wordFace)
     faceWord = copy.copy(_faceWord)
 
     markerfile = wav_file[:-4]+'.txt'
-    startTime, totalDur = parseFile(markerfile) # COORDINATION! with utils.getSoundParmFromFile
+    #startTime, totalDur = parseFile(markerfile) # COORDINATION! with utils.getSoundParmFromFile
+    startTime,totalDur,_,_ = utils.getSoundInfo(markerfile)
     
     for i in range(len(segment_ids)):
         audio_id = segment_ids[i]
@@ -232,6 +234,7 @@ def generate(predicate, method,
         nextWord = select(temp, 'highest')
     return nextWord
     
+'''
 def parseFile(markerfile):
     f = open(markerfile, 'r')
     #segments = []
@@ -247,6 +250,7 @@ def parseFile(markerfile):
         #    segments.append(float(line)) 
         if 'Sub segment start times:' in line: enable = 1
     return startTime, totalDur
+'''
 
 def updateWordsInSentence(sentence):
     a = 0
