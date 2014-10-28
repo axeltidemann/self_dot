@@ -19,6 +19,15 @@ from brain import cochlear
 findfloat=re.compile(r"[0-9.]*")
 
 
+def save(filename, data):
+    pickle.dump(data, file(filename, 'w'))
+    print '{} saved ({})'.format(filename, filesize(filename))
+
+def load(filename):
+    data = pickle.load(file(filename, 'r'))
+    print 'Part of brain loaded from file {} ({})'.format(filename, filesize(filename))
+    return data
+
 def write_cochlear(wav_file):
     array_to_csv('{}-cochlear.txt'.format(wav_file), cochlear(wav_file))
 

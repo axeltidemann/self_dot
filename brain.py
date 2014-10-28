@@ -460,6 +460,12 @@ def respond(control_host, learn_host, debug=False):
                 except Exception, e:
                     print e, 'showme print failed.'
 
+            if 'save' in pushbutton:
+                utils.save('{}.{}'.format(pushbutton['save'], me.name), [ sound_to_face, wordFace, face_to_sound, faceWord, video_producer, segment_ids, wavs, wav_segments, audio_recognizer, maxlen, maxlen_scaled, NAP_hashes, face_id, face_recognizer ])
+
+            if 'load' in pushbutton:
+                sound_to_face, wordFace, face_to_sound, faceWord, video_producer, segment_ids, wavs, wav_segments, audio_recognizer, maxlen, maxlen_scaled, NAP_hashes, face_id, face_recognizer = utils.load('{}.{}'.format(pushbutton['load'], me.name))
+
                     
 
 def learn_audio(host, debug=False):
@@ -574,6 +580,12 @@ def learn_audio(host, debug=False):
 
                 audio.clear()
 
+            if 'save' in pushbutton:
+                utils.save('{}.{}'.format(pushbutton['save'], me.name), [ NAPs, wavs, wav_segments, NAP_hashes, audio_recognizer, maxlen, maxlen_scaled ])
+
+            if 'load' in pushbutton:
+                NAPs, wavs, wav_segments, NAP_hashes, audio_recognizer, maxlen, maxlen_scaled = utils.load('{}.{}'.format(pushbutton['load'], me.name))
+
                 
 def learn_video(host, debug=False):
     me = mp.current_process()
@@ -593,7 +605,6 @@ def learn_video(host, debug=False):
     poller.register(eventQ, zmq.POLLIN)
 
     video = deque()
-    video_producer = {}
     
     state = stateQ.recv_json()
 
@@ -747,6 +758,13 @@ def learn_faces(host, debug=False):
                     utils.print_exception('Face learning aborted.')
 
                 faces.clear()
+
+            if 'save' in pushbutton:
+                utils.save('{}.{}'.format(pushbutton['save'], me.name), [ face_history, face_hashes, face_recognizer ])
+
+            if 'load' in pushbutton:
+                face_history, face_hashes, face_recognizer = utils.load('{}.{}'.format(pushbutton['load'], me.name))
+
 
 def _three_amigos(context, host):
     stateQ = context.socket(zmq.SUB)

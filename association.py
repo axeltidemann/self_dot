@@ -82,8 +82,13 @@ def association(host):
     assoc_out = context.socket(zmq.PUSH)
     assoc_out.connect('tcp://{}:{}'.format(host, IO.ASSOCIATION_OUT))        
 
+    eventQ = context.socket(zmq.SUB)
+    eventQ.connect('tcp://{}:{}'.format(host, IO.EVENT))
+    eventQ.setsockopt(zmq.SUBSCRIBE, b'') 
+
     poller = zmq.Poller()
     poller.register(assoc_in, zmq.POLLIN)
+    poller.register(eventQ, zmq.POLLIN)
     
     while True:
         #print 'assoc is running %i', time.time()
@@ -104,6 +109,15 @@ def association(host):
                     setParam(param,value)                    
             except Exception, e:
                 print e, 'association receive failed on receiving:', thing
+
+        if eventQ in events:
+            global wordTime, time_word, duration_word, similarWords, neighbors, neighborAfter, wordFace, faceWord, sentencePosition_item, wordsInSentence, numWords, method, neighborsWeight, wordsInSentenceWeight, similarWordsWeight, wordFaceWeight, faceWordWeight, timeBeforeWeight, timeAfterWeight, timeDistance, durationWeight, posInSentenceWeight, method2, neighborsWeight2, wordsInSentenceWeight2, similarWordsWeight2, wordFaceWeight2, faceWordWeight2, timeBeforeWeight2, timeAfterWeight2, timeDistance2, durationWeight2, posInSentenceWeight2
+            pushbutton = eventQ.recv_json()
+            if 'save' in pushbutton:
+                utils.save('{}.{}'.format(pushbutton['save'], me.name), [ wordTime, time_word, duration_word, similarWords, neighbors, neighborAfter, wordFace, faceWord, sentencePosition_item, wordsInSentence, numWords, method, neighborsWeight, wordsInSentenceWeight, similarWordsWeight, wordFaceWeight, faceWordWeight, timeBeforeWeight, timeAfterWeight, timeDistance, durationWeight, posInSentenceWeight, method2, neighborsWeight2, wordsInSentenceWeight2, similarWordsWeight2, wordFaceWeight2, faceWordWeight2, timeBeforeWeight2, timeAfterWeight2, timeDistance2, durationWeight2, posInSentenceWeight2 ])
+
+            if 'load' in pushbutton:
+                wordTime, time_word, duration_word, similarWords, neighbors, neighborAfter, wordFace, faceWord, sentencePosition_item, wordsInSentence, numWords, method, neighborsWeight, wordsInSentenceWeight, similarWordsWeight, wordFaceWeight, faceWordWeight, timeBeforeWeight, timeAfterWeight, timeDistance, durationWeight, posInSentenceWeight, method2, neighborsWeight2, wordsInSentenceWeight2, similarWordsWeight2, wordFaceWeight2, faceWordWeight2, timeBeforeWeight2, timeAfterWeight2, timeDistance2, durationWeight2, posInSentenceWeight2 = utils.load('{}.{}'.format(pushbutton['load'], me.name))
 
 def setParam(param,value):
     #param is a string, so we must compile the statement to set the variable
