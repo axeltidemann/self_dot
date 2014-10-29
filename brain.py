@@ -311,7 +311,6 @@ def respond(control_host, learn_host, debug=False):
 
                     face_id = np.random.choice(sound_to_face[audio_id])
                     video_time = (1000*dur)/IO.VIDEO_SAMPLE_TIME
-                    print dur, video_time
                     stride = int(np.ceil(NAP.shape[0]/video_time))
                     projection = video_producer[(audio_id, face_id)](NAP[::stride])
 
@@ -583,7 +582,7 @@ def learn_video(host, debug=False):
     poller.register(eventQ, zmq.POLLIN)
 
     video = deque()
-    
+
     state = stateQ.recv_json()
 
     while True:
@@ -622,7 +621,7 @@ def learn_video(host, debug=False):
                         x = new_sentence[::stride]
                     y = video_segment[:x.shape[0]]
 
-                    tarantino = train_network(x,y)
+                    tarantino = train_network(x,y, output_dim=10)
                     tarantino.stride = stride
 
                     t1 = time.time()

@@ -247,8 +247,8 @@ def zero_pad(signal, length):
 def scale(image):
     return (image - np.min(image))/(np.max(image) - np.min(image))
 
-def getSoundInfo(markerfile):
-    f = open(markerfile, 'r')
+def getSoundInfo(wavfile):
+    f = open(wavfile[:-4]+'.txt', 'r')
     segments = []
     enable = 0
     startTime = 0
@@ -271,7 +271,7 @@ def getSoundInfo(markerfile):
 
 def get_segments(wavfile, threshold=.25):
     ''' Find segments in audio descriptor file. Transients closer together than the threshold will be excluded.'''
-    _, totalDur, _, segments = getSoundInfo(wavfile[:-4]+'.txt')
+    _, totalDur, _, segments = getSoundInfo(wavfile)
     segmentTimes = []
     for item in segments:
         segmentTimes.append(item[0])    
