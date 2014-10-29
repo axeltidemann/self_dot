@@ -301,7 +301,9 @@ def respond(control_host, learn_host, debug=False):
                     voiceType = 1 
                     speed = 1
                     amp = -3 # voice amplitude in dB
-                    dur, maxamp = utils.getSoundParmFromFile(soundfile) # COORDINATION!
+                    #dur, maxamp = utils.getSoundParmFromFile(soundfile) # COORDINATION!
+                    _,dur,maxamp,_ = utils.getSoundInfo(soundfile)
+                    
                     start = 0
                     sender.send_json('playfile {} {} {} {} {} {} {} {} {}'.format(voiceChannel, voiceType, start, soundfile, speed, segstart, segend, amp, maxamp))
 
@@ -309,6 +311,7 @@ def respond(control_host, learn_host, debug=False):
 
                     face_id = np.random.choice(sound_to_face[audio_id])
                     video_time = (1000*dur)/IO.VIDEO_SAMPLE_TIME
+                    print dur, video_time
                     stride = int(np.ceil(NAP.shape[0]/video_time))
                     projection = video_producer[(audio_id, face_id)](NAP[::stride])
 
@@ -322,42 +325,14 @@ def respond(control_host, learn_host, debug=False):
                 print 'SENTENCE Respond to', pushbutton['filename'][-12:]
 
                 try:
-                    NAP_resampled, NAP = _NAP_resampled(pusbutton['filename'], maxlen, maxlen_scaled)
+                    NAP_resampled, NAP = _NAP_resampled(pushbutton['filename'], maxlen, maxlen_scaled)
 
                     try:
                         audio_id = _predict_audio_id(audio_recognizer, NAP_resampled)
                     except:
                         audio_id = 0
                         print 'Responding having only heard 1 sound.'
-                    '''
-                    numWords = 4
-                    method = 'boundedAdd'
-                    neighborsWeight = 0.2
-                    wordsInSentenceWeight = 0.5
-                    similarWordsWeight = 0.5
-                    wordFaceWeight = 0.5
-                    faceWordWeight = 0.5
-                    timeBeforeWeight = 0.0
-                    timeAfterWeight = 0.5
-                    timeDistance = 5.0
-                    durationWeight = 0.1
-                    posInSentenceWeight = 0.5
-                    method2 = 'boundedAdd'
-                    neighborsWeight2 = 0.2
-                    wordsInSentenceWeight2 = 0.5
-                    similarWordsWeight2 = 0.5
-                    wordFaceWeight2 = 0.5
-                    faceWordWeight2 = 0.5
-                    timeBeforeWeight2 = 0.5
-                    timeAfterWeight2 = 0.0
-                    timeDistance2 = 5.0
-                    durationWeight2 = 0.5
-                    posInSentenceWeight2 = 0.5   
-                    association_in.send_pyobj(['makeSentence',audio_id, numWords, method, neighborsWeight, wordsInSentenceWeight, similarWordsWeight,\
-                                                wordFaceWeight,faceWordWeight,timeBeforeWeight, timeAfterWeight, timeDistance, durationWeight, posInSentenceWeight,\
-                                                method2, neighborsWeight2, wordsInSentenceWeight2, similarWordsWeight2,\
-                                                wordFaceWeight2,faceWordWeight2,timeBeforeWeight2, timeAfterWeight2, timeDistance2, durationWeight2, posInSentenceWeight2])
-                    '''
+
                     association_in.send_pyobj(['makeSentence',audio_id])
                     print 'respond_sentence waiting for association output...'
                     sentence, secondaryStream = association_out.recv_pyobj()
@@ -377,9 +352,10 @@ def respond(control_host, learn_host, debug=False):
                         # segment start and end within sound file, if zero, play whole file
                         segstart, segend = wav_segments[(soundfile, word_id)]
                         amp = -3 # voice amplitude in dB
-                        totaldur, maxamp = utils.getSoundParmFromFile(soundfile)
+                        #totaldur, maxamp = utils.getSoundParmFromFile(soundfile)
+                        _,totaldur,maxamp,_ = utils.getSoundInfo(soundfile)
                         dur = segend-segstart
-                        if dur < 0: dur = totalDur
+                        if dur < 0: dur = totaldur
                         sender.send_json('playfile {} {} {} {} {} {} {} {} {}'.format(voiceChannel, voiceType, start, soundfile, speed, segstart, segend, amp, maxamp))
                         #start += dur # if we want to create a 'score section' for Csound, update start time to make segments into a contiguous sentence
                         nextTime1 += (dur/speed)
@@ -391,11 +367,12 @@ def respond(control_host, learn_host, debug=False):
                             voiceType2 = 1
                             start2 = 0.7 #  set delay between voice 1 and 2
                             speed2 = 0.7
-                            segstart2, segend2 = wav_segments[(soundfile2, word_id2)]
-                            #segstart2 = 0 # segment start and end within sound file
-                            #segend2 = 0 # if zero, play whole file
                             amp2 = -3 # voice amplitude in dB
-                            dur2, maxamp2 = utils.getSoundParmFromFile(soundfile2)
+                            segstart2, segend2 = wav_segments[(soundfile2, word_id2)]
+                            dur2 = segend2-segstart2
+                            #totalDur2, maxamp2 = utils.getSoundParmFromFile(soundfile2)
+                            _,totalDur2,maxamp2,_ = utils.getSoundInfo(soundfile)
+                            if dur2 < 0: dur2 = totalDur2
                             sender.send_json('playfile {} {} {} {} {} {} {} {} {}'.format(voiceChannel2, voiceType2, start2, soundfile2, speed2, segstart2, segend2, amp2, maxamp2))
                             nextTime2 += (dur2/speed2)
                             enableVoice2 = 0
@@ -445,7 +422,8 @@ def respond(control_host, learn_host, debug=False):
                     #segstart = 0 # segment start and end within sound file
                     #segend = 0 # if zero, play whole file
                     amp = -3 # voice amplitude in dB
-                    dur, maxamp = utils.getSoundParmFromFile(soundfile)
+                    #dur, maxamp = utils.getSoundParmFromFile(soundfile)
+                    _,dur,maxamp,_ = utils.getSoundInfo(soundfile)
                     start = 0
                     sender.send_json('playfile {} {} {} {} {} {} {} {} {}'.format(voiceChannel, voiceType, start, soundfile, speed, segstart, segend, amp, maxamp))
                 except:
@@ -515,7 +493,7 @@ def learn_audio(host, debug=False):
                     t0 = time.time()
                     filename = pushbutton['filename']
                     audio_segments = utils.get_segments(filename)
-                    
+
                     print 'Learning {} duration {} seconds with {} segments'.format(filename, audio_segments[-1], len(audio_segments)-1)
                     new_sentence = utils.load_cochlear(filename)
                     norm_segments = np.rint(new_sentence.shape[0]*audio_segments/audio_segments[-1]).astype('int')

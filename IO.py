@@ -170,6 +170,7 @@ def audio():
 
     filename = []
     counter = 0
+    ampPitchCentroid = [[],[],[]]
 
     state = stateQ.recv_json()
     
@@ -201,6 +202,9 @@ def audio():
         memRecActive = cGet("memRecActive")             # flag to check if memoryRecording is currently recording to file in Csound
         memRecMaxAmp = cGet("memRecMaxAmp")             # max amplitude for each recorded file
         panposition = cs.GetChannel("panalyzer_pan")
+        in_amp = cs.GetChannel("in_amp")
+        in_pitch = cs.GetChannel("in_pitch")
+        in_centroid = cs.GetChannel("in_centroid")
 
         if state['roboActive'] > 0:
             if panposition != 0.5:
@@ -218,12 +222,44 @@ def audio():
                 markerfileName = memRecPath+timestr+'.txt'
                 markerfile = open(markerfileName, 'w')
                 markerfile.write('Self. audio clip perceived at %s\n'%tim_time)
-                segments = 'Sub segment start times: \n0.000 \n'
+                segmentstring = 'Sub segments (start, amp, pitch, cent): \n'
+                segStart = 0.0
+                ampPitchCentroid = [[],[],[]]
+            if audioStatus > 0:
+                ampPitchCentroid[0].append(in_amp)
+                ampPitchCentroid[1].append(in_pitch)
+                ampPitchCentroid[2].append(in_centroid)
             if (transient > 0) & (memRecActive > 0):
-                segments += '%.3f \n'%memRecTimeMarker
+                if memRecTimeMarker == 0: pass
+                else:
+                    print '... ...get medians and update segments'
+                    ampPitchCentroid[0].sort()
+                    l = ampPitchCentroid[0]
+                    ampMean = max(l)#np.mean(l[int(len(l)*0.5):int(len(l)*1)])
+                    ampPitchCentroid[1].sort()
+                    l = ampPitchCentroid[1]
+                    pitchMean = np.mean(l[int(len(l)*0.25):int(len(l)*0.75)])
+                    ampPitchCentroid[2].sort()
+                    l = ampPitchCentroid[2]
+                    centroidMean = np.mean(l[int(len(l)*0.25):int(len(l)*0.9)])
+                    ampPitchCentroid = [[],[],[]]
+                    segmentstring += '%.3f %.3f %.3f %.3f\n'%(segStart,ampMean,pitchMean,centroidMean)
+                    segStart = memRecTimeMarker 
             if (audioStatusTrig < 0) & (memRecActive > 0):
+                print '... ...get final medians and update segments'
+                ampPitchCentroid[0].sort()
+                l = ampPitchCentroid[0]
+                ampMean = max(l)#np.mean(l[int(len(l)*0.5):int(len(l)*1)])
+                ampPitchCentroid[1].sort()
+                l = ampPitchCentroid[1]
+                pitchMean = np.mean(l[int(len(l)*0.25):int(len(l)*0.75)])
+                ampPitchCentroid[2].sort()
+                l = ampPitchCentroid[2]
+                centroidMean = np.mean(l[int(len(l)*0.25):int(len(l)*0.9)])
+                ampPitchCentroid = [[],[],[]]
+                segmentstring += '%.3f %.3f %.3f %.3f\n'%(segStart,ampMean,pitchMean,centroidMean)
                 cs.InputMessage('i -34 0 1')
-                markerfile.write(segments)
+                markerfile.write(segmentstring)
                 markerfile.write('Total duration: %f\n'%memRecTimeMarker)
                 markerfile.write('\nMax amp for file: %f'%memRecMaxAmp)
                 markerfile.close()
@@ -231,8 +267,20 @@ def audio():
                 #assoc.send_json(markerfileName)
 
         if not state['memoryRecording'] and memRecActive:
+            print '... ...turnoff rec, get final medians and update segments'
+            ampPitchCentroid[0].sort()
+            l = ampPitchCentroid[0]
+            ampMean = max(l)#np.mean(l[int(len(l)*0.5):int(len(l)*1)])
+            ampPitchCentroid[1].sort()
+            l = ampPitchCentroid[1]
+            pitchMean = np.mean(l[int(len(l)*0.25):int(len(l)*0.75)])
+            ampPitchCentroid[2].sort()
+            l = ampPitchCentroid[2]
+            centroidMean = np.mean(l[int(len(l)*0.25):int(len(l)*0.9)])
+            ampPitchCentroid = [[],[],[]]
+            segmentstring += '%.3f %.3f %.3f %.3f\n'%(segStart,ampMean,pitchMean,centroidMean)
             cs.InputMessage('i -34 0 1')
-            markerfile.write(segments)
+            markerfile.write(segmentstring)
             markerfile.write('Total duration: %f'%memRecTimeMarker)
             markerfile.close()
             print 'stopping memoryRec'

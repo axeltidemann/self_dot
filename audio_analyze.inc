@@ -8,19 +8,20 @@
 	ktd_LoShelfGain	chnget "td_LoShelfGain"
 	ktd_AmpAdjust	chnget "td_AmpAdjust"
 	
-	atd_input	pareq a1, ktd_HiShelfFq, ampdb(ktd_HiShelfGain), 0.7,  2
-        atd_input	pareq atd_input, ktd_HiShelfFq, ampdb(ktd_LoShelfGain), 0.7,  1
-	atd_input	= atd_input*ampdb(ktd_AmpAdjust)
+    atd_input	pareq a1, ktd_HiShelfFq, ampdb(ktd_HiShelfGain), 0.7,  2
+    atd_input	pareq atd_input, ktd_HiShelfFq, ampdb(ktd_LoShelfGain), 0.7,  1
+    atd_input	= atd_input*ampdb(ktd_AmpAdjust)
 
 
 ; ***************
 ; amplitude tracking
-	krms1		rms atd_input			; simple level measure
-	kAttack		= 0.001				; envelope follower attack
-	kRelease	= 0.3 				; envelope follower release
+	krms0		rms atd_input			    ; simple level measure
+	krms1		rms atd_input			    ; simple level measure (with transient pre emphasis)
+	kAttack		= 0.001				        ; envelope follower attack
+	kRelease	chnget "in_envelopeRelease" ; 0.3 ; envelope follower release
 	aFollow1	follow2	atd_input, kAttack, kRelease	; envelope follower
 	kFollow1	downsamp aFollow1	
-	kFollowdb1	= dbfsamp(kFollow1)		; convert to dB
+	kFollowdb1	= dbfsamp(kFollow1)		    ; convert to dB
 
 	knoiseFloor_dB	chnget "inputNoisefloor"
 	kgate		= (dbfsamp(krms1) < knoiseFloor_dB ? 0 : 1)	; don't bother analyzing very quiet sections
@@ -29,11 +30,11 @@
 
 ; ***************
 ;analyze transients
-	iresponse	= 10 			; response time in milliseconds
-	ktthresh	= 9			; transient trig threshold 
-	klowThresh	= knoiseFloor_dB	; lower threshold for transient detection
-	idoubleLimit	= 0.02			; minimum duration between events, (double trig limit)
-	kdecThresh	= 6			; retrig threshold, how much must the level decay from its local max before allowing new transient trig
+	iresponse	= 10 			            ; response time in milliseconds
+	ktthresh	chnget "transientThresh"    ;= 9 ; transient trig threshold 
+	klowThresh	= knoiseFloor_dB	        ; lower threshold for transient detection
+	idoubleLimit = 0.02			            ; minimum duration between events, (double trig limit)
+	kdecThresh	chnget "transientDecThresh"  ;= 6 ; retrig threshold, how much must the level decay from its local max before allowing new transient trig
 
 	ktrig1, kdiff	TransientDetect kFollowdb1, iresponse, ktthresh, klowThresh, kdecThresh, idoubleLimit
 
@@ -41,8 +42,8 @@
 ; segmentation, set kstatus = 1 when a transient occurs, 
 ; keep status = 1 until level drops 6dB below the level at which the transient was detected
 ; and keep status = 1 for a release time period after the level has dropped below the threshold
-	iStatusThresh	= 9					; status release threshold, signal must drop this much below transient level before we say that the audio segment is finished
-	iStatusRel	= 1.2;0.2					; status release time, hold status=1 for this long after signal has dropped below threshold
+	iStatusThresh	= 9					    ; status release threshold, signal must drop this much below transient level before we say that the audio segment is finished
+	iStatusRel	= 0.3;0.2					; status release time, hold status=1 for this long after signal has dropped below threshold
 ;	iDecResponse	= 100					; decay rate analysis response time
 ;	krms1F		tonek krms1, 5
 ;	krms1F_dB	= ampdbfs(krms1F)
@@ -105,7 +106,7 @@ rireturn
 	kZCmedi		= (kinterval1+kinterval2+kinterval3+kinterval4-kmax-kmin)/2
 	kepochZCcps	divz 1, kZCmedi, 1
 
-
+*/
 ; ***************
 ; spectral analysis
 
@@ -185,7 +186,7 @@ endif
 	krmsA			sumarray kArrA
 	krmsAprev		sumarray kArrAprev
 	kautocorr		divz kautocorr*2, (krmsA*krmsAprev) , 0
-*/
+
 ; ***************
 /*
 ;analyze centroid transients
@@ -223,7 +224,7 @@ endif
 	kepochZCcps	samphold kepochZCcps, kpzgate
 */
 
-/*
+
 ; ***************
 ; pitch tracking
 ; using two different methods, keeping both signals
@@ -255,7 +256,7 @@ endif
 	;kcps1p		samphold kcps1p, kgate
 	imedianSize	= 20
 	kcps1p		mediank	kcps1p, imedianSize, imedianSize
-*/
+
 
 ; ***************
 ; third method of pitch tracking, effective for use as control signal for Pitch Synchronous Granular Synthesis (PSGS)

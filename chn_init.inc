@@ -6,17 +6,22 @@
 	chnset 200, "td_LoShelfFq"
 	chnset -20, "td_LoShelfGain"
 	chnset -15, "td_AmpAdjust"	; approximate amp compensation for EQ
+	
+	; transient detect parameters
+	chnset 2.5, "in_envelopeRelease"    ; envelope follower release
+    chnset 5, "transientThresh"         ; transient trig threshold 
+	chnset 8, "transientDecThresh"       ; retrig threshold, how much must the level decay from its local max before allowing new transient trig
 
-        ; these three are active only for the "secondary synth" voices, and for send between effects (i.e. only the send from delay to reverb)
+    ; these three are active only for the "secondary synth" voices, and for send between effects (i.e. only the send from delay to reverb)
 	chnset -1, "SecondaryDryLevel"          ; in dB
 	chnset -14, "SecondaryDelaySendLevel"    ; in dB
 	chnset -14, "SecondaryReverbSendLevel"   ; in dB ; affects send from delay to reverb
 
-        chnset 0.8, "SecondaryDelayTime"
-        chnset 0.3, "SecondaryDelayFeed"
-        chnset 1500, "SecondaryDelayFiltFq"
+    chnset 0.8, "SecondaryDelayTime"
+    chnset 0.3, "SecondaryDelayFeed"
+    chnset 1500, "SecondaryDelayFiltFq"
 
-        chnset 0.91, "SecondaryReverbFeed"
+    chnset 0.91, "SecondaryReverbFeed"
 	chnset 6000, "SecondaryReverbFiltFq"
 
 	chnset 300, "SecondaryMasterLoCut"       ; cut LF on master out for secondary associations synth

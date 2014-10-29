@@ -247,36 +247,63 @@ def zero_pad(signal, length):
 def scale(image):
     return (image - np.min(image))/(np.max(image) - np.min(image))
 
+def getSoundInfo(markerfile):
+    f = open(markerfile, 'r')
+    segments = []
+    enable = 0
+    startTime = 0
+    totalDur = 0
+    maxAmp = 1
+    for line in f:
+        if 'Self. audio clip perceived at ' in line:
+	        startTime = float(line[30:])
+        if 'Total duration:' in line: 
+            enable = 0
+            totalDur = float(line[16:])
+        if 'Max amp for file:' in line:
+            maxAmp = float(line[18:])
+        if enable:
+            start,amp,pitch,centroid = line.split(' ')
+            segments.append([float(start),float(amp),float(pitch),float(centroid)]) 
+        if 'Sub segments (start, amp, ' in line: enable = 1
+    return startTime, totalDur, maxAmp, segments
+
 
 def get_segments(wavfile, threshold=.25):
     ''' Find segments in audio descriptor file. Transients closer together than the threshold will be excluded.'''
-    audio_info = open(wavfile[:-4]+'.txt')
-    segments = []
-    for line in audio_info:
-        if 'Total duration:' in line:
-            segments.append(float(line[16:]))
-        try:
-            segments.append(float(line))
-        except:
-            continue
+    _, totalDur, _, segments = getSoundInfo(wavfile[:-4]+'.txt')
+    segmentTimes = []
+    for item in segments:
+        segmentTimes.append(item[0])    
+    segmentTimes.append(totalDur)    
+    return np.array(segmentTimes)
+    
+#    audio_info = open(wavfile[:-4]+'.txt')
+#    segments = []
+#    for line in audio_info:
+#        if 'Total duration:' in line:
+#            segments.append(float(line[16:]))
+#        try:
+#            segments.append(float(line))
+#        except:
+#            continue
+#
+#    remove = [ i for i,d in enumerate(np.diff(segments)) if d < threshold ]
+#    for i in remove[::-1]:
+#        segments.pop(i+1)
+#        
+#    return np.array(segments)
 
-    remove = [ i for i,d in enumerate(np.diff(segments)) if d < threshold ]
-    for i in remove[::-1]:
-        segments.pop(i+1)
-        
-    return np.array(segments)
-
-
-def getSoundParmFromFile(responsefile):
-    audioinfo = open(responsefile[:-4]+'.txt')
-    maxamp = 1
-    dur = 1
-    for line in audioinfo:
-        if 'Total duration:' in line: 
-            dur = float(line[16:])
-        if 'Max amp for file:' in line:
-            maxamp = float(line[18:])
-    return dur, maxamp
+#def getSoundParmFromFile(responsefile):
+#    audioinfo = open(responsefile[:-4]+'.txt')
+#    maxamp = 1
+#    dur = 1
+#    for line in audioinfo:
+#        if 'Total duration:' in line: 
+#            dur = float(line[16:])
+#        if 'Max amp for file:' in line:
+#            maxamp = float(line[18:])
+#    return dur, maxamp
 
 
 def print_exception(msg=''):
