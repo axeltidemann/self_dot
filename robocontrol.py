@@ -77,7 +77,7 @@ def robocontrol(host):
         robohead,axis,value = robo.recv_json()
         if robohead == 1:
             if axis == 'pan':
-                print 'head 1 panposition', value
+                #dprint 'head 1 panposition', value
                 # send pan position to head (eg. 'p 60')
                 pan1 += int((value-0.5)*80)
                 #pan1 += int((value)*80)

@@ -122,7 +122,9 @@ def association(host):
 
 def analyze(wav_file,wav_segments,segment_ids,wavs,similar_ids,_wordFace,_faceWord):
     print 'analyze', wav_file
-    
+    #print 'similar_ids:'
+    #for item in similar_ids:
+    #    print '   ', item
     global wordFace,faceWord
     wordFace = copy.copy(_wordFace)
     faceWord = copy.copy(_faceWord)
@@ -136,7 +138,8 @@ def analyze(wav_file,wav_segments,segment_ids,wavs,similar_ids,_wordFace,_faceWo
         
         # get timing and duration for segment    
         segmentStart = wav_segments[(wav_file,audio_id)][0]
-        segmentDur = wav_segments[(wav_file,audio_id)][1]-segmentStart
+        segmentDur = int((wav_segments[(wav_file,audio_id)][1]-segmentStart)*10)/10.0
+        
         segmentStart += startTime
         time_word.append((segmentStart, audio_id))
         wordTime.setdefault(audio_id, []).append(segmentStart)
@@ -152,6 +155,14 @@ def analyze(wav_file,wav_segments,segment_ids,wavs,similar_ids,_wordFace,_faceWo
         else:
             similarScaler = 1/float(max(similar_ids_this))
         similarWords[audio_id] = scale(similar_ids_this, similarScaler)
+
+        # fill in our best estimates for hamming distances between this id and earlier ids
+        # (these will be updated with better values when a new sound similar to any earlier id comes in) 
+        for k in similarWords.keys():
+            #print 'checking', similarWords[k], similarWords[audio_id], 'length k, a',len(similarWords[k]), len(similarWords[audio_id])
+            if len(similarWords[k]) < len(similarWords[audio_id]):
+                #print 'adding id %i, distance %f to %i'%(audio_id,similarWords[audio_id][k], k)
+                similarWords[k].append(similarWords[audio_id][k])
     
     # analysis of the segment's relationship to the sentence it occured in
     updateWordsInSentence(segment_ids)
@@ -205,10 +216,13 @@ def generate(predicate, method,
             preferredDuration, preferredDurationWidth, durationWeight):
 
     # get the lists we need
-    #print 'get lists for predicate', predicate
+    #print '***get lists for predicate', predicate
     _neighbors = normalizeItemScore(copy.copy(neighbors[predicate]))
+    #print '\n_neighbors', _neighbors
     _wordsInSentence = normalizeItemScore(copy.copy(wordsInSentence[predicate]))
+    #print '\n_wordsInSentence', _wordsInSentence
     _wordFace = normalizeItemScore(copy.copy(wordFace[predicate]))
+    #print '\n_wordFace', _wordFace
     # temporary solution to using faces
     faces = [item[0] for item in _wordFace]
     if -1 in faces: faces.remove(-1)
@@ -216,14 +230,22 @@ def generate(predicate, method,
     print 'using face', face, 'we might want to update face/word selection'
     #print 'faceWord', faceWord
     _faceWord = normalizeItemScore(copy.copy(faceWord[face]))
+    #print '\n_faceWord', _faceWord
     _similarWords = normalizeItemScore(copy.copy(formatAsMembership(similarWords[predicate])))
-    #print '_similarWords', _similarWords
+    #print '\n_similarWords', _similarWords
+    #print '\*similarWords*'
+    #for k,v in similarWords.iteritems():
+    #    print 'audio id %i has %i similar sounds'%(k, len(v))
+    #    print v
     timeContextBefore, timeContextAfter = getTimeContext(predicate, timeDistance) 
-    #print '***timeContextAfter',timeContextAfter
     timeContextBefore = normalizeItemScore(timeContextBefore)
     timeContextAfter = normalizeItemScore(timeContextAfter)
+    #print '\ntimeContextBefore',timeContextBefore
+    #print '\ntimeContextAfter',timeContextAfter
     posInSentenceContext = getCandidatesFromContext(sentencePosition_item, posInSentence, posInSentenceWidth)
+    #print '\nposInSentenceContext', posInSentenceContext
     durationContext = getCandidatesFromContext(duration_word, preferredDuration, preferredDurationWidth)
+    #print '\ndurationContext', durationContext
         
     #print 'generate lengths:', len(timeContextBefore), len(timeContextAfter), len(durationContext)
     # merge them
@@ -325,7 +347,7 @@ def updatePositionMembership(sentence):
     sentencePosition_item = list(set(sentencePosition_item))
     sentencePosition_item.sort()
 
-
+'''
 def print_us(filename,audio_id,wavs,audio_hammings,sound_to_face,face_to_sound):
     print '*** association analysis ***'
     print filename
@@ -347,7 +369,7 @@ def print_us(filename,audio_id,wavs,audio_hammings,sound_to_face,face_to_sound):
     print '\n***' 
     print face_to_sound
     print '\n***' 
-    
+'''    
 
 def getTimeContext(predicate, distance):
     '''
@@ -531,6 +553,7 @@ def formatAsMembership(a):
     membership = []
     for item in a:
         membership.append([i,item])
+        i += 1
     return membership
 
 def select(items, method):
