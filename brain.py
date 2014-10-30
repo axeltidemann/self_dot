@@ -283,7 +283,10 @@ def respond(control_host, learn_host, debug=False):
                     new_sentence = utils.load_cochlear(filename)
                     norm_segments = np.rint(new_sentence.shape[0]*audio_segments/audio_segments[-1]).astype('int')
 
-                    segment_id = 0 #### ØYVIND: SETT DENNE #####
+                    _,_,_,segmentData = utils.getSoundInfo(filename)
+                    amps = [ item[0] for item in segmentData ]
+                    segment_id = amps.index(max(amps))
+                    #print 'Single selected to respond to segment {}'.format(segment_id)
 
                     NAP = utils.trim_right(utils.scale(new_sentence[norm_segments[segment_id]:norm_segments[segment_id+1]]))
                     NAP_resampled = utils.zero_pad(resample(NAP, float(maxlen)/NAP.shape[0], 'sinc_best'), maxlen_scaled)
@@ -328,19 +331,33 @@ def respond(control_host, learn_host, debug=False):
 
             if 'respond_sentence' in pushbutton:
                 print 'SENTENCE Respond to', pushbutton['filename'][-12:]
-
+                
                 try:
-                    NAP_resampled, NAP = _NAP_resampled(pushbutton['filename'], maxlen, maxlen_scaled)
+                    filename = pushbutton['filename']
+                    audio_segments = utils.get_segments(filename)
+                    print 'Sentence response to {} duration {} seconds with {} segments'.format(filename, audio_segments[-1], len(audio_segments)-1)
+                    new_sentence = utils.load_cochlear(filename)
+                    norm_segments = np.rint(new_sentence.shape[0]*audio_segments/audio_segments[-1]).astype('int')
 
+                    _,_,_,segmentData = utils.getSoundInfo(filename)
+                    amps = [ item[0] for item in segmentData ]
+                    segment_id = amps.index(max(amps))
+                    print '**Sentence selected to respond to segment {}'.format(segment_id)
+
+                    NAP = utils.trim_right(utils.scale(new_sentence[norm_segments[segment_id]:norm_segments[segment_id+1]]))
+                    NAP_resampled = utils.zero_pad(resample(NAP, float(maxlen)/NAP.shape[0], 'sinc_best'), maxlen_scaled)
+                    
+                    if debug:            
+                        plt.imshow(NAP_resampled.T, aspect='auto')
+                        plt.draw()
+                    
                     try:
                         audio_id = _predict_audio_id(audio_recognizer, NAP_resampled)
                     except:
                         audio_id = 0
                         print 'Responding having only heard 1 sound.'
 
-                    print 'get number of segments in', pushbutton['filename']
-                    _,_,_,inputsegments = utils.getSoundInfo(pushbutton['filename'])
-                    numWords = len(inputsegments)
+                    numWords = len(segmentData)
                     print numWords
                     association_in.send_pyobj(['setParam', 'numWords', numWords ])
                     
@@ -366,12 +383,12 @@ def respond(control_host, learn_host, debug=False):
                         #totaldur, maxamp = utils.getSoundParmFromFile(soundfile)
                         _,totaldur,maxamp,_ = utils.getSoundInfo(soundfile)
                         dur = segend-segstart
-                        if dur < 0: dur = totaldur
+                        if dur <= 0: dur = totaldur
                         sender.send_json('playfile {} {} {} {} {} {} {} {} {}'.format(voiceChannel, voiceType, start, soundfile, speed, segstart, segend, amp, maxamp))
                         #start += dur # if we want to create a 'score section' for Csound, update start time to make segments into a contiguous sentence
                         nextTime1 += (dur/speed)
 
-                        if enableVoice2:
+                        if enableVoice2 and (i<len(secondaryStream)-1):
                             word_id2 = secondaryStream[i]
                             soundfile2 = np.random.choice(wavs[word_id2])
                             voiceChannel2 = 2
@@ -383,7 +400,7 @@ def respond(control_host, learn_host, debug=False):
                             dur2 = segend2-segstart2
                             #totalDur2, maxamp2 = utils.getSoundParmFromFile(soundfile2)
                             _,totalDur2,maxamp2,_ = utils.getSoundInfo(soundfile)
-                            if dur2 < 0: dur2 = totalDur2
+                            if dur2 <= 0: dur2 = totalDur2
                             sender.send_json('playfile {} {} {} {} {} {} {} {} {}'.format(voiceChannel2, voiceType2, start2, soundfile2, speed2, segstart2, segend2, amp2, maxamp2))
                             nextTime2 += (dur2/speed2)
                             enableVoice2 = 0

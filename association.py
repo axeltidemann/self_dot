@@ -50,8 +50,8 @@ method = 'boundedAdd'
 neighborsWeight = 0.04
 wordsInSentenceWeight = 0.0
 similarWordsWeight = 0.3
-wordFaceWeight = 0.0
-faceWordWeight = 0.0
+wordFaceWeight = 0.0    # not really used
+faceWordWeight = 0.1
 timeBeforeWeight = 0.0
 timeAfterWeight = 0.7
 timeDistance = 5.0
@@ -216,44 +216,45 @@ def generate(predicate, method,
             preferredDuration, preferredDurationWidth, durationWeight):
 
     # get the lists we need
-    print '***get lists for predicate', predicate
+    #print '***get lists for predicate', predicate
     _neighbors = normalizeItemScore(copy.copy(neighbors[predicate]))
-    print '\n_neighbors', _neighbors
+    #print '\n_neighbors', _neighbors
     _wordsInSentence = normalizeItemScore(copy.copy(wordsInSentence[predicate]))
-    print '\n_wordsInSentence', _wordsInSentence
+    #print '\n_wordsInSentence', _wordsInSentence
     _wordFace = normalizeItemScore(copy.copy(wordFace[predicate]))
-    print '\n_wordFace', _wordFace
+    #print '\n* faces that have heard this word', _wordFace
+    #print '\n_wordFace', _wordFace
     # temporary solution to using faces
     faces = [item[0] for item in _wordFace]
     if -1 in faces: faces.remove(-1)
     if faces == []: face = 0
     else: face = random.choice(faces)
-    print 'using face', face, 'we might want to update face/word selection'
-    print 'faceWord', faceWord
+    #print 'using face', face, 'we might want to update face/word selection'
+    #print 'faceWord', faceWord
     _faceWord = normalizeItemScore(copy.copy(faceWord[face]))
-    print '\n_faceWord', _faceWord
+    #print '\n_faceWord', _faceWord
     _similarWords = normalizeItemScore(copy.copy(formatAsMembership(similarWords[predicate])))
     print '\n_similarWords', _similarWords
-    print '\*similarWords*'
-    for k,v in similarWords.iteritems():
-        print 'audio id %i has %i similar sounds'%(k, len(v))
-        print v
+    #print '\*similarWords*'
+    #for k,v in similarWords.iteritems():
+    #    print 'audio id %i has %i similar sounds'%(k, len(v))
+    #    print v
     timeContextBefore, timeContextAfter = getTimeContext(predicate, timeDistance) 
     timeContextBefore = normalizeItemScore(timeContextBefore)
     timeContextAfter = normalizeItemScore(timeContextAfter)
-    print '\ntimeContextBefore',timeContextBefore
-    print '\ntimeContextAfter',timeContextAfter
+    #print '\ntimeContextBefore',timeContextBefore
+    #print '\ntimeContextAfter',timeContextAfter
     posInSentenceContext = getCandidatesFromContext(sentencePosition_item, posInSentence, posInSentenceWidth)
-    print '\nposInSentenceContext', posInSentenceContext
+    #print '\nposInSentenceContext', posInSentenceContext
     durationContext = getCandidatesFromContext(duration_word, preferredDuration, preferredDurationWidth)
-    print '\ndurationContext', durationContext
+    #print '\ndurationContext', durationContext
         
     #print 'generate lengths:', len(timeContextBefore), len(timeContextAfter), len(durationContext)
     # merge them
     if method == 'add': method = weightedSum
     if method == 'boundedAdd': method = boundedSum
     temp = method(_neighbors, neighborsWeight, _wordsInSentence, wordsInSentenceWeight)
-    temp = method(temp, 1.0, _wordFace, wordFaceWeight)
+    #temp = method(temp, 1.0, _wordFace, wordFaceWeight)
     temp = method(temp, 1.0, _faceWord, faceWordWeight)
     temp = method(temp, 1.0, _similarWords, similarWordsWeight)
     temp = method(temp, 1.0, timeContextBefore, timeBeforeWeight)
@@ -604,7 +605,7 @@ def setParam(param,value):
         wordsInSentenceWeight = 0.0
         similarWordsWeight = 0.0
         wordFaceWeight = 0.0
-        faceWordWeight = 0.0
+        faceWordWeight = 0.1
         timeBeforeWeight = 0.0
         timeAfterWeight = 0.0
         timeDistance = 4.0
@@ -614,7 +615,7 @@ def setParam(param,value):
         wordsInSentenceWeight2 = 0.0
         similarWordsWeight2 = 0.0
         wordFaceWeight2 = 0.0
-        faceWordWeight2 = 0.0
+        faceWordWeight2 = 0.1
         timeBeforeWeight2 = 0.0
         timeAfterWeight2 = 0.0
         timeDistance2 = 4.0
@@ -650,7 +651,7 @@ def setParam(param,value):
         wordsInSentenceWeight = 0.0
         similarWordsWeight = 0.3
         wordFaceWeight = 0.0
-        faceWordWeight = 0.0
+        faceWordWeight = 0.1
         timeBeforeWeight = 0.0
         timeAfterWeight = 0.7
         timeDistance = 5.0
@@ -660,7 +661,7 @@ def setParam(param,value):
         wordsInSentenceWeight2 = 0.0
         similarWordsWeight2 = 0.3
         wordFaceWeight2 = 0.0
-        faceWordWeight2 = 0.0
+        faceWordWeight2 = 0.1
         timeBeforeWeight2 = 0.0
         timeAfterWeight2 = 0.7
         timeDistance2 = 5.0
@@ -696,7 +697,7 @@ def setParam(param,value):
         wordsInSentenceWeight = 0.1
         similarWordsWeight = 0.1
         wordFaceWeight = 0.0
-        faceWordWeight = 0.0
+        faceWordWeight = 0.1
         timeBeforeWeight = 0.0
         timeAfterWeight = 0.8
         timeDistance = 5.0
@@ -706,7 +707,7 @@ def setParam(param,value):
         wordsInSentenceWeight2 = 0.0
         similarWordsWeight2 = 0.9
         wordFaceWeight2 = 0.0
-        faceWordWeight2 = 0.0
+        faceWordWeight2 = 0.1
         timeBeforeWeight2 = 0.0
         timeAfterWeight2 = 0.0
         timeDistance2 = 5.0
@@ -719,7 +720,7 @@ def setParam(param,value):
         wordsInSentenceWeight = 0.1
         similarWordsWeight = 0.1
         wordFaceWeight = 0.0
-        faceWordWeight = 0.0
+        faceWordWeight = 0.1
         timeBeforeWeight = 0.0
         timeAfterWeight = 0.8
         timeDistance = 5.0
@@ -729,7 +730,7 @@ def setParam(param,value):
         wordsInSentenceWeight2 = 0.0
         similarWordsWeight2 = -0.9
         wordFaceWeight2 = 0.0
-        faceWordWeight2 = 0.0
+        faceWordWeight2 = 0.1
         timeBeforeWeight2 = 0.0
         timeAfterWeight2 = 0.0
         timeDistance2 = 5.0
