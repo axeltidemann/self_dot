@@ -15,3 +15,8 @@ carfac_cmd.o
 *.txt*save_*
 errors.txt
 error.txt
+*.ASSOCIATION
+*.AUDIO LEARN
+*.FACES LEARN
+*.RESPONDER
+ 
