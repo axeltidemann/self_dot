@@ -277,11 +277,8 @@ def respond(control_host, learn_host, debug=False):
             pushbutton = eventQ.recv_json()
             if 'respond_single' in pushbutton:
                 try:
-                    #NAP_resampled, NAP = _NAP_resampled(pushbutton['filename'], maxlen, maxlen_scaled)
-
                     filename = pushbutton['filename']
                     audio_segments = utils.get_segments(filename)
-
                     print 'Single response to {} duration {} seconds with {} segments'.format(filename, audio_segments[-1], len(audio_segments)-1)
                     new_sentence = utils.load_cochlear(filename)
                     norm_segments = np.rint(new_sentence.shape[0]*audio_segments/audio_segments[-1]).astype('int')
