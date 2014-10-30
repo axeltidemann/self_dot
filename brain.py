@@ -331,6 +331,12 @@ def respond(control_host, learn_host, debug=False):
                         audio_id = 0
                         print 'Responding having only heard 1 sound.'
 
+                    print 'get number of segments in', pushbutton['filename']
+                    _,_,_,inputsegments = utils.getSoundInfo(pushbutton['filename'])
+                    numWords = len(inputsegments)
+                    print numWords
+                    association_in.send_pyobj(['setParam', 'numWords', numWords ])
+                    
                     association_in.send_pyobj(['makeSentence',audio_id])
                     print 'respond_sentence waiting for association output...'
                     sentence, secondaryStream = association_out.recv_pyobj()

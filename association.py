@@ -178,7 +178,7 @@ def makeSentence(assoc_out, predicate):
     secondaryStream = []
     #timeThen = time.time()
     for i in range(numWords):
-        posInSentence = i/float(numWords-1)
+        posInSentence = i/float(numWords)
         posInSentenceWidth = 0.2
         if posInSentence < 0.5:
             preferredDuration = posInSentence*20 # longer words in the middle of a sentence (just as a test...)
@@ -216,36 +216,37 @@ def generate(predicate, method,
             preferredDuration, preferredDurationWidth, durationWeight):
 
     # get the lists we need
-    #print '***get lists for predicate', predicate
+    print '***get lists for predicate', predicate
     _neighbors = normalizeItemScore(copy.copy(neighbors[predicate]))
-    #print '\n_neighbors', _neighbors
+    print '\n_neighbors', _neighbors
     _wordsInSentence = normalizeItemScore(copy.copy(wordsInSentence[predicate]))
-    #print '\n_wordsInSentence', _wordsInSentence
+    print '\n_wordsInSentence', _wordsInSentence
     _wordFace = normalizeItemScore(copy.copy(wordFace[predicate]))
-    #print '\n_wordFace', _wordFace
+    print '\n_wordFace', _wordFace
     # temporary solution to using faces
     faces = [item[0] for item in _wordFace]
     if -1 in faces: faces.remove(-1)
-    face = random.choice(faces)
+    if faces == []: face = 0
+    else: face = random.choice(faces)
     print 'using face', face, 'we might want to update face/word selection'
-    #print 'faceWord', faceWord
+    print 'faceWord', faceWord
     _faceWord = normalizeItemScore(copy.copy(faceWord[face]))
-    #print '\n_faceWord', _faceWord
+    print '\n_faceWord', _faceWord
     _similarWords = normalizeItemScore(copy.copy(formatAsMembership(similarWords[predicate])))
-    #print '\n_similarWords', _similarWords
-    #print '\*similarWords*'
-    #for k,v in similarWords.iteritems():
-    #    print 'audio id %i has %i similar sounds'%(k, len(v))
-    #    print v
+    print '\n_similarWords', _similarWords
+    print '\*similarWords*'
+    for k,v in similarWords.iteritems():
+        print 'audio id %i has %i similar sounds'%(k, len(v))
+        print v
     timeContextBefore, timeContextAfter = getTimeContext(predicate, timeDistance) 
     timeContextBefore = normalizeItemScore(timeContextBefore)
     timeContextAfter = normalizeItemScore(timeContextAfter)
-    #print '\ntimeContextBefore',timeContextBefore
-    #print '\ntimeContextAfter',timeContextAfter
+    print '\ntimeContextBefore',timeContextBefore
+    print '\ntimeContextAfter',timeContextAfter
     posInSentenceContext = getCandidatesFromContext(sentencePosition_item, posInSentence, posInSentenceWidth)
-    #print '\nposInSentenceContext', posInSentenceContext
+    print '\nposInSentenceContext', posInSentenceContext
     durationContext = getCandidatesFromContext(duration_word, preferredDuration, preferredDurationWidth)
-    #print '\ndurationContext', durationContext
+    print '\ndurationContext', durationContext
         
     #print 'generate lengths:', len(timeContextBefore), len(timeContextAfter), len(durationContext)
     # merge them
