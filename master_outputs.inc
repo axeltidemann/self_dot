@@ -1,3 +1,27 @@
+; ******************************
+; background sound
+; this will be playing as an ambient wash in the room,
+; and it will be dampened when self is listening to input (audioStatus).
+; As such, it provides feedback to the person speaking to self that it is listening,
+; in addition to creating a suitable sonic atmosphere
+	instr 91
+	
+	; white noise to test the idea of sound as monitoring
+	a1          rnd31 1, 1
+    klevel      = ampdbfs(-5)
+    kstatus     chnget "audioStatus"
+    ;printk2 kstatus
+    alevel      interp kstatus
+    afollow     follow2 alevel*a1, 0.1, 1.5
+    a1          = 0;kstatus;klevel;*
+                chnmix a1, "MasterOut1"
+                chnmix a1, "MasterOut2"
+                ;outs a1, a1
+    endin
+    
+    
+    
+; ******************************
 ; self analysis of own output 
 	instr 98
 	a1	chnget "MasterOut1"
