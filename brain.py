@@ -34,7 +34,7 @@ except:
     
 FACE_HAAR_CASCADE_PATH = opencv_prefix + '/share/OpenCV/haarcascades/haarcascade_frontalface_default.xml'
 EYE_HAAR_CASCADE_PATH = opencv_prefix + '/share/OpenCV/haarcascades/haarcascade_eye_tree_eyeglasses.xml'
-AUDIO_HAMMERTIME = 8 # Hamming distance match criterion
+AUDIO_HAMMERTIME = 6 # Hamming distance match criterion
 FACE_HAMMERTIME = 10
 FRAME_SIZE = (160,120) # Neural network image size, 1/4 of full frame size.
 
@@ -374,7 +374,7 @@ def respond(control_host, learn_host, debug=False):
                         word_id = sentence[i]
                         soundfile = np.random.choice(wavs[word_id])
                         voiceChannel = 1
-                        voiceType = 0
+                        voiceType = 1
                         speed = 1
                         
                         # segment start and end within sound file, if zero, play whole file
@@ -387,15 +387,16 @@ def respond(control_host, learn_host, debug=False):
                         sender.send_json('playfile {} {} {} {} {} {} {} {} {}'.format(voiceChannel, voiceType, start, soundfile, speed, segstart, segend, amp, maxamp))
                         #start += dur # if we want to create a 'score section' for Csound, update start time to make segments into a contiguous sentence
                         nextTime1 += (dur/speed)
-
-                        if enableVoice2 and (i<len(secondaryStream)-1):
+                        #print 'voice 2 ready to play', secondaryStream[i], i
+                        if enableVoice2:
                             word_id2 = secondaryStream[i]
+                            #print 'voice 2 playing', secondaryStream[i]
                             soundfile2 = np.random.choice(wavs[word_id2])
                             voiceChannel2 = 2
                             voiceType2 = 1
                             start2 = 0.7 #  set delay between voice 1 and 2
                             speed2 = 0.7
-                            amp2 = -3 # voice amplitude in dB
+                            amp2 = -10 # voice amplitude in dB
                             segstart2, segend2 = wav_segments[(soundfile2, word_id2)]
                             dur2 = segend2-segstart2
                             #totalDur2, maxamp2 = utils.getSoundParmFromFile(soundfile2)
@@ -403,7 +404,7 @@ def respond(control_host, learn_host, debug=False):
                             if dur2 <= 0: dur2 = totalDur2
                             sender.send_json('playfile {} {} {} {} {} {} {} {} {}'.format(voiceChannel2, voiceType2, start2, soundfile2, speed2, segstart2, segend2, amp2, maxamp2))
                             nextTime2 += (dur2/speed2)
-                            enableVoice2 = 0
+                            #enableVoice2 = 0
                         # trig another word in voice 2 only if word 2 has finished playing (and sync to start of voice 1)
                         if nextTime1 > nextTime2: enableVoice2 = 1 
 
