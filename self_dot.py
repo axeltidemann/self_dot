@@ -48,7 +48,7 @@ class Controller:
             if 'calculate_cochlear' in message:
                 _, wav_file = message.split()
                 t0 = time.time()
-                utils.write_cochlear(wav_file)
+                utils.write_cochlear(utils.wait_for_wav(wav_file))
                 print 'Calculating cochlear neural activation patterns took {} seconds'.format(time.time() - t0)
             
             if 'register' in message and 'BRAIN' in message:

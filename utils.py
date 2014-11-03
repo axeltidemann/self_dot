@@ -81,6 +81,13 @@ def wait_for_wav(filename):
 def filesize(filename):
     return bytes2human(os.path.getsize(filename))
 
+def chunks(A, chunk_len):
+    i = 1
+    result = []
+    while i*chunk_len <= A.shape[0]:
+        result.append(A[chunk_len*(i-1):chunk_len*i])
+        i+=1
+    return result
 
 def wav_duration(filename):
     sound = wave.open(filename, 'r')
