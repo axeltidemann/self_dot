@@ -4,6 +4,7 @@
 import multiprocessing as mp
 import os
 import random
+import utils
 
 import cv2
 import numpy as np
@@ -171,6 +172,9 @@ def audio():
     filename = []
     counter = 0
     ampPitchCentroid = [[],[],[]]
+    
+    ambientFiles = [] # used by the ambient sound generator (instr 90 pp)
+    ambientActive = 0
 
     state = stateQ.recv_json()
     
@@ -212,6 +216,20 @@ def audio():
             if (counter % 500) == 0:
                 robocontrol.send_json([2,'pan',-1])
          
+        if state['ambientSound'] > 0:
+            if ambientActive == 0:
+                cs.InputMessage('i 91 0 -1')
+                ambientActive = 1
+            if (counter % 4000) == 0:
+                print 'update ambient sound ftables'
+                newtable, ambientFiles = utils.updateAmbientMemoryWavs(ambientFiles)
+                cs.InputMessage('i 90 0 1 "%s"'%newtable)
+        
+        if state['ambientSound'] == 0:
+            if ambientActive == 1:
+                cs.InputMessage('i -91 0 1')
+                ambientActive = 0
+
         if state['memoryRecording']:
             if audioStatusTrig > 0:
                 print 'starting memoryRec'

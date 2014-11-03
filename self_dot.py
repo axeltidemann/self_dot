@@ -88,7 +88,9 @@ class Controller:
 
             if 'roboActive' in message:
                 self.state['roboActive'] = int(message[11:])
-                print self.state['roboActive']
+
+            if 'ambientSound' in message:
+                self.state['ambientSound'] = int(message[13:])
 
             if 'decrement' in message:
                 _, name = message.split()
@@ -161,6 +163,7 @@ if __name__ == '__main__':
                          'record': False,
                          'memoryRecording': False,
                          'roboActive': False,
+                         'ambientSound': False,
                          'fullscreen': 0,
                          'display2': 0,
                          'facerecognition': False,}

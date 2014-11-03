@@ -31,6 +31,14 @@
 	giExpFall	ftgen	0, 0, 8193, 5, 1, 8193, 0.00001				; exponential decay
 	giTriangleWin 	ftgen	0, 0, 8193, 7, 0, 4096, 1, 4096, 0			; triangular window 
 
+; default init (silent) ambient background tables (STATIC TABLE NUMS 91-98)
+    giAmbient1          ftgen	95, 0, 1024, 2, 0	; empty buffer
+    giAmbient2          ftgen	96, 0, 1024, 2, 0	; empty buffer
+    giAmbient3          ftgen	97, 0, 1024, 2, 0	; empty buffer
+    giAmbient4          ftgen	98, 0, 1024, 2, 0	; empty buffer
+    giAmbientTabNum     = 0
+    giAmbientTabs       ftgen   0, 0, 4, -2, giAmbient1,giAmbient2,giAmbient3,giAmbient4
+
 ; panalyzer tables
 	giPanalyzeTemp0		ftgen	0, 0, 1024, 2, 0	; empty buffer
 	giPanalyzeTemp1		ftgen	0, 0, 1024, 2, 0	; empty buffer

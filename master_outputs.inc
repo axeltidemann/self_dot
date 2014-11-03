@@ -1,24 +1,59 @@
 ; ******************************
-; background sound
+; background sound (instr 90, 91)
 ; this will be playing as an ambient wash in the room,
 ; and it will be dampened when self is listening to input (audioStatus).
 ; As such, it provides feedback to the person speaking to self that it is listening,
 ; in addition to creating a suitable sonic atmosphere
+
+    instr 90
+; load ftables for instr 91
+#include "partikkel_ambient_ftables.inc"	
+    endin
+
 	instr 91
-	
-	; white noise to test the idea of sound as monitoring
-	a1          rnd31 1, 1
+; synthesize background sound	
+#include "partikkel_ambient.inc"	
+
 	kaLevel     chnget "ambientLevel"
     klevel      = ampdbfs(kaLevel)
     kstatus     chnget "audioStatus"
     kstatus     = 1-kstatus
     alevel      interp kstatus
     afollow     follow2 alevel*a1, 0.1, 3.5
-    a1          = a1*afollow*klevel;*
-                chnmix a1, "MasterOut1"
-                chnmix a1, "MasterOut2"
+    a1          = a1*klevel*afollow
+    a2          = a2*klevel*afollow
+                chnmix a1, "ReverbLeft"
+                chnmix a2, "ReverbRight"
+
     endin
     
+;******************************************************
+        instr 93
+
+        ; reverb for ambience
+        aL              chnget "ReverbLeft"
+        aR              chnget "ReverbRight"
+        a0              = 0
+                        chnset a0, "ReverbLeft"
+                        chnset a0, "ReverbRight"
+
+        kfb             = 0.87;0.93
+        kfco            = 7000
+        iverb1Lev       = 0.2
+        averb1L,averb1R reverbsc aL, aR, kfb, kfco
+
+        ksize           = 0.8;0.9
+        kHF             = 0.2
+        iverb2Lev       = 0.6
+        averb2L,averb2R freeverb aL, aR, ksize, kHF
+
+        iMaster         = 0.5
+        aoutL           = (aL+(averb1L*iverb1Lev)+(averb2L*iverb2Lev))*iMaster
+        aoutR           = (aR+(averb1R*iverb1Lev)+(averb2R*iverb2Lev))*iMaster
+                        chnmix aoutL, "MasterOut1"
+                        chnmix aoutR, "MasterOut2"
+ 
+        endin
     
     
 ; ******************************
