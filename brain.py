@@ -198,6 +198,8 @@ def respond(control_host, learn_host, debug=False):
     faceWord = {}
     register = {}
     video_producer = {}
+    voiceType1 = 0
+    voiceType2 = 1
     
     if debug:
         import matplotlib.pyplot as plt
@@ -308,14 +310,13 @@ def respond(control_host, learn_host, debug=False):
                     segstart, segend = wav_segments[(soundfile, audio_id)]
 
                     voiceChannel = 1
-                    voiceType = 1 
                     speed = 1
                     amp = -3 # voice amplitude in dB
                     #dur, maxamp = utils.getSoundParmFromFile(soundfile) # COORDINATION!
                     _,dur,maxamp,_ = utils.getSoundInfo(soundfile)
                     
                     start = 0
-                    sender.send_json('playfile {} {} {} {} {} {} {} {} {}'.format(voiceChannel, voiceType, start, soundfile, speed, segstart, segend, amp, maxamp))
+                    sender.send_json('playfile {} {} {} {} {} {} {} {} {}'.format(voiceChannel, voiceType1, start, soundfile, speed, segstart, segend, amp, maxamp))
 
                     print 'Recognized as sound {}'.format(audio_id)
 
@@ -375,7 +376,6 @@ def respond(control_host, learn_host, debug=False):
                         word_id = sentence[i]
                         soundfile = np.random.choice(wavs[word_id])
                         voiceChannel = 1
-                        voiceType = 1
                         speed = 1
                         
                         # segment start and end within sound file, if zero, play whole file
@@ -385,7 +385,7 @@ def respond(control_host, learn_host, debug=False):
                         _,totaldur,maxamp,_ = utils.getSoundInfo(soundfile)
                         dur = segend-segstart
                         if dur <= 0: dur = totaldur
-                        sender.send_json('playfile {} {} {} {} {} {} {} {} {}'.format(voiceChannel, voiceType, start, soundfile, speed, segstart, segend, amp, maxamp))
+                        sender.send_json('playfile {} {} {} {} {} {} {} {} {}'.format(voiceChannel, voiceType1, start, soundfile, speed, segstart, segend, amp, maxamp))
                         #start += dur # if we want to create a 'score section' for Csound, update start time to make segments into a contiguous sentence
                         nextTime1 += (dur/speed)
                         #print 'voice 2 ready to play', secondaryStream[i], i
@@ -394,7 +394,6 @@ def respond(control_host, learn_host, debug=False):
                             #print 'voice 2 playing', secondaryStream[i]
                             soundfile2 = np.random.choice(wavs[word_id2])
                             voiceChannel2 = 2
-                            voiceType2 = 1
                             start2 = 0.7 #  set delay between voice 1 and 2
                             speed2 = 0.7
                             amp2 = -10 # voice amplitude in dB
@@ -433,6 +432,11 @@ def respond(control_host, learn_host, debug=False):
             if 'assoc_setParam' in pushbutton:
                 parm, value = pushbutton['assoc_setParam'].split()
                 association_in.send_pyobj(['setParam', parm, value ])
+
+            if 'setVoiceType' in pushbutton:
+                chan, value = pushbutton['setVoiceType'].split()
+                if chan == '1': voiceType1 = value
+                if chan == '2': voiceType2 = value
 
             if 'play_id' in pushbutton:
                 try:

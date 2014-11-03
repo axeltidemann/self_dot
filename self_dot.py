@@ -83,6 +83,9 @@ class Controller:
             if 'assoc_setParam' in message:
                 self.event.send_json({ 'assoc_setParam': message[15:] })
 
+            if 'setVoiceType' in message:
+                self.event.send_json({ 'setVoiceType': message[13:] })
+
             if 'memoryRecording' in message:
                 self.state['memoryRecording'] = message[16:] in ['True', '1']
 
