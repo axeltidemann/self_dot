@@ -8,15 +8,15 @@
 	
 	; white noise to test the idea of sound as monitoring
 	a1          rnd31 1, 1
-    klevel      = ampdbfs(-5)
+	kaLevel     chnget "ambientLevel"
+    klevel      = ampdbfs(kaLevel)
     kstatus     chnget "audioStatus"
-    ;printk2 kstatus
+    kstatus     = 1-kstatus
     alevel      interp kstatus
-    afollow     follow2 alevel*a1, 0.1, 1.5
-    a1          = 0;kstatus;klevel;*
+    afollow     follow2 alevel*a1, 0.1, 3.5
+    a1          = a1*afollow*klevel;*
                 chnmix a1, "MasterOut1"
                 chnmix a1, "MasterOut2"
-                ;outs a1, a1
     endin
     
     

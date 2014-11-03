@@ -8,7 +8,7 @@
 	chnset -15, "td_AmpAdjust"	; approximate amp compensation for EQ
 	
 	; transient detect parameters
-	chnset 2.0, "in_envelopeRelease"    ; envelope follower release
+	chnset 2.3, "in_envelopeRelease"    ; envelope follower release
     chnset 4, "transientThresh"         ; transient trig threshold 
 	chnset 8, "transientDecThresh"       ; retrig threshold, how much must the level decay from its local max before allowing new transient trig
 
@@ -32,4 +32,7 @@
 	chnset -2, "PrimaryMasterLevel"       ; in dB
 	chnset -12, "PrimaryCompThresh"
 	chnset 4, "PrimaryCompRatio"
+	
+	chnset -96, "ambientLevel"      ; set level of self's own background sound
+
 
