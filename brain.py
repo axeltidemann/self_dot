@@ -198,6 +198,12 @@ def respond(control_host, learn_host, debug=False):
     faceWord = {}
     register = {}
     video_producer = {}
+    voiceType1 = 0
+    voiceType2 = 1
+    wordSpace1 = 0.2
+    wordSpaceDev1 = 0.3
+    wordSpace2 = 0.2
+    wordSpaceDev2 = 0.3
     
     if debug:
         import matplotlib.pyplot as plt
@@ -308,14 +314,13 @@ def respond(control_host, learn_host, debug=False):
                     segstart, segend = wav_segments[(soundfile, audio_id)]
 
                     voiceChannel = 1
-                    voiceType = 1 
                     speed = 1
                     amp = -3 # voice amplitude in dB
                     #dur, maxamp = utils.getSoundParmFromFile(soundfile) # COORDINATION!
                     _,dur,maxamp,_ = utils.getSoundInfo(soundfile)
                     
                     start = 0
-                    sender.send_json('playfile {} {} {} {} {} {} {} {} {}'.format(voiceChannel, voiceType, start, soundfile, speed, segstart, segend, amp, maxamp))
+                    sender.send_json('playfile {} {} {} {} {} {} {} {} {}'.format(voiceChannel, voiceType1, start, soundfile, speed, segstart, segend, amp, maxamp))
 
                     print 'Recognized as sound {}'.format(audio_id)
 
@@ -375,7 +380,6 @@ def respond(control_host, learn_host, debug=False):
                         word_id = sentence[i]
                         soundfile = np.random.choice(wavs[word_id])
                         voiceChannel = 1
-                        voiceType = 1
                         speed = 1
                         
                         # segment start and end within sound file, if zero, play whole file
@@ -385,16 +389,16 @@ def respond(control_host, learn_host, debug=False):
                         _,totaldur,maxamp,_ = utils.getSoundInfo(soundfile)
                         dur = segend-segstart
                         if dur <= 0: dur = totaldur
-                        sender.send_json('playfile {} {} {} {} {} {} {} {} {}'.format(voiceChannel, voiceType, start, soundfile, speed, segstart, segend, amp, maxamp))
+                        sender.send_json('playfile {} {} {} {} {} {} {} {} {}'.format(voiceChannel, voiceType1, start, soundfile, speed, segstart, segend, amp, maxamp))
                         #start += dur # if we want to create a 'score section' for Csound, update start time to make segments into a contiguous sentence
-                        nextTime1 += (dur/speed)
+                        wordSpacing1 = wordSpace1 + np.random.random()*wordSpaceDev1
+                        nextTime1 += (dur/speed)+wordSpacing1
                         #print 'voice 2 ready to play', secondaryStream[i], i
                         if enableVoice2:
                             word_id2 = secondaryStream[i]
                             #print 'voice 2 playing', secondaryStream[i]
                             soundfile2 = np.random.choice(wavs[word_id2])
                             voiceChannel2 = 2
-                            voiceType2 = 1
                             start2 = 0.7 #  set delay between voice 1 and 2
                             speed2 = 0.7
                             amp2 = -10 # voice amplitude in dB
@@ -404,7 +408,8 @@ def respond(control_host, learn_host, debug=False):
                             _,totalDur2,maxamp2,_ = utils.getSoundInfo(soundfile)
                             if dur2 <= 0: dur2 = totalDur2
                             sender.send_json('playfile {} {} {} {} {} {} {} {} {}'.format(voiceChannel2, voiceType2, start2, soundfile2, speed2, segstart2, segend2, amp2, maxamp2))
-                            nextTime2 += (dur2/speed2)
+                            wordSpacing2 = wordSpace2 + np.random.random()*wordSpaceDev2
+                            nextTime2 += (dur2/speed2)+wordSpacing2
                             #enableVoice2 = 0
                         # trig another word in voice 2 only if word 2 has finished playing (and sync to start of voice 1)
                         if nextTime1 > nextTime2: enableVoice2 = 1 
@@ -418,7 +423,7 @@ def respond(control_host, learn_host, debug=False):
                             utils.send_array(projector, np.resize(row, FRAME_SIZE[::-1]))
 
                         # as the first crude method of assembling a sentence, just wait for the word duration here
-                        time.sleep(dur)
+                        time.sleep(dur+wordSpacing1)
 
                 except:
                     utils.print_exception('Sentence response aborted.')
@@ -433,6 +438,23 @@ def respond(control_host, learn_host, debug=False):
             if 'assoc_setParam' in pushbutton:
                 parm, value = pushbutton['assoc_setParam'].split()
                 association_in.send_pyobj(['setParam', parm, value ])
+
+            if 'respond_setParam' in pushbutton:
+                items = pushbutton['respond_setParam'].split()
+                if items[0] == 'voiceType':
+                    chan = items[1]
+                    if chan == '1': voiceType1 = int(items[2])
+                    if chan == '2': voiceType2 = int(items[2])
+                if items[0] == 'wordSpace':
+                    chan = items[1]
+                    print 'wordSpace chan', chan, items
+                    if chan == '1': wordSpace1 = float(items[2])
+                    if chan == '2': wordSpace2 = float(items[2])
+                if items[0] == 'wordSpaceDev':
+                    chan = items[1]
+                    print 'wordSpaceDev1 chan', chan, items
+                    if chan == '1': wordSpaceDev1 = float(items[2])
+                    if chan == '2': wordSpaceDev2 = float(items[2])
 
             if 'play_id' in pushbutton:
                 try:
