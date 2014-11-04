@@ -4,9 +4,9 @@
 
 ; select source waveforms 
         kwaveform1      table 0, giAmbientTabs  ; source audio waveform 1
-        kwaveform2      table 0, giAmbientTabs  ; ...
-        kwaveform3      table 0, giAmbientTabs
-        kwaveform4      table 0, giAmbientTabs
+        kwaveform2      table 1, giAmbientTabs  ; ...
+        kwaveform3      table 2, giAmbientTabs
+        kwaveform4      table 3, giAmbientTabs
 
 ; get source waveform length (used when calculating transposition and time pointer)
         kfilen1         tableng  kwaveform1             ; get length of the first source waveform

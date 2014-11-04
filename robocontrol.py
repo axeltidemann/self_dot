@@ -79,7 +79,7 @@ def robocontrol(host):
             if axis == 'pan':
                 #dprint 'head 1 panposition', value
                 # send pan position to head (eg. 'p 60')
-                pan1 += int((value-0.5)*80)
+                pan1 += int((value-0.5)*120)
                 #pan1 += int((value)*80)
                 if pan1 < 10: pan1 += 180
                 if pan1 > 200: pan1 -= 180
@@ -88,7 +88,7 @@ def robocontrol(host):
                 #print 'head 1 tiltposition', value
                 # send til position to head (eg. 'p 60')
                 #tilt1 += int((value-0.5)*3)
-                tilt1 += int((value)*30)
+                tilt1 += int((value)*50)
                 tilt1 = np.clip(tilt1, 10, 90)
                 #print 'head 1 tiltposition', tilt1
                 ser.write('t %03dn'%tilt1)

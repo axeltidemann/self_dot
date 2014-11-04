@@ -180,7 +180,10 @@ def audio():
     
     while not stopflag:
         counter += 1
+        counter = counter%16000 # just to reset sometimes
         stopflag = perfKsmps()
+        if stopflag:
+            print '*** *** CSOUND STOP FLAG *** ***'
         fftinFlag = cGet("pvsinflag")
         fftoutFlag = cGet("pvsoutflag")
         

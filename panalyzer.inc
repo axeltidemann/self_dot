@@ -1,7 +1,7 @@
 
 	aLeft	chnget "in1"
 	aRight	chnget "in2"
-
+	aRight = aRight * ampdbfs(0.5)
 ; preprocess
 /*
     aLeft           butterhp aLeft, 400

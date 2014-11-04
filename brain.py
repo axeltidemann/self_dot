@@ -66,7 +66,7 @@ def face_extraction(host, extended_search=False, show=False):
     while True:
         frame = utils.recv_array(camera).copy() # Weird, but necessary to do a copy.
 
-        if j%3 == 0: # Every third frame we do face extraction.
+        if j%2 == 0: # Every N'th frame we do face extraction.
             j = 1
         else:
             j += 1
@@ -279,6 +279,7 @@ def respond(control_host, learn_host, debug=False):
                 #print '**wordFace', wordFace
                 print '**faceWord', faceWord
                 association_in.send_pyobj(['analyze',wav_file,wav_segments,segment_ids,wavs,similar_ids,wordFace,faceWord])
+                print 'return from association send'
                                 
         if eventQ in events:
             pushbutton = eventQ.recv_json()

@@ -192,10 +192,12 @@ def analyze(wav_file,wav_segments,segment_ids,wavs,similar_ids,_wordFace,_faceWo
                 similarWords[k].append(similarWords[audio_id][k])
     
     # analysis of the segment's relationship to the sentence it occured in
+    print 'update segments in sentence...'
     updateWordsInSentence(segment_ids)
     updateNeighbors(segment_ids)
     updateNeighborAfter(segment_ids)
     updatePositionMembership(segment_ids) 
+    print '...analysis done'
         
 def makeSentence(assoc_out, predicate):
 
@@ -269,7 +271,7 @@ def generate(predicate, method,
     _wordsInSentence = normalizeItemScore(copy.copy(wordsInSentence[predicate]))
     #print '\n_wordsInSentence', _wordsInSentence
     _wordFace = normalizeItemScore(copy.copy(wordFace[predicate]))
-    #print '\n* faces that have said this word', _wordFace
+    print '\n* faces that have said this word', _wordFace
     #print '\n_wordFace', _wordFace
     # temporary solution to using faces
     faces = [item[0] for item in _wordFace]
@@ -280,12 +282,12 @@ def generate(predicate, method,
     #print 'faceWord', faceWord
     try:_faceWord = normalizeItemScore(copy.copy(faceWord[face]))
     except:_faceWord = [] # if for some reason we can't find any faces
-    #print '\n_faceWord', _faceWord
+    print '\n_faceWord', _faceWord
     _similarWords = copy.copy(similarWords[predicate])
     _similarWords = list(numpy.add(scale(_similarWords, -1), 1.0)) # invert scores (keeping in 0 to 1 range)
     _similarWords = normalizeItemScore(formatAsMembership(_similarWords))
     _similarWords = zeroMe(predicate, _similarWords)
-    #print '\n_similarWords', _similarWords
+    print '\n_similarWords', _similarWords
     #print '\*similarWords*'
     #for k,v in similarWords.iteritems():
     #    print 'audio id %i has %i similar sounds'%(k, len(v))
