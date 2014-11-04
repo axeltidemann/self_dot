@@ -433,10 +433,15 @@ def respond(control_host, learn_host, debug=False):
                 parm, value = pushbutton['assoc_setParam'].split()
                 association_in.send_pyobj(['setParam', parm, value ])
 
-            if 'setVoiceType' in pushbutton:
-                chan, value = pushbutton['setVoiceType'].split()
-                if chan == '1': voiceType1 = value
-                if chan == '2': voiceType2 = value
+            if 'respond_setParam' in pushbutton:
+                print 'respond_setParam', pushbutton['respond_setParam']
+                items = pushbutton['respond_setParam'].split()
+                print 'items', items
+                if items[0] == 'voiceType':
+                    chan = items[1]
+                    print 'chan', chan, items
+                    if chan == '1': voiceType1 = items[2]
+                    if chan == '2': voiceType2 = items[2]
 
             if 'play_id' in pushbutton:
                 try:
