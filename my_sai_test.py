@@ -22,7 +22,7 @@ def CreateSAIParams(sai_width, num_triggers_per_frame=2, **kwargs):
                          num_triggers_per_frame=num_triggers_per_frame,
                          **kwargs)
 
-def rectangles(sai_frame, channels=32, lags=16):
+def sai_rectangles(sai_frame, channels=32, lags=16):
     center = sai_frame.shape[1]/2
     height = sai_frame.shape[0]
     width = sai_frame.shape[1]
@@ -37,7 +37,7 @@ def rectangles(sai_frame, channels=32, lags=16):
 
         while end_row < height:
 
-            while window_width < width and center - (window_width - width/2) > 0:
+            while window_width <= width:
                 #print 'SAI frame section {} {} {} {}'.format(end_row - window_height, end_row, center - (window_width - width/2) if window_width > width/2 else center, np.clip(center + window_width, center, width))
                 r = sai_frame[end_row - window_height:end_row, center - (window_width - width/2) if window_width > width/2 else center:np.clip(center + window_width, center, width)]
                 r_resized = cv2.resize(r, (lags, channels))
@@ -51,15 +51,16 @@ def rectangles(sai_frame, channels=32, lags=16):
 
     return marginal_values
 
-def codebook_creation(marginals, k=256):
+def sai_codebooks(marginals, k):
     code_books = []
     for rectangle in zip(*marginals):
         obs = np.vstack(rectangle)
+        #print '{} observations, {} features, k={}'.format(obs.shape[0], obs.shape[1], k)
         code_books.append(kmeans(obs, k)[0])
 
     return code_books
 
-def histogram_computation(sai_video_marginals, codebooks, k=256):
+def sai_histogram(sai_video_marginals, codebooks, k):
     sparse_code = np.zeros(len(codebooks)*k)
     for marginals in sai_video_marginals:
         sparse_frame = [ np.zeros(k) ] * len(codebooks)
@@ -70,12 +71,18 @@ def histogram_computation(sai_video_marginals, codebooks, k=256):
         sparse_code += np.hstack(sparse_frame) 
     return sparse_code
 
+def sai_sparse_codes(sai_videos, k):
+    sai_video_marginals = [[sai_rectangles(sai_frame) for sai_frame in video] for video in sai_videos]
+    all_marginals = list(itertools.chain.from_iterable(sai_video_marginals))
+    codebooks = sai_codebooks(all_marginals, k)
+    return [ sai_histogram(s, codebooks, k) for s in sai_video_marginals ]
+    
 
 if __name__ == '__main__':
 
     t0 = time.time()
     
-    NAPs = [ utils.trim_right(brain.cochlear(filename, stride=1, new_rate=44100, apply_filter=0), threshold=.05) for filename in glob.glob('memory_recordings/testing/*wav') ]
+    NAPs = [ utils.trim_right(brain.cochlear(filename, stride=1, new_rate=44100, apply_filter=0), threshold=.05) for filename in glob.glob('memory_recordings/*wav') ]
     t1 = time.time()
     print 'Cochlear calculated in {} seconds'.format(t1 - t0)
 
@@ -95,11 +102,9 @@ if __name__ == '__main__':
 
     print 'SAI video calculated in {} seconds'.format(time.time() - t1)
 
-    sai_video_marginals = [[rectangles(sai_frame) for sai_frame in video] for video in sai_videos]
-    all_marginals = list(itertools.chain.from_iterable(sai_video_marginals))
-    codebooks = codebook_creation(all_marginals)
-    sparse_codings = [ histogram_computation(s, codebooks) for s in sai_video_marginals ]
+    k = 256
+    sparse_codes = sai_sparse_codes(sai_videos, k)
 
-    plt.matshow(sparse_codings, aspect='auto')
-    plt.show()
+    plt.ion()
+    plt.matshow(sparse_codes, aspect='auto')
     
