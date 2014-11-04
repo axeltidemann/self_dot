@@ -7,6 +7,7 @@ import linecache
 import sys
 import cPickle as pickle
 import zlib
+import random
 
 import numpy as np
 import zmq
@@ -312,7 +313,31 @@ def get_segments(wavfile, threshold=.25):
 #            maxamp = float(line[18:])
 #    return dur, maxamp
 
+def getLatestMemoryWavs(howmany):
+    '''
+    Find the N latest recorded memory wave files
+    '''
+    path = './memory_recordings/'
+    infiles = os.listdir(path)
+    wavfiles = []
+    for f in infiles:
+        if f[-4:] == '.wav': wavfiles.append(path+f)
+    wavfiles.sort()
+    latefiles = wavfiles[-howmany:]        
+    return latefiles
 
+def updateAmbientMemoryWavs(currentFiles):
+    newfiles = getLatestMemoryWavs(10)
+    for f in currentFiles:
+        try:
+            newfiles.remove(f)
+        except: pass
+    new = random.choice(newfiles)
+    currentFiles.append(new)
+    if len(currentFiles) > 4:
+        currentFiles.pop(0)
+    return new, currentFiles
+    
 def print_exception(msg=''):
     exc_type, exc_obj, tb = sys.exc_info()
     f = tb.tb_frame
