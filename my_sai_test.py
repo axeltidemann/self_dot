@@ -82,7 +82,7 @@ if __name__ == '__main__':
 
     t0 = time.time()
     
-    NAPs = [ utils.trim_right(brain.cochlear(filename, stride=1, new_rate=44100, apply_filter=0), threshold=.05) for filename in glob.glob('memory_recordings/*wav') ]
+    NAPs = [ utils.trim_right(brain.cochlear(filename, stride=1, new_rate=44100, apply_filter=0), threshold=.05) for filename in glob.glob('memory_recordings/*wav') if utils.get_segments(filename)[-1] > .1 ]
     t1 = time.time()
     print 'Cochlear calculated in {} seconds'.format(t1 - t0)
 
