@@ -76,6 +76,7 @@ i31 	0 $SCORELEN			; analysis
 i77     0 $SCORELEN			; delay for secondary associations playback
 i78     0 $SCORELEN			; reverb for secondary associations playback
 i79     0 $SCORELEN			; mixer for secondary associations playback
+i91 	0 $SCORELEN			; ambient sound
 i99 	0 $SCORELEN			; master out
 
 ; test
