@@ -112,8 +112,7 @@ def audio():
     poller.register(eventQ, zmq.POLLIN)
 
     import time
-    t_str = time.strftime
-    t_tim = time.time
+
 
     memRecPath = myCsoundAudioOptions.memRecPath
         
@@ -194,8 +193,11 @@ def audio():
         if state['memoryRecording']:
             if audioStatusTrig > 0:
                 print 'starting memoryRec'
-                timestr = t_str('%Y_%m_%d_%H_%M_%S')
-                tim_time = t_tim()
+                #t_str = time.strftime
+                #t_tim = time.time
+                timestr = time.strftime('%Y_%m_%d_%H_%M_%S')
+                print '**** timestr ****', timestr                
+                tim_time = time.time()
                 filename = memRecPath+timestr+'.wav'
                 cs.InputMessage('i 34 0 -1 "%s"'%filename)
                 markerfileName = memRecPath+timestr+'.txt'

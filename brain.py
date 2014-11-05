@@ -563,7 +563,7 @@ def learn_audio(host, debug=False):
                         audio_id = 0
                         if len(NAPs) == 1:
                             hammings = [ utils.hamming_distance(new_audio_hash, h) for h in NAP_hashes[0] ]
-
+                        
                         if audio_recognizer:
                             resampled_new_sound = utils.zero_pad(resample(new_sound, float(maxlen)/new_sound.shape[0], 'sinc_best'), maxlen_scaled)
                             x_test = audio_recognizer.rPCA.transform(np.ndarray.flatten(resampled_new_sound))

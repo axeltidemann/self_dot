@@ -36,7 +36,6 @@
 	klowThresh	= knoiseFloor_dB	        ; lower threshold for transient detection
 	;idoubleLimit = 0.02			            ; minimum duration between events, (double trig limit)
     kdoubleLimit chnget "doubleLimit"          ; minimum duration between events, (double trig limit)
-    printk2 kdoubleLimit
     kdecThresh	chnget "transientDecThresh"  ;= 6 ; retrig threshold, how much must the level decay from its local max before allowing new transient trig
 
 	ktrig1, kdiff	TransientDetect kFollowdb1, iresponse, ktthresh, klowThresh, kdecThresh, kdoubleLimit
