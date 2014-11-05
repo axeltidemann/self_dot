@@ -10,6 +10,7 @@
 
 import multiprocessing as mp
 import time
+from threading import Timer
 
 import zmq
 from zmq.utils.jsonapi import dumps
@@ -19,6 +20,10 @@ import utils
 import brain
 import robocontrol
 import association
+
+IDLE_SECONDS = 10
+def idle():
+    IO.send('SELF IS BORED')
 
 class Controller:
     def __init__(self, init_state):
@@ -37,9 +42,14 @@ class Controller:
 
         incoming = context.socket(zmq.PULL)
         incoming.bind('tcp://*:{}'.format(IO.EXTERNAL))
-        
+
+        timer = []
         while True:
             self.parse(incoming.recv_json())
+            if timer:
+                timer.cancel()
+            timer = Timer(IDLE_SECONDS, idle, ())
+            timer.start()
 
     def parse(self, message):
         print '[self.] received:', message

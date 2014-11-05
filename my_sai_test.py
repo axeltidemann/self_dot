@@ -1,6 +1,8 @@
 import time
 import glob
 import itertools
+import multiprocessing as mp
+import cPickle as pickle
 
 import numpy as np
 from scipy.io import wavfile
@@ -32,10 +34,10 @@ def sai_rectangles(sai_frame, channels=32, lags=16):
 
     marginal_values = []
     
-    while window_height < height:
+    while window_height <= height:
         end_row = window_height
 
-        while end_row < height:
+        while end_row <= height:
 
             while window_width <= width:
                 #print 'SAI frame section {} {} {} {}'.format(end_row - window_height, end_row, center - (window_width - width/2) if window_width > width/2 else center, np.clip(center + window_width, center, width))
@@ -71,40 +73,84 @@ def sai_histogram(sai_video_marginals, codebooks, k):
         sparse_code += np.hstack(sparse_frame) 
     return sparse_code
 
-def sai_sparse_codes(sai_videos, k):
-    sai_video_marginals = [[sai_rectangles(sai_frame) for sai_frame in video] for video in sai_videos]
+def sai_sparse_codes(sai_video_marginals, k):
+    #sai_video_marginals = [[sai_rectangles(sai_frame) for sai_frame in video] for video in sai_videos]
     all_marginals = list(itertools.chain.from_iterable(sai_video_marginals))
     codebooks = sai_codebooks(all_marginals, k)
     return [ sai_histogram(s, codebooks, k) for s in sai_video_marginals ]
-    
 
+def _valid_file(filename, threshold=.1):
+    try:
+        return utils.get_segments(filename)[-1] > threshold
+    except:
+        return False    
+
+def _cochlear_trim_sai_marginals(filename):
+    try:
+        NAP = brain.cochlear(filename, stride=1, new_rate=44100, apply_filter=0)
+        
+        num_channels = NAP.shape[1]
+        input_segment_width = 2048
+        sai_params = CreateSAIParams(num_channels=num_channels,
+                                    input_segment_width=input_segment_width,
+                                    trigger_window_width=input_segment_width,
+                                    sai_width=1024)
+
+        sai = pysai.SAI(sai_params)
+
+        audio_segments = utils.get_segments(filename)
+        norm_segments = np.rint(NAP.shape[0]*audio_segments/audio_segments[-1]).astype('int')
+        marginals = []
+        
+        for segment_id, NAP_segment in enumerate(utils.trim_right(NAP[norm_segments[i]:norm_segments[i+1]], threshold=.05) for i in range(len(norm_segments)-1)) :
+            sai_video = [ np.copy(sai.RunSegment(input_segment.T)) for input_segment in utils.chunks(NAP_segment, input_segment_width) ]
+            marginals.append([filename, segment_id, [ sai_rectangles(frame) for frame in sai_video ]])
+            sai.Reset()
+            
+        return marginals
+    except:
+        print utils.print_exception()
+        return [[filename, -1, None]]
+    
 if __name__ == '__main__':
 
     t0 = time.time()
-    
-    NAPs = [ utils.trim_right(brain.cochlear(filename, stride=1, new_rate=44100, apply_filter=0), threshold=.05) for filename in glob.glob('memory_recordings/*wav') ]
+
+    pool = mp.Pool() #Only about 30% faster than single-thread, since carfac-cmd is also parallelized.
+    sai_video_marginals = pool.map(_cochlear_trim_sai_marginals, [ filename for filename in glob.glob('memory_recordings/*wav') if _valid_file(filename) ])
+    sai_video_marginals = list(itertools.chain.from_iterable(sai_video_marginals))
+    #sai_video_marginals = [_cochlear_trim_sai_marginals(filename) for filename in glob.glob('memory_recordings/*wav')[-100:] if _valid_file(filename) ]
+    pool.close()
+    #NAPs = [ _cochlear_trim_sai(filename) for filename in glob.glob('memory_recordings/*wav')[-5:] if _valid_file(filename) ]
+    #NAPs = [ utils.trim_right(brain.cochlear(filename, stride=1, new_rate=44100, apply_filter=0), threshold=.05) for filename in glob.glob('memory_recordings/*wav')[-10:] if _valid_file(filename) ]
     t1 = time.time()
-    print 'Cochlear calculated in {} seconds'.format(t1 - t0)
+    print 'Cochlear SAI marginals calculated in {} seconds'.format(t1 - t0)
 
-    num_channels = NAPs[0].shape[1]
-    input_segment_width = 2048
-    sai_params = CreateSAIParams(num_channels=num_channels,
-                                 input_segment_width=input_segment_width,
-                                 trigger_window_width=input_segment_width,
-                                 sai_width=1024)
+    # num_channels = NAPs[0][1].shape[1]
+    # input_segment_width = 2048
+    # sai_params = CreateSAIParams(num_channels=num_channels,
+    #                              input_segment_width=input_segment_width,
+    #                              trigger_window_width=input_segment_width,
+    #                              sai_width=1024)
 
-    sai = pysai.SAI(sai_params)
+    # sai = pysai.SAI(sai_params)
 
-    sai_videos = []
-    for NAP in NAPs:
-        sai_videos.append([ np.copy(sai.RunSegment(input_segment.T)) for input_segment in utils.chunks(NAP, input_segment_width) ] ) # NOTICE THE NP.COPY FOR JESUS HOLY MOTHER OF JOSEPH SAKE!!! HOLY CRAP!
-        sai.Reset()
+    # sai_videos = []
+    # for _, NAP in NAPs:
+    #     sai_videos.append([ np.copy(sai.RunSegment(input_segment.T)) for input_segment in utils.chunks(NAP, input_segment_width) ] ) # NOTICE THE NP.COPY FOR JESUS HOLY MOTHER OF JOSEPH SAKE!!! HOLY CRAP!
+    #     sai.Reset()
 
-    print 'SAI video calculated in {} seconds'.format(time.time() - t1)
+    # print 'SAI video calculated in {} seconds'.format(time.time() - t1)
 
     k = 256
-    sparse_codes = sai_sparse_codes(sai_videos, k)
+    sparse_codes = sai_sparse_codes([ marginals for _,_,marginals in sai_video_marginals if marginals is not None ], k)
+    print 'Sparse codes calculated in {} seconds'.format(time.time() - t1)
 
+    pickle.dump(sai_video_marginals, open('SAIVIDEOMARGINALS', 'w'))    
     plt.ion()
     plt.matshow(sparse_codes, aspect='auto')
     
+    # pool = mp.Pool()
+    # results = pool.map(parse_excel_file, glob.glob('wawa*/*xlsx'))
+    # pool.close()
+    # return results

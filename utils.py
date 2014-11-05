@@ -61,7 +61,7 @@ def csv_to_array(filename, delimiter=' '):
 
 
 def array_to_csv(filename, data, delimiter=' '):
-    with open(filename, 'wb') as csvfile:
+    with open(filename, 'wb') as csvfile: #b
         writer = csv.writer(csvfile, delimiter=delimiter)
         if len(data.shape) == 1:
             data.shape = (data.shape[0],1)
