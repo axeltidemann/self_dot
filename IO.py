@@ -89,15 +89,8 @@ def audio():
     publisher = context.socket(zmq.PUB)
     publisher.bind('tcp://*:{}'.format(MIC))
 
-    #assoc = context.socket(zmq.PUB)
-    #assoc.bind('tcp://*:{}'.format(ASSOCIATION_IN))
-
     robocontrol = context.socket(zmq.PUSH)
     robocontrol.connect('tcp://localhost:{}'.format(ROBO))
-
-    #roboback = context.socket(zmq.SUB)
-    #roboback.connect('tcp://localhost:{}'.format(ROBOBACK))
-    #roboback.setsockopt(zmq.SUBSCRIBE, b'')
 
     subscriber = context.socket(zmq.PULL)
     subscriber.bind('tcp://*:{}'.format(SPEAKER))
@@ -117,8 +110,6 @@ def audio():
     poller.register(subscriber, zmq.POLLIN)
     poller.register(stateQ, zmq.POLLIN)
     poller.register(eventQ, zmq.POLLIN)
-    #poller.register(assoc, zmq.POLLIN)
-    #poller.register(roboback, zmq.POLLIN)
 
     import time
     t_str = time.strftime
@@ -142,32 +133,12 @@ def audio():
     stopflag = 0
     zeroChannelsOnNoBrain = 1
     
-    fftsize = int(cs.GetChannel("fftsize"))
-    ffttabsize = fftsize/2
-    fftin_amptab = 1
-    fftin_freqtab = 2
-    fftout_amptab = 4
-    fftout_freqtab = 5
-    fftresyn_amptab = 7
-    fftresyn_freqtab = 8
-    
     # optimizations to avoid function lookup inside loop
     tGet = cs.TableGet 
     tSet = cs.TableSet
     cGet = cs.GetChannel
     cSet = cs.SetChannel
     perfKsmps = cs.PerformKsmps
-    fftbinindices = range(ffttabsize)
-    fftin_amptabs = [fftin_amptab]*ffttabsize
-    fftin_freqtabs = [fftin_freqtab]*ffttabsize
-    fftout_amptabs = [fftout_amptab]*ffttabsize
-    fftout_freqtabs = [fftout_freqtab]*ffttabsize
-    fftresyn_amptabs = [fftresyn_amptab]*ffttabsize
-    fftresyn_freqtabs = [fftresyn_freqtab]*ffttabsize
-    fftzeros = [0]*ffttabsize
-    fftconst = [0.1]*ffttabsize
-    fftin_amplist = [0]*ffttabsize
-    fftin_freqlist = [0]*ffttabsize
 
     filename = []
     counter = 0
@@ -184,18 +155,7 @@ def audio():
         stopflag = perfKsmps()
         if stopflag:
             print '*** *** CSOUND STOP FLAG *** ***'
-        fftinFlag = cGet("pvsinflag")
-        fftoutFlag = cGet("pvsoutflag")
         
-        if fftinFlag:
-            fftin_amplist = map(tGet,fftin_amptabs,fftbinindices)
-            fftin_freqlist = map(tGet,fftin_freqtabs,fftbinindices)
-            #bogusamp = map(tSet,fftresyn_amptabs,fftbinindices,fftin_amplist)
-            #bogusfreq = map(tSet,fftresyn_freqtabs,fftbinindices,fftin_freqlist)
-        if fftoutFlag:
-            fftout_amplist = map(tGet,fftout_amptabs,fftbinindices)
-            fftout_freqlist = map(tGet,fftout_freqtabs,fftbinindices)
-
         events = dict(poller.poll(timeout=0))
 
         if stateQ in events:
