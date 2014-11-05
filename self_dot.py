@@ -23,7 +23,8 @@ import association
 
 IDLE_SECONDS = 10
 def idle():
-    IO.send('SELF IS BORED')
+    #IO.send('SELF IS BORED')
+    pass
 
 class Controller:
     def __init__(self, init_state):
@@ -180,6 +181,9 @@ if __name__ == '__main__':
                          'fullscreen': 0,
                          'display2': 0,
                          'facerecognition': False,}
+
+    me = mp.current_process()
+    print 'SELF MAIN PID', me.pid
 
     mp.Process(target=IO.audio, name='AUDIO').start() 
     mp.Process(target=IO.video, name='VIDEO').start()

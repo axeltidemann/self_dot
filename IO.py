@@ -23,7 +23,7 @@ PROJECTOR = 5562
 MIC = 5563
 SPEAKER = 5564
 STATE = 5565
-EXTERNAL = 5566
+EXTERNAL = 5566 # If you change this, you're out of luck.
 #5567 available
 EVENT = 5568
 #5569 available 
@@ -68,7 +68,7 @@ def video():
             if state['fullscreen'] > 0:
                 cv2.setWindowProperty('Output', cv2.WND_PROP_FULLSCREEN, cv2.cv.CV_WINDOW_FULLSCREEN)
             if state['display2'] > 0:
-                cv2.moveWindow('Output', 2100, 100)
+                cv2.moveWindow('Output', 2000, 100)
 
         if projector in events:
             cv2.imshow('Output', cv2.resize(recv_array(projector), FRAME_SIZE))
@@ -115,10 +115,7 @@ def audio():
     t_str = time.strftime
     t_tim = time.time
 
-    memRecPath = "./memory_recordings/"
-
-    if not os.path.exists(memRecPath):
-        os.makedirs(memRecPath)
+    memRecPath = myCsoundAudioOptions.memRecPath
         
     import csnd6
     cs = csnd6.Csound()
@@ -152,10 +149,10 @@ def audio():
     while not stopflag:
         counter += 1
         counter = counter%16000 # just to reset sometimes
-        stopflag = perfKsmps()
-        if stopflag:
-            print '*** *** CSOUND STOP FLAG *** ***'
-        
+        #print 'PROCESSING KSMPS'
+        stopflag = cs.PerformKsmps()
+        #print 'ALIVE'
+
         events = dict(poller.poll(timeout=0))
 
         if stateQ in events:
@@ -174,7 +171,8 @@ def audio():
         in_centroid = cs.GetChannel("in_centroid")
 
         if state['roboActive'] > 0:
-            if panposition != 0.5:
+            if (panposition < 0.48) or (panposition > 0.52):
+                print 'panposition', panposition
                 robocontrol.send_json([1,'pan',panposition])
             if (counter % 500) == 0:
                 robocontrol.send_json([2,'pan',-1])
@@ -353,11 +351,3 @@ def audio():
                 except Exception, e:
                     print e, 'Playfile aborted.'
 
-# Setup so it can be accessed from processes which don't have a zmq context, i.e. for one-shot messaging.
-# Do not use this in contexts where timing is important, i.e. create a proper socket similar to this one.
-def send(message, context=None, host='localhost', port=EXTERNAL):
-    print 'This send() should only be used in simple circumstances, i.e. not in something that runs in performance-critical code!'
-    context = context or zmq.Context()
-    sender = context.socket(zmq.PUSH)
-    sender.connect('tcp://{}:{}'.format(host, port))
-    sender.send_json(message)

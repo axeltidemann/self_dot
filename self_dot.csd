@@ -18,6 +18,14 @@
 #include "udos.inc"
 
 ;******************************
+; DEBUG
+	instr 1
+k1 init 0
+k1 = (k1+1)%100
+printk2 k1
+        endin
+
+;******************************
 ; audio input and housekeeping
 ; instruments 1-29 
 #include "input_housekeep.inc"
@@ -53,6 +61,14 @@
 ; Master output, self analysis
 #include "master_outputs.inc"
 
+;******************************
+; DEBUG
+	instr 100
+k1 init 0
+k1 = (k1+1)%100
+printk2 k1+9900, 30
+        endin
+
 </CsInstruments>
 
 <CsScore>
@@ -62,17 +78,19 @@
 
 f0 86400
 
-i1 	0 .1			        ; init chn values
-i4 	0 $SCORELEN			; audio input
-i11 	0 $SCORELEN			; panalyze, merge left and right input
-i21 	0 .1 1				; initialize input level
-i22 	0 .1 "inputNoisefloor" -20	; initialize noise floor 
-i31 	0 $SCORELEN			; analysis
-i77     0 $SCORELEN			; delay for secondary associations playback
-i78     0 $SCORELEN			; reverb for secondary associations playback
-i79     0 $SCORELEN			; mixer for secondary associations playback
-i93 	0 $SCORELEN			; ambient sound reverb
-i99 	0 $SCORELEN			; master out
+;i1   0 $SCORELEN              ; debug
+i2 	 0 .1			        ; init chn values
+i4 	 0 $SCORELEN			; audio input
+i11  0 $SCORELEN			; panalyze, merge left and right input
+i21  0 .1 1				; initialize input level
+i22  0 .1 "inputNoisefloor" -20	; initialize noise floor 
+i31  0 $SCORELEN			; analysis
+i77  0 $SCORELEN			; delay for secondary associations playback
+i78  0 $SCORELEN			; reverb for secondary associations playback
+i79  0 $SCORELEN			; mixer for secondary associations playback
+i93  0 $SCORELEN			; ambient sound reverb
+i99  0 $SCORELEN			; master out
+;i100 0 $SCORELEN              ; debug
 
 </CsScore>
 

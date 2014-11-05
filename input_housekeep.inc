@@ -1,12 +1,12 @@
 ;******************************
 ; exit from Csound
         instr 9999
-        exitnow
+        ;exitnow
         endin
 
 ;******************************
 ; init chn values 
-	instr 1
+	instr 2
 #include "chn_init.inc"
         endin
         
@@ -81,9 +81,9 @@ endif
 	instr 6
 print p1, p2, p3, p4
 	a1	oscili p4, 440, giSine
-;		chnmix a1, "MasterOut1"
-;		chnmix a1, "MasterOut2"
-    outs a1, a1
+		chnmix a1, "MasterOut1"
+		chnmix a1, "MasterOut2"
+;    outs a1, a1
 	endin
 
 ;******************************
