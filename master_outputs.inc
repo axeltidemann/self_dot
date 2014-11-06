@@ -91,25 +91,72 @@
 ; master output 
 	instr 99
 
-	a1	chnget "MasterOut1"
+	a1	        chnget "MasterOut1"
+        a1              butterhp a1, 100                ; low cut 
+
+	kHiShelfFq      chnget  "Master1HiShelfFq"; 4000
+	kHiShelfGain    chnget  "Master1HiShelfGain"; = 0
+	a1	        pareq a1, kHiShelfFq, ampdb(kHiShelfGain), 0.8,  2
+	kLoShelfFq      chnget  "Master1LoShelfFq"; = 100
+	kLoShelfGain    chnget  "Master1LoShelfGain" ; = 0
+	a1	        pareq a1, kLoShelfFq, ampdb(kLoShelfGain), 0.8,  1
+	kBand1Fq        chnget  "Master1Band1Fq"; = 1200
+	kBand1Gain      chnget  "Master1Band1Gain" ; = -20
+	kBand1Q         chnget  "Master1Band1Q"; ; = 0.3
+	a1	        pareq a1, kBand1Fq, ampdb(kBand1Gain), kBand1Q,  0
 
 	kthresh         chnget "PrimaryCompThresh"
 	kratio          chnget "PrimaryCompRatio"
-	kattack		    = 15				; attack time 
-	krelease	    = 20				; release time 
+	kattack		= 15				; attack time 
+	krelease	= 20				; release time 
 #include "compressor.inc"
 	klevel          chnget "PrimaryMasterLevel"
-    klevel          = ampdbfs(klevel)
-    a1              = a1*klevel
+        klevel          = ampdbfs(klevel)
+        a1out           = a1*klevel
 
-	a2	chnget "MasterOut2"
-    iMasterAdjust   = 2
-		            outs a1*iMasterAdjust, a2*iMasterAdjust
-		            chnset (a1+a2)*0.5, "MyOutput"
 
-	a0	= 0
-                    chnset a0, "MasterOut1"
-                    chnset a0, "MasterOut2"
-                    chnset a0, "in1"
-                    chnset a0, "in2"
+        a2d             chnget "SecondaryDry"
+	a2m	        chnget "MasterOut2"
+        a2              = a2d+a2m
+        kLoFreq         chnget "SecondaryMasterLoCut"
+        a2              butterhp a2, kLoFreq        
+        a2              butterhp a2, kLoFreq*0.8        
+
+	kHiShelfFq      chnget  "Master2HiShelfFq"; 4000
+	kHiShelfGain    chnget  "Master2HiShelfGain"; = 0
+	a2	        pareq a2, kHiShelfFq, ampdb(kHiShelfGain), 0.8,  2
+	kLoShelfFq      chnget  "Master2LoShelfFq"; = 100
+	kLoShelfGain    chnget  "Master2LoShelfGain" ; = 0
+	a2	        pareq a2, kLoShelfFq, ampdb(kLoShelfGain), 0.8,  1
+	kBand1Fq        chnget  "Master2Band1Fq"; = 1200
+	kBand1Gain      chnget  "Master2Band1Gain" ; = -20
+	kBand1Q         chnget  "Master2Band1Q"; ; = 0.3
+	a2	        pareq a2, kBand1Fq, ampdb(kBand1Gain), kBand1Q,  0
+
+        kthresh         chnget "SecondaryCompThresh"
+        kratio          chnget "SecondaryCompRatio"
+        kattack         = 15                                ; attack time 
+        krelease        = 20                                ; release time 
+        a1              = a2 ; patch into compressor
+#include "compressor.inc"
+        a2              = a1 ; patch out of compressor
+        klevel          chnget "SecondaryMasterLevel"
+        klevel          = ampdbfs(klevel)
+        a2out           = a2*klevel
+
+        iMasterAdjust   = 2
+	                outs a1out*iMasterAdjust, a2out*iMasterAdjust
+		        chnset (a1+a2)*0.5, "MyOutput"
+
+        ; reset channels 
+        a0              = 0
+                        chnset a0, "SecondaryDry"
+                        chnset a0, "SecondaryDelaySend"
+                        chnset a0, "SecondaryReverbSend"
+                        chnset a0, "MasterOut1"
+                        chnset a0, "MasterOut2"
+                        chnset a0, "in1"
+                        chnset a0, "in2"
+                        chnset a0, "in1clean"
+                        chnset a0, "in2clean"
 	endin

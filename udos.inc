@@ -49,7 +49,6 @@
     idoubleLimit    limit idoubleLimit, 0.1, 5
     kdouble		linseg	0, idoubleLimit, 0, 0, 1, 1, 1
 	rireturn
-    printk2 kdouble, 30
 
 	xout ktrig, kdiff
 	endop

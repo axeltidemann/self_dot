@@ -44,7 +44,7 @@ printk2 k1
 ; ******************************
 ; instr 50-59
 ; primary synth, resynthesis/imitation
-#include "synth_primary.inc"
+;#include "synth_primary.inc"
 
 ; ******************************
 ; instr 60-69
@@ -54,8 +54,8 @@ printk2 k1
 ; ******************************
 ; instr 70-79
 ; Playback of secondary associations / memory images of heard sounds
-#include "synth_secondary.inc"
-
+; #include "synth_secondary.inc"
+#include "secondary_efx.inc"
 ; ******************************
 ; instr 91-99
 ; Master output, self analysis
