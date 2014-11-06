@@ -101,13 +101,15 @@ def face_extraction(host, extended_search=False, show=False):
         if faces:
             faces_sorted = sorted(faces, key=lambda x: x[2]*x[3], reverse=True)
             x,y,w,h = faces_sorted[0]
-            x_diff = (x + w/2. - rows/2.)/rows
+            #x_diff = (x + w/2. - rows/2.)/rows # [-1, 1]
+            x_diff = (rows/2. - (x + w/2.))/rows # [-1, 1]
             y_diff = (y + h/2. - cols/2.)/cols
             utils.send_array(publisher, cv2.resize(frame[y:y+h, x:x+w], (100,100)))
             i += 1
-            if i%5 == 0:
-                if abs(x_diff) > .05:
-                    robocontrol.send_json([ 1, 'pan', .52 if x_diff < 0 else .47]) 
+            if i%2 == 0:
+                if abs(x_diff) > .1:
+                    robocontrol.send_json([ 1, 'pan', (x_diff + 1)/2]) 
+                    #robocontrol.send_json([ 1, 'pan', .52 if x_diff < 0 else .47]) 
                 robocontrol.send_json([ 1, 'tilt', y_diff])
                 i = 0
     
@@ -535,7 +537,6 @@ def respond(control_host, learn_host, debug=False):
 
             if 'load' in pushbutton:
                 sound_to_face, wordFace, face_to_sound, faceWord, video_producer, segment_ids, wavs, wav_segments, audio_recognizer, maxlen, maxlen_scaled, NAP_hashes, face_id, face_recognizer = utils.load('{}.{}'.format(pushbutton['load'], me.name))
-
                     
 
 def learn_audio(host, debug=False):

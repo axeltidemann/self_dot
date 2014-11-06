@@ -112,8 +112,6 @@ def audio():
     poller.register(eventQ, zmq.POLLIN)
 
     import time
-
-
     memRecPath = myCsoundAudioOptions.memRecPath
         
     import csnd6
@@ -148,9 +146,7 @@ def audio():
     while not stopflag:
         counter += 1
         counter = counter%16000 # just to reset sometimes
-        #print 'PROCESSING KSMPS'
         stopflag = cs.PerformKsmps()
-        #print 'ALIVE'
 
         events = dict(poller.poll(timeout=0))
 
@@ -192,11 +188,8 @@ def audio():
 
         if state['memoryRecording']:
             if audioStatusTrig > 0:
-                print 'starting memoryRec'
-                #t_str = time.strftime
-                #t_tim = time.time
                 timestr = time.strftime('%Y_%m_%d_%H_%M_%S')
-                print '**** timestr ****', timestr                
+                print 'starting memoryRec', timestr
                 tim_time = time.time()
                 filename = memRecPath+timestr+'.wav'
                 cs.InputMessage('i 34 0 -1 "%s"'%filename)

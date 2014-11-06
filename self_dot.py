@@ -13,6 +13,7 @@ import time
 
 import zmq
 from zmq.utils.jsonapi import dumps
+import numpy as np
 
 import IO
 import utils
@@ -20,52 +21,35 @@ import brain
 import robocontrol
 import association
 
-IDLE_SECONDS = 10
 def idle(host):
     me = mp.current_process()
     print me.name, 'PID', me.pid
 
     context = zmq.Context()
 
-    stateQ = context.socket(zmq.SUB)
-    stateQ.connect('tcp://{}:{}'.format(host, IO.STATE))
-    stateQ.setsockopt(zmq.SUBSCRIBE, b'') 
-
-    sender = context.socket(zmq.PUSH)
-    sender.connect('tcp://{}:{}'.format(host, IO.EXTERNAL))
-
     face = context.socket(zmq.SUB)
     face.connect('tcp://{}:{}'.format(host, IO.FACE))
     face.setsockopt(zmq.SUBSCRIBE, b'')
 
     robocontrol = context.socket(zmq.PUSH)
-    robocontrol.connect('tcp://localhost:{}'.format(IO.ROBO))
+    robocontrol.connect('tcp://{}:{}'.format(host, IO.ROBO))
 
     poller = zmq.Poller()
-    poller.register(stateQ, zmq.POLLIN)
     poller.register(face, zmq.POLLIN)
     
     state = stateQ.recv_json()
 
-    state_time = time.time()
-    face_time = time.time()
-        
     while True:
-        events = dict(poller.poll(timeout=IDLE_SECONDS*1000))
-        if stateQ in events:
-            state = stateQ.recv_json()
-            state_time = time.time()
-
-        if time.time() - state_time > IDLE_SECONDS and time.time() - face_time > IDLE_SECONDS:
-            robocontrol.send_json([ 1, 'pan', .55 if np.random.rand() < 0.5 else .45]) 
-            robocontrol.send_json([ 1, 'tilt', 45*np.randint(-5,5)])
-
+        events = dict(poller.poll(timeout=np.random.randint(1000,2500)))
 
         if face in events:
             new_face = utils.recv_array(face)
-            face_time = time.time()
+        else:
+            print '[self.] searches for a face'
+            robocontrol.send_json([ 1, 'pan', .55 if np.random.rand() < 0.5 else .45]) 
+            robocontrol.send_json([ 1, 'tilt', (2*np.random.rand()-1)/10])
 
-            
+
 class Controller:
     def __init__(self, init_state):
         me = mp.current_process()
