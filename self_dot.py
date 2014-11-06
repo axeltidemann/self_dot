@@ -21,11 +21,6 @@ import brain
 import robocontrol
 import association
 
-IDLE_SECONDS = 10
-def idle():
-    #IO.send('SELF IS BORED')
-    pass
-
 class Controller:
     def __init__(self, init_state):
         me = mp.current_process()
@@ -44,13 +39,8 @@ class Controller:
         incoming = context.socket(zmq.PULL)
         incoming.bind('tcp://*:{}'.format(IO.EXTERNAL))
 
-        timer = []
         while True:
             self.parse(incoming.recv_json())
-            if timer:
-                timer.cancel()
-            timer = Timer(IDLE_SECONDS, idle, ())
-            timer.start()
 
     def parse(self, message):
         print '[self.] received:', message
@@ -189,7 +179,6 @@ if __name__ == '__main__':
     mp.Process(target=IO.video, name='VIDEO').start()
     mp.Process(target=brain.face_extraction, args=('localhost',False,True,), name='FACE EXTRACTION').start()
     mp.Process(target=brain.respond, args=('localhost','localhost',), name='RESPONDER').start()
-    #mp.Process(target=brain.learn, args=('localhost',)).start()
     mp.Process(target=brain.learn_audio, args=('localhost',), name='AUDIO LEARN').start()
     mp.Process(target=brain.learn_video, args=('localhost',), name='VIDEO LEARN').start()
     mp.Process(target=brain.learn_faces, args=('localhost',), name='FACES LEARN').start()

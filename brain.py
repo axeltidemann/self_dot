@@ -496,7 +496,6 @@ def respond(control_host, learn_host, debug=False):
 
             if 'load' in pushbutton:
                 sound_to_face, wordFace, face_to_sound, faceWord, video_producer, segment_ids, wavs, wav_segments, audio_recognizer, maxlen, maxlen_scaled, NAP_hashes, face_id, face_recognizer = utils.load('{}.{}'.format(pushbutton['load'], me.name))
-
                     
 
 def learn_audio(host, debug=False):
