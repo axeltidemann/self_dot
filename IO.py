@@ -188,11 +188,8 @@ def audio():
 
         if state['memoryRecording']:
             if audioStatusTrig > 0:
-                print 'starting memoryRec'
-                #t_str = time.strftime
-                #t_tim = time.time
                 timestr = time.strftime('%Y_%m_%d_%H_%M_%S')
-                print '\n\n\n\n**** timestr ****\n\n\n\n', timestr                
+                print 'starting memoryRec', timestr
                 tim_time = time.time()
                 filename = memRecPath+timestr+'.wav'
                 cs.InputMessage('i 34 0 -1 "%s"'%filename)

@@ -7,14 +7,13 @@ import cPickle as pickle
 import numpy as np
 from scipy.io import wavfile
 from scipy.cluster.vq import kmeans, vq
-import matplotlib.pyplot as plt
 import cv2
-import matplotlib.pyplot as plt
 
 import sai as pysai
 import IO
 import utils
 import brain
+
 
 def CreateSAIParams(sai_width, num_triggers_per_frame=2, **kwargs):
   """Fills an SAIParams object using reasonable defaults for some fields."""
@@ -113,13 +112,12 @@ def _cochlear_trim_sai_marginals(filename):
         return [[filename, -1, None]]
     
 if __name__ == '__main__':
-
+    import matplotlib.pyplot as plt
     t0 = time.time()
 
-    pool = mp.Pool() #Only about 30% faster than single-thread, since carfac-cmd is also parallelized.
+    pool = mp.Pool() 
     sai_video_marginals = pool.map(_cochlear_trim_sai_marginals, [ filename for filename in glob.glob('memory_recordings/*wav') if _valid_file(filename) ])
     sai_video_marginals = list(itertools.chain.from_iterable(sai_video_marginals))
-    #sai_video_marginals = [_cochlear_trim_sai_marginals(filename) for filename in glob.glob('memory_recordings/*wav')[-100:] if _valid_file(filename) ]
     pool.close()
     #NAPs = [ _cochlear_trim_sai(filename) for filename in glob.glob('memory_recordings/*wav')[-5:] if _valid_file(filename) ]
     #NAPs = [ utils.trim_right(brain.cochlear(filename, stride=1, new_rate=44100, apply_filter=0), threshold=.05) for filename in glob.glob('memory_recordings/*wav')[-10:] if _valid_file(filename) ]
@@ -149,8 +147,3 @@ if __name__ == '__main__':
     pickle.dump(sai_video_marginals, open('SAIVIDEOMARGINALS', 'w'))    
     plt.ion()
     plt.matshow(sparse_codes, aspect='auto')
-    
-    # pool = mp.Pool()
-    # results = pool.map(parse_excel_file, glob.glob('wawa*/*xlsx'))
-    # pool.close()
-    # return results

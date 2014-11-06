@@ -10,16 +10,45 @@
 
 import multiprocessing as mp
 import time
-from threading import Timer
 
 import zmq
 from zmq.utils.jsonapi import dumps
+import numpy as np
 
 import IO
 import utils
 import brain
 import robocontrol
 import association
+
+def idle(host):
+    me = mp.current_process()
+    print me.name, 'PID', me.pid
+
+    context = zmq.Context()
+
+    face = context.socket(zmq.SUB)
+    face.connect('tcp://{}:{}'.format(host, IO.FACE))
+    face.setsockopt(zmq.SUBSCRIBE, b'')
+
+    robocontrol = context.socket(zmq.PUSH)
+    robocontrol.connect('tcp://{}:{}'.format(host, IO.ROBO))
+
+    poller = zmq.Poller()
+    poller.register(face, zmq.POLLIN)
+    
+    state = stateQ.recv_json()
+
+    while True:
+        events = dict(poller.poll(timeout=np.random.randint(1000,2500)))
+
+        if face in events:
+            new_face = utils.recv_array(face)
+        else:
+            print '[self.] searches for a face'
+            robocontrol.send_json([ 1, 'pan', .55 if np.random.rand() < 0.5 else .45]) 
+            robocontrol.send_json([ 1, 'tilt', (2*np.random.rand()-1)/10])
+
 
 class Controller:
     def __init__(self, init_state):
@@ -182,9 +211,11 @@ if __name__ == '__main__':
     mp.Process(target=brain.learn_audio, args=('localhost',), name='AUDIO LEARN').start()
     mp.Process(target=brain.learn_video, args=('localhost',), name='VIDEO LEARN').start()
     mp.Process(target=brain.learn_faces, args=('localhost',), name='FACES LEARN').start()
+    mp.Process(target=brain.calculate_sai_video_marginals, args=('localhost',), name='SAI VIDEO CALCULATION').start()
     mp.Process(target=robocontrol.robocontrol, args=('localhost',), name='ROBOCONTROL').start()
     mp.Process(target=association.association, args=('localhost',), name='ASSOCIATION').start()
     mp.Process(target=Controller, args=(persistent_states,), name='CONTROLLER').start()
+    mp.Process(target=idle, args=('localhost',), name='IDLER').start()
     try:
         raw_input('')
     except KeyboardInterrupt:

@@ -21,10 +21,12 @@ from scikits.samplerate import resample
 import cv2
 from sklearn.decomposition import RandomizedPCA
 from scipy.signal.signaltools import correlate2d as c2d
+import sai as pysai
 
 import utils
 import IO
 import association
+import my_sai_test as mysai
 
 try:
     opencv_prefix = os.environ['VIRTUAL_ENV']
@@ -99,13 +101,15 @@ def face_extraction(host, extended_search=False, show=False):
         if faces:
             faces_sorted = sorted(faces, key=lambda x: x[2]*x[3], reverse=True)
             x,y,w,h = faces_sorted[0]
-            x_diff = (x + w/2. - rows/2.)/rows
+            #x_diff = (x + w/2. - rows/2.)/rows # [-1, 1]
+            x_diff = (rows/2. - (x + w/2.))/rows # [-1, 1]
             y_diff = (y + h/2. - cols/2.)/cols
             utils.send_array(publisher, cv2.resize(frame[y:y+h, x:x+w], (100,100)))
             i += 1
-            if i%5 == 0:
-                if abs(x_diff) > .05:
-                    robocontrol.send_json([ 1, 'pan', .52 if x_diff < 0 else .47]) 
+            if i%2 == 0:
+                if abs(x_diff) > .1:
+                    robocontrol.send_json([ 1, 'pan', (x_diff + 1)/2]) 
+                    #robocontrol.send_json([ 1, 'pan', .52 if x_diff < 0 else .47]) 
                 robocontrol.send_json([ 1, 'tilt', y_diff])
                 i = 0
     
@@ -161,7 +165,44 @@ def _predict_audio_id(audio_recognizer, NAP_resampled):
 def _NAP_resampled(wav_file, maxlen, maxlen_scaled):
     NAP = utils.trim_right(utils.scale(utils.load_cochlear(wav_file)))
     return utils.zero_pad(resample(utils.trim_right(utils.scale(NAP)), float(maxlen)/NAP.shape[0], 'sinc_best'), maxlen_scaled), NAP
-                    
+
+def calculate_sai_video_marginals(host, debug=False):
+    me = mp.current_process()
+    print '{} PID {}'.format(me.name, me.pid)
+
+    context = zmq.Context()
+    eventQ = context.socket(zmq.SUB)
+    eventQ.connect('tcp://{}:{}'.format(host, IO.EVENT))
+    eventQ.setsockopt(zmq.SUBSCRIBE, b'') 
+
+    while True:
+        pushbutton = eventQ.recv_json()
+        if 'learn' in pushbutton:
+            t0 = time.time()
+            filename = pushbutton['filename']
+            audio_segments = utils.get_segments(filename)
+
+            NAP = cochlear(filename, stride=1, new_rate=22050, apply_filter=0)
+            input_segment_width = 2048
+            num_channels = NAP.shape[1]
+
+            sai_params = mysai.CreateSAIParams(num_channels=num_channels,
+                                               input_segment_width=input_segment_width,
+                                               trigger_window_width=input_segment_width,
+                                               sai_width=1024)
+            sai = pysai.SAI(sai_params)
+
+
+            input_segment_width = 2048
+            norm_segments = np.rint(NAP.shape[0]*audio_segments/audio_segments[-1]).astype('int')
+
+            for segment_id, NAP_segment in enumerate(utils.trim_right(NAP[norm_segments[i]:norm_segments[i+1]], threshold=.05) for i in range(len(norm_segments)-1)) :
+                sai_video = [ np.copy(sai.RunSegment(input_segment.T)) for input_segment in utils.chunks(NAP_segment, input_segment_width) ]
+                sai.Reset()
+                marginals = [ mysai.sai_rectangles(frame) for frame in sai_video ]
+                pickle.dump(marginals, open('{}-sai_video_marginals_segment_{}'.format(filename, segment_id), 'w'))
+
+            print 'SAI video marginals for {} calculated in {} seconds'.format(filename, time.time() - t0)
 
 def respond(control_host, learn_host, debug=False):
     me = mp.current_process()
@@ -809,6 +850,3 @@ def _three_amigos(context, host):
     brainQ.connect('tcp://{}:{}'.format(host, IO.BRAIN))
 
     return stateQ, eventQ, brainQ
-                        
-if __name__ == '__main__':
-    classifier_brain(sys.argv[1] if len(sys.argv) == 2 else 'localhost')
