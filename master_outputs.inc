@@ -146,7 +146,7 @@
 
         iMasterAdjust   = 2
 	                outs a1out*iMasterAdjust, a2out*iMasterAdjust
-		        chnset (a1+a2)*0.5, "MyOutput"
+		        chnset (a1out+a2out)*0.5, "MyOutput"
 
         ; reset channels 
         a0              = 0
