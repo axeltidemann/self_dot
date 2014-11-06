@@ -4,9 +4,9 @@
 
 ; select source waveforms 
         kwaveform1      table 0, giAmbientTabs  ; source audio waveform 1
-        kwaveform2      table 0, giAmbientTabs  ; ...
-        kwaveform3      table 0, giAmbientTabs
-        kwaveform4      table 0, giAmbientTabs
+        kwaveform2      table 1, giAmbientTabs  ; ...
+        kwaveform3      table 2, giAmbientTabs
+        kwaveform4      table 3, giAmbientTabs
 
 ; get source waveform length (used when calculating transposition and time pointer)
         kfilen1         tableng  kwaveform1             ; get length of the first source waveform
@@ -56,7 +56,8 @@
 
 ; grain rate
         kgrainrate      = 12.0                                  ; number of grains per second
-        kgrainrate      rspline 0.5, 15, 0.3, 2
+        kgrainrate      rspline 0.5, 5, 0.3, 2
+        kgrainrate      pow kgrainrate, 1.7
         krateDev        randh 1, kgrainrate
         krateDev        pow krateDev, 2
         kgrainrate      = kgrainrate+(krateDev*kgrainrate)
@@ -73,14 +74,14 @@
         idisttab        ftgenonce       0, 0, 16, 16, 1, 16, -10, 0     ; probability distribution for random grain masking
 
 ; grain shape
-        kGrainDur       = 0.1                                   ; length of each grain relative to grain rate 
+        kGrainDur       = 0.2                                   ; length of each grain relative to grain rate 
         kRelDur         = (kGrainDur*1000)/kgrainrate           ; grain dur in milliseconds, relative to grain rate
-        kduration       = 20+kRelDur
+        kduration       = 25+kRelDur
 
         ienv_attack     = giSigmoRise                           ; grain attack shape (from table)
         ienv_decay      = giSigmoFall                           ; grain decay shape (from table)
         ksustain_amount = 0.0                                   ; balance between enveloped time(attack+decay) and sustain level time, 0.0 = no time at sustain level
-        ka_d_ratio      = 0.1                                   ; balance between attack time and decay time, 0.0 = zero attack time and full decay time
+        ka_d_ratio      = 0.15                                   ; balance between attack time and decay time, 0.0 = zero attack time and full decay time
 
         kenv2amt        = 0.0                                   ; amount of secondary enveloping per grain (e.g. for fof synthesis)
         ienv2tab        = giExpFall                             ; secondary grain shape (from table), enveloping the whole grain if used
@@ -154,7 +155,8 @@ a1,a2                   partikkel \                                             
         ivoice2         = ivoice+1
         kamp2           = ampdbfs(-10)                          ; output amplitude
         ;kgrainrate2     = 200
-        kgrainrate2     rspline 0.4, 250, 0.1, 2
+        kgrainrate2     rspline 0.4, 30, 0.1, 2
+        kgrainrate2     pow kgrainrate2, 1.5
         krateDev2       randh 1, kgrainrate2
         krateDev2       pow krateDev2, 2
         ;kgrainrate2     = kgrainrate2+(krateDev2*kgrainrate2)

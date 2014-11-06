@@ -217,6 +217,9 @@ if __name__ == '__main__':
                          'display2': 0,
                          'facerecognition': False,}
 
+    me = mp.current_process()
+    print 'SELF MAIN PID', me.pid
+
     mp.Process(target=IO.audio, name='AUDIO').start() 
     mp.Process(target=IO.video, name='VIDEO').start()
     mp.Process(target=brain.face_extraction, args=('localhost',False,True,), name='FACE EXTRACTION').start()

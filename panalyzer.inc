@@ -1,6 +1,7 @@
 
 	aLeft	chnget "in1"
 	aRight	chnget "in2"
+	aRight = aRight * ampdbfs(1)
 
 ; preprocess
 /*

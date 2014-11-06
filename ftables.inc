@@ -37,7 +37,7 @@
     giAmbient3          ftgen	97, 0, 1024, 2, 0	; empty buffer
     giAmbient4          ftgen	98, 0, 1024, 2, 0	; empty buffer
     giAmbientTabNum     = 0
-    giAmbientTabs       ftgen   0, 0, 4, -2, giAmbient1,giAmbient2,giAmbient3,giAmbient4
+    giAmbientTabs       ftgen   0, 0, 8, -2, 95,96,97,98,giAmbient1,giAmbient2,giAmbient3,giAmbient4
 
 ; panalyzer tables
 	giPanalyzeTemp0		ftgen	0, 0, 1024, 2, 0	; empty buffer

@@ -18,6 +18,14 @@
 #include "udos.inc"
 
 ;******************************
+; DEBUG
+	instr 1
+k1 init 0
+k1 = (k1+1)%100
+printk2 k1
+        endin
+
+;******************************
 ; audio input and housekeeping
 ; instruments 1-29 
 #include "input_housekeep.inc"
@@ -53,6 +61,14 @@
 ; Master output, self analysis
 #include "master_outputs.inc"
 
+;******************************
+; DEBUG
+	instr 100
+k1 init 0
+k1 = (k1+1)%100
+printk2 k1+9900, 30
+        endin
+
 </CsInstruments>
 
 <CsScore>
@@ -60,89 +76,21 @@
 #define SCORELEN # 86400 #
 ;#define SCORELEN # 15 #
 
-;#include "testscore.inc"
+f0 86400
 
-i1 	0 .1			        ; init chn values
-i4 	0 $SCORELEN			; audio input
-i11 	0 $SCORELEN			; panalyze, merge left and right input
-i21 	0 .1 1				; initialize input level
-i22 	0 .1 "inputNoisefloor" -20	; initialize noise floor 
-;i22 	0 .1 "memoryRecording" 1	; enable/disable recording of audio memory
-i31 	0 $SCORELEN			; analysis
-;i51 	0 -1				; subtractive harmonic resynthesis
-;i52 	0 -1				; partikkel resynthesis
-;i53 	3 -1				; fft resynthesis
-;i98 	0 $SCORELEN			; analysis of own output
-i77     0 $SCORELEN			; delay for secondary associations playback
-i78     0 $SCORELEN			; reverb for secondary associations playback
-i79     0 $SCORELEN			; mixer for secondary associations playback
-i93 	0 $SCORELEN			; ambient sound reverb
-i99 	0 $SCORELEN			; master out
-
-; test
-;i35 2 1                                ; related to osx python problems
-;i2      4 1                             ; exit Csound
-;i 70    1 1                             ; test read a segment from memoryRecording       
-;i 74    2 1 800                         ; test play a loaded segment from memoryRecording       
-;i 55    2 0 "memory_recordings/2014_08_07_15_15_54.wav"   ; test play granular file playback
-
-/*
-; test self voice
-i 60    0  1   "memory_recordings/2014_10_02_13_35_10.wav"      0       0     -2    1       1   -96    -96    1
-;          p3  soundfile                                        start   end   amp   voice   max dly   rvb   speed
-i 60    0  1   "memory_recordings/2014_08_07_15_15_54.wav"      0       0     -2    2      1    -12    -23    1
-i 61    5  1   "memory_recordings/2014_08_07_15_15_54.wav"      0       0     -2    2      1    -12    -23    1
-i 62   10  1   "memory_recordings/2014_08_07_15_15_54.wav"      0       0     -2    2      1    -12    -23    1
-i 63   15  1   "memory_recordings/2014_08_07_15_15_54.wav"      0       0     -2    2      1    -12    -23    1
-i 64   20  1   "memory_recordings/2014_08_07_15_15_54.wav"      0       0     -2    2      1    -12    -23    1
-i 65   25  1   "memory_recordings/2014_08_07_15_15_54.wav"      0       0     -2    2      1    -12    -23    1
-i 66   30  1   "memory_recordings/2014_08_07_15_15_54.wav"      0       0     -2    2      1    -12    -23    1
-i 67   35  1   "memory_recordings/2014_08_07_15_15_54.wav"      0       0     -2    2      1    -12    -23    1
-*/
-/*
-; test self voice
-;                                               start   end     amp   maxamp    voice   dly   rvb   speed
-i 61    0  1   "2014_10_13_14_57_57.wav"        0.000   0.891    -2    1.5      1      -96    -96    1
-i 61    2  1   "2014_10_13_14_57_57.wav"        0.891   1.712    .      .       .       .       .    .
-i 61    4  1   "2014_10_13_14_57_57.wav"        1.712   2.638    .      .       .       .       .    .
-i 61    6  1   "2014_10_13_14_57_57.wav"        2.638   2.763    .      .       .       .       .    .
-i 61    8  1   "2014_10_13_14_57_57.wav"        2.763   3.544    .      .       .       .       .    .
-i 61    10 1   "2014_10_13_14_57_57.wav"        3.544   4.429    .      .       .       .       .    .
-i 61    12 1   "2014_10_13_14_57_57.wav"        4.429   4.818    .      .       .       .       .    .
-i 61    14 1   "2014_10_13_14_57_57.wav"        4.818   5.312    .      .       .       .       .    .
-i 61    16 1   "2014_10_13_14_57_57.wav"        5.312   0        .      .       .       .       .    .
-*/
-/*
-i 60    0  1   "2014_10_13_14_57_57.wav"        0.000   0.891    -2    1.5      1      -96    -96    1
-i 61    1  1   "2014_10_13_14_57_57.wav"         0.000   0.891    -2    1.5      1      -96    -96    1
-i 62    2  1   "2014_10_13_14_57_57.wav"        0.000   0.891    -2    1.5      1      -96    -96    1
-i 63    3  1   "2014_10_13_14_57_57.wav"        0.000   0.891    -2    1.5      1      -96    -96    1
-i 64    4  1   "2014_10_13_14_57_57.wav"        0.000   0.891    -2    1.5      1      -96    -96    1
-i 65    5  1   "2014_10_13_14_57_57.wav"        0.000   0.891    -2    1.5      1      -96    -96    1
-i 66    6  1   "2014_10_13_14_57_57.wav"        0.000   0.891    -2    1.5      1      -96    -96    1
-i 67    7  1   "2014_10_13_14_57_57.wav"        0.000   0.891    -2    1.5      1      -96    -96    1
-*/
-/*
-;          p3  soundfile                                        start   end   amp   voice   dly   rvb   speed
-i 60    0  1   "memory_recordings/2014_08_07_15_15_54.wav"      0       0     -2    2      -12    -23    1
-i 61    5  1   "memory_recordings/2014_08_07_15_15_54.wav"      0       0     -2    2      -12    -23    1
-i 62   10  1   "memory_recordings/2014_08_07_15_15_54.wav"      0       0     -2    2      -12    -23    1
-i 63   15  1   "memory_recordings/2014_08_07_15_15_54.wav"      0       0     -2    2      -12    -23    1
-i 64   20  1   "memory_recordings/2014_08_07_15_15_54.wav"      0       0     -2    2      -12    -23    1
-i 65   25  1   "memory_recordings/2014_08_07_15_15_54.wav"      0       0     -2    2      -12    -23    1
-i 66   30  1   "memory_recordings/2014_08_07_15_15_54.wav"      0       0     -2    2      -12    -23    1
-i 67   35  1   "memory_recordings/2014_08_07_15_15_54.wav"      0       0     -2    2      -12    -23    1
-*/
-/*
-; test self suppression
-i 12 1 4') # measure roundtrip latency
-i 13 5 1.9') # get audio input noise print
-i 14 7 -1 1 1') # enable noiseprint and self-output suppression
-i 15 7.2 2') # get noise floor level 
-i 16 8.3 0.1') # set noise gate shape
-i 17 8.5 -1') # turn on new noise gate
-i 60 10  1   "memory_recordings/2014_08_07_15_15_54.wav"      0       0     -2    2      -16    -16    1
-*/
+;i1   0 $SCORELEN              ; debug
+i2 	 0 .1			        ; init chn values
+i4 	 0 $SCORELEN			; audio input
+i11  0 $SCORELEN			; panalyze, merge left and right input
+i21  0 .1 1				; initialize input level
+i22  0 .1 "inputNoisefloor" -20	; initialize noise floor 
+i31  0 $SCORELEN			; analysis
+i77  0 $SCORELEN			; delay for secondary associations playback
+i78  0 $SCORELEN			; reverb for secondary associations playback
+i79  0 $SCORELEN			; mixer for secondary associations playback
+i93  0 $SCORELEN			; ambient sound reverb
+i99  0 $SCORELEN			; master out
+;i100 0 $SCORELEN              ; debug
 
 </CsScore>
 

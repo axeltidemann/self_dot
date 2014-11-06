@@ -1,12 +1,12 @@
 ;******************************
 ; exit from Csound
         instr 9999
-        exitnow
+        ;exitnow
         endin
 
 ;******************************
 ; init chn values 
-	instr 1
+	instr 2
 #include "chn_init.inc"
         endin
         
@@ -37,7 +37,7 @@
 	a1,a2	    inch 1,2
 		        chnmix a1, "in1clean"
 		        chnmix a2, "in2clean"
-/*
+
 	aref		chnget "MyOutput"
     aenv        follow2 aref, 0.001, 0.9    ; amp of output
     kenv        downsamp aenv
@@ -49,16 +49,26 @@
     kduck       chnget "selfDucking"
     aenv2       = (aenv2*kduck)             ; user control for activation
     aenv2       = 1-aenv2    ; invert (normally at 1, duck to zero, then fade back in)
-*/    
-
+   
+/*
 ;alternative ducking
 	aref		chnget "MyOutput"
     kduck       chnget "selfDucking"
     aref        = aref * kduck
-    aenv        follow2 aref, 0.001, 1.6    ; amp of output
+    aenv        follow2 aref, 0.001, 1.5    ; amp of output
     aenv        limit aenv, 0, 1
-    aenv2       = 1-aenv    ; invert (normally at 1, duck to zero, then fade back in)
-    
+    aenv1	follow2 aenv*aref, 0.001, 1.2
+    aenv2       = 1-aenv1    ; invert (normally at 1, duck to zero, then fade back in)
+*/   
+
+kdebug	chnget "printInputRms"
+if kdebug > 0 then
+krms	rms a1+a2
+printk2 krms
+krmsduck rms (a1*aenv2)+(a2*aenv2)
+printk2 krmsduck, 5
+endif
+
 		        chnmix a1*aenv2, "in1"
 		        chnmix a2*aenv2, "in2"
 
@@ -73,6 +83,7 @@ print p1, p2, p3, p4
 	a1	oscili p4, 440, giSine
 		chnmix a1, "MasterOut1"
 		chnmix a1, "MasterOut2"
+;    outs a1, a1
 	endin
 
 ;******************************

@@ -23,7 +23,7 @@ PROJECTOR = 5562
 MIC = 5563
 SPEAKER = 5564
 STATE = 5565
-EXTERNAL = 5566
+EXTERNAL = 5566 # If you change this, you're out of luck.
 #5567 available
 EVENT = 5568
 #5569 available 
@@ -68,7 +68,7 @@ def video():
             if state['fullscreen'] > 0:
                 cv2.setWindowProperty('Output', cv2.WND_PROP_FULLSCREEN, cv2.cv.CV_WINDOW_FULLSCREEN)
             if state['display2'] > 0:
-                cv2.moveWindow('Output', 2100, 100)
+                cv2.moveWindow('Output', 2000, 100)
 
         if projector in events:
             cv2.imshow('Output', cv2.resize(recv_array(projector), FRAME_SIZE))
@@ -89,15 +89,8 @@ def audio():
     publisher = context.socket(zmq.PUB)
     publisher.bind('tcp://*:{}'.format(MIC))
 
-    #assoc = context.socket(zmq.PUB)
-    #assoc.bind('tcp://*:{}'.format(ASSOCIATION_IN))
-
     robocontrol = context.socket(zmq.PUSH)
     robocontrol.connect('tcp://localhost:{}'.format(ROBO))
-
-    #roboback = context.socket(zmq.SUB)
-    #roboback.connect('tcp://localhost:{}'.format(ROBOBACK))
-    #roboback.setsockopt(zmq.SUBSCRIBE, b'')
 
     subscriber = context.socket(zmq.PULL)
     subscriber.bind('tcp://*:{}'.format(SPEAKER))
@@ -117,17 +110,11 @@ def audio():
     poller.register(subscriber, zmq.POLLIN)
     poller.register(stateQ, zmq.POLLIN)
     poller.register(eventQ, zmq.POLLIN)
-    #poller.register(assoc, zmq.POLLIN)
-    #poller.register(roboback, zmq.POLLIN)
 
     import time
-    t_str = time.strftime
-    t_tim = time.time
 
-    memRecPath = "./memory_recordings/"
 
-    if not os.path.exists(memRecPath):
-        os.makedirs(memRecPath)
+    memRecPath = myCsoundAudioOptions.memRecPath
         
     import csnd6
     cs = csnd6.Csound()
@@ -142,32 +129,12 @@ def audio():
     stopflag = 0
     zeroChannelsOnNoBrain = 1
     
-    fftsize = int(cs.GetChannel("fftsize"))
-    ffttabsize = fftsize/2
-    fftin_amptab = 1
-    fftin_freqtab = 2
-    fftout_amptab = 4
-    fftout_freqtab = 5
-    fftresyn_amptab = 7
-    fftresyn_freqtab = 8
-    
     # optimizations to avoid function lookup inside loop
     tGet = cs.TableGet 
     tSet = cs.TableSet
     cGet = cs.GetChannel
     cSet = cs.SetChannel
     perfKsmps = cs.PerformKsmps
-    fftbinindices = range(ffttabsize)
-    fftin_amptabs = [fftin_amptab]*ffttabsize
-    fftin_freqtabs = [fftin_freqtab]*ffttabsize
-    fftout_amptabs = [fftout_amptab]*ffttabsize
-    fftout_freqtabs = [fftout_freqtab]*ffttabsize
-    fftresyn_amptabs = [fftresyn_amptab]*ffttabsize
-    fftresyn_freqtabs = [fftresyn_freqtab]*ffttabsize
-    fftzeros = [0]*ffttabsize
-    fftconst = [0.1]*ffttabsize
-    fftin_amplist = [0]*ffttabsize
-    fftin_freqlist = [0]*ffttabsize
 
     filename = []
     counter = 0
@@ -180,18 +147,10 @@ def audio():
     
     while not stopflag:
         counter += 1
-        stopflag = perfKsmps()
-        fftinFlag = cGet("pvsinflag")
-        fftoutFlag = cGet("pvsoutflag")
-        
-        if fftinFlag:
-            fftin_amplist = map(tGet,fftin_amptabs,fftbinindices)
-            fftin_freqlist = map(tGet,fftin_freqtabs,fftbinindices)
-            #bogusamp = map(tSet,fftresyn_amptabs,fftbinindices,fftin_amplist)
-            #bogusfreq = map(tSet,fftresyn_freqtabs,fftbinindices,fftin_freqlist)
-        if fftoutFlag:
-            fftout_amplist = map(tGet,fftout_amptabs,fftbinindices)
-            fftout_freqlist = map(tGet,fftout_freqtabs,fftbinindices)
+        counter = counter%16000 # just to reset sometimes
+        #print 'PROCESSING KSMPS'
+        stopflag = cs.PerformKsmps()
+        #print 'ALIVE'
 
         events = dict(poller.poll(timeout=0))
 
@@ -211,7 +170,8 @@ def audio():
         in_centroid = cs.GetChannel("in_centroid")
 
         if state['roboActive'] > 0:
-            if panposition != 0.5:
+            if (panposition < 0.48) or (panposition > 0.52):
+                print 'panposition', panposition
                 robocontrol.send_json([1,'pan',panposition])
             if (counter % 500) == 0:
                 robocontrol.send_json([2,'pan',-1])
@@ -233,8 +193,11 @@ def audio():
         if state['memoryRecording']:
             if audioStatusTrig > 0:
                 print 'starting memoryRec'
-                timestr = t_str('%Y_%m_%d_%H_%M_%S')
-                tim_time = t_tim()
+                #t_str = time.strftime
+                #t_tim = time.time
+                timestr = time.strftime('%Y_%m_%d_%H_%M_%S')
+                print '**** timestr ****', timestr                
+                tim_time = time.time()
                 filename = memRecPath+timestr+'.wav'
                 cs.InputMessage('i 34 0 -1 "%s"'%filename)
                 markerfileName = memRecPath+timestr+'.txt'
@@ -390,11 +353,3 @@ def audio():
                 except Exception, e:
                     print e, 'Playfile aborted.'
 
-# Setup so it can be accessed from processes which don't have a zmq context, i.e. for one-shot messaging.
-# Do not use this in contexts where timing is important, i.e. create a proper socket similar to this one.
-def send(message, context=None, host='localhost', port=EXTERNAL):
-    print 'This send() should only be used in simple circumstances, i.e. not in something that runs in performance-critical code!'
-    context = context or zmq.Context()
-    sender = context.socket(zmq.PUSH)
-    sender.connect('tcp://{}:{}'.format(host, port))
-    sender.send_json(message)

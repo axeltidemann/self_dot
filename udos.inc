@@ -13,13 +13,13 @@
 ;***************************************************
 ; Transient detection udo
 
-	opcode TransientDetect, kk,kikkki
-	kin, iresponse, ktthresh, klowThresh, kdecThresh, idoubleLimit xin 
+	opcode TransientDetect, kk,kikkkk
+	kin, iresponse, ktthresh, klowThresh, kdecThresh, kdoubleLimit xin 
 /*
 	iresponse	= 10 		; response time in milliseconds
 	ktthresh	= 6		; transient trig threshold 
 	klowThresh	= -60		; lower threshold for transient detection
-	idoubleLimit	= 0.02		; minimum duration between events, (double trig limit)
+	kdoubleLimit	= 0.02		; minimum duration between events, (double trig limit)
 	kdecThresh	= 6		; retrig threshold, how much must the level decay from its local max before allowing new transient trig
 */	
 	kinDel		delayk	kin, iresponse/1000		; delay with response time for comparision of levels
@@ -37,7 +37,7 @@
 	kreGate		limit kreGate-ktrig, 0, 1		; mute when trig detected
 	kreGate		= (kdiff > kdecThresh ? 1 : kreGate)	; re-enable gate when signal has decayed sufficiently
 	kmaxAmp		= (kreGate == 1 ? -99999 : kmaxAmp)	; reset max amp gauge
-/*
+
 	; avoid closely spaced transient triggers (first trig priority)
 	kdouble		init 1
 	ktrig		= ktrig*kdouble
@@ -45,9 +45,12 @@
 	reinit double
 	endif
 	double:
-	kdouble		linseg	0, idoubleLimit, 0, 0, 1, 1, 1
+    idoubleLimit  = i(kdoubleLimit)	
+    idoubleLimit    limit idoubleLimit, 0.1, 5
+    kdouble		linseg	0, idoubleLimit, 0, 0, 1, 1, 1
 	rireturn
-*/
+    printk2 kdouble, 30
+
 	xout ktrig, kdiff
 	endop
 
