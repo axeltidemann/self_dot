@@ -10,7 +10,6 @@
 
 import multiprocessing as mp
 import time
-from threading import Timer
 
 import zmq
 from zmq.utils.jsonapi import dumps
@@ -22,9 +21,51 @@ import robocontrol
 import association
 
 IDLE_SECONDS = 10
-def idle():
-    IO.send('SELF IS BORED')
+def idle(host):
+    me = mp.current_process()
+    print me.name, 'PID', me.pid
 
+    context = zmq.Context()
+
+    stateQ = context.socket(zmq.SUB)
+    stateQ.connect('tcp://{}:{}'.format(host, IO.STATE))
+    stateQ.setsockopt(zmq.SUBSCRIBE, b'') 
+
+    sender = context.socket(zmq.PUSH)
+    sender.connect('tcp://{}:{}'.format(host, IO.EXTERNAL))
+
+    face = context.socket(zmq.SUB)
+    face.connect('tcp://{}:{}'.format(host, IO.FACE))
+    face.setsockopt(zmq.SUBSCRIBE, b'')
+
+    robocontrol = context.socket(zmq.PUSH)
+    robocontrol.connect('tcp://localhost:{}'.format(IO.ROBO))
+
+    poller = zmq.Poller()
+    poller.register(stateQ, zmq.POLLIN)
+    poller.register(face, zmq.POLLIN)
+    
+    state = stateQ.recv_json()
+
+    state_time = time.time()
+    face_time = time.time()
+        
+    while True:
+        events = dict(poller.poll(timeout=IDLE_SECONDS*1000))
+        if stateQ in events:
+            state = stateQ.recv_json()
+            state_time = time.time()
+
+        if time.time() - state_time > IDLE_SECONDS and time.time() - face_time > IDLE_SECONDS:
+            robocontrol.send_json([ 1, 'pan', .55 if np.random.rand() < 0.5 else .45]) 
+            robocontrol.send_json([ 1, 'tilt', 45*np.randint(-5,5)])
+
+
+        if face in events:
+            new_face = utils.recv_array(face)
+            face_time = time.time()
+
+            
 class Controller:
     def __init__(self, init_state):
         me = mp.current_process()
@@ -43,13 +84,8 @@ class Controller:
         incoming = context.socket(zmq.PULL)
         incoming.bind('tcp://*:{}'.format(IO.EXTERNAL))
 
-        timer = []
         while True:
             self.parse(incoming.recv_json())
-            if timer:
-                timer.cancel()
-            timer = Timer(IDLE_SECONDS, idle, ())
-            timer.start()
 
     def parse(self, message):
         print '[self.] received:', message
@@ -185,13 +221,14 @@ if __name__ == '__main__':
     mp.Process(target=IO.video, name='VIDEO').start()
     mp.Process(target=brain.face_extraction, args=('localhost',False,True,), name='FACE EXTRACTION').start()
     mp.Process(target=brain.respond, args=('localhost','localhost',), name='RESPONDER').start()
-    #mp.Process(target=brain.learn, args=('localhost',)).start()
     mp.Process(target=brain.learn_audio, args=('localhost',), name='AUDIO LEARN').start()
     mp.Process(target=brain.learn_video, args=('localhost',), name='VIDEO LEARN').start()
     mp.Process(target=brain.learn_faces, args=('localhost',), name='FACES LEARN').start()
+    mp.Process(target=brain.calculate_sai_video_marginals, args=('localhost',), name='SAI VIDEO CALCULATION').start()
     mp.Process(target=robocontrol.robocontrol, args=('localhost',), name='ROBOCONTROL').start()
     mp.Process(target=association.association, args=('localhost',), name='ASSOCIATION').start()
     mp.Process(target=Controller, args=(persistent_states,), name='CONTROLLER').start()
+    mp.Process(target=idle, args=('localhost',), name='IDLER').start()
     try:
         raw_input('')
     except KeyboardInterrupt:
