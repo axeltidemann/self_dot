@@ -168,7 +168,7 @@ def audio():
         if state['roboActive'] > 0:
             if (panposition < 0.48) or (panposition > 0.52):
                 print 'panposition', panposition
-                robocontrol.send_json([1,'pan',panposition])
+                robocontrol.send_json([1,'pan',panposition-.5])
             if (counter % 500) == 0:
                 robocontrol.send_json([2,'pan',-1])
          

@@ -37,8 +37,6 @@ def idle(host):
     poller = zmq.Poller()
     poller.register(face, zmq.POLLIN)
     
-    state = stateQ.recv_json()
-
     while True:
         events = dict(poller.poll(timeout=np.random.randint(1000,2500)))
 
