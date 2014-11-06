@@ -88,7 +88,7 @@ endif
 
         instr 7 ; test noise
 print p1, p2, p3, p4, p5
-        a1      rand31 p4, 1
+        a1      rnd31 p4, 1
 if p5 <= 1 then 
                 chnmix a1, "MasterOut1"
 else
