@@ -122,6 +122,9 @@ class Controller:
             if 'memoryRecording' in message:
                 self.state['memoryRecording'] = message[16:] in ['True', '1']
 
+            if '_audioLearningStatus' in message:
+                self.state['_audioLearningStatus'] = message[21:] in ['True', '1']
+
             if 'roboActive' in message:
                 self.state['roboActive'] = int(message[11:])
 
@@ -202,6 +205,7 @@ if __name__ == '__main__':
                          'brains': {},
                          'record': False,
                          'memoryRecording': False,
+                         '_audioLearningStatus':False,
                          'roboActive': False,
                          'ambientSound': False,
                          'fullscreen': 0,

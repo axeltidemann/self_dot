@@ -265,8 +265,10 @@ def audio():
         if state['autolearn'] or state['autorespond_single'] or state['autorespond_sentence']:
             if audioStatusTrig > 0:
                 sender.send_json('startrec')
+                sender.send_json('_audioLearningStatus 1')
             if audioStatusTrig < 0:
                 sender.send_json('stoprec')
+                sender.send_json('_audioLearningStatus 0')
                 if filename:
                     if state['autolearn']:
                         interaction.append('learnwav {}'.format(os.path.abspath(filename)))

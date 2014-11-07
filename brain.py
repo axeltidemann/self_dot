@@ -241,6 +241,10 @@ def respond(control_host, learn_host, debug=False):
     eventQ.connect('tcp://{}:{}'.format(control_host, IO.EVENT))
     eventQ.setsockopt(zmq.SUBSCRIBE, b'') 
 
+    stateQ = context.socket(zmq.SUB)
+    stateQ.connect('tcp://{}:{}'.format(host, IO.STATE))
+    stateQ.setsockopt(zmq.SUBSCRIBE, b'') 
+
     projector = context.socket(zmq.PUSH)
     projector.connect('tcp://{}:{}'.format(control_host, IO.PROJECTOR)) 
 
@@ -258,7 +262,10 @@ def respond(control_host, learn_host, debug=False):
     
     poller = zmq.Poller()
     poller.register(eventQ, zmq.POLLIN)
+    poller.register(stateQ, zmq.POLLIN)
     poller.register(brainQ, zmq.POLLIN)
+
+    state = stateQ.recv_json()
 
     sound_to_face = []
     wordFace = {}
@@ -493,6 +500,10 @@ def respond(control_host, learn_host, debug=False):
 
                         # as the first crude method of assembling a sentence, just wait for the word duration here
                         time.sleep(dur+wordSpacing1)
+                        # check if someone is talking to us, if so, abort sentence
+                        if state['_audioLearningStatus']:
+                            print 'Darn, my beautiful sentence was interrupted by this crackface... oh well'
+                            break
 
                 except:
                     utils.print_exception('Sentence response aborted.')
