@@ -52,18 +52,14 @@ def cognition(host):
     eventQ.connect('tcp://{}:{}'.format(host, IO.EVENT))
     eventQ.setsockopt(zmq.SUBSCRIBE, b'') 
 
-    brainQ = context.socket(zmq.PULL)
-    brainQ.bind('tcp://*:{}'.format(IO.BRAIN))
-
     association_in = context.socket(zmq.PUSH)
-    association_in.connect('tcp://{}:{}'.format(learn_host, IO.ASSOCIATION_IN))
+    association_in.connect('tcp://{}:{}'.format(host, IO.ASSOCIATION_IN))
 
-    association_out = context.socket(zmq.PULL)
-    association_out.bind('tcp://*:{}'.format(IO.ASSOCIATION_OUT))
+    # association_out = context.socket(zmq.PULL)
+    # association_out.connect('tcp://*:{}'.format(IO.ASSOCIATION_OUT))
 
     poller = zmq.Poller()
     poller.register(eventQ, zmq.POLLIN)
-    poller.register(brainQ, zmq.POLLIN)
 
     question = False
     rhyme = False
@@ -71,15 +67,13 @@ def cognition(host):
 
     while True:
         events = dict(poller.poll())
-        if brainQ in events:
-            cells = brainQ.recv_pyobj()
-            if cells[0] == 'audio_learn':
-                lastSentenceIds = cells[2]
-                ## we could perhaps store more data from the cells? (e.g. filename?)
-                ##['audio_learn', filename, segment_ids, wavs, wav_segments, audio_recognizer, maxlen, maxlen_scaled, NAP_hashes])
         
         if eventQ in events:
             pushbutton = eventQ.recv_json()
+            
+            if 'last_segment_ids' in pushbutton:
+                lastSentenceIds = pushbutton['last_segment_ids']
+                print 'LAST SENTENCE IDS', lastSentenceIds
 
             if 'learn' in pushbutton or 'respond_sentence' in pushbutton:
                 filename = pushbutton['filename']
@@ -306,7 +300,7 @@ def respond(control_host, learn_host, debug=False):
     eventQ.setsockopt(zmq.SUBSCRIBE, b'') 
 
     stateQ = context.socket(zmq.SUB)
-    stateQ.connect('tcp://{}:{}'.format(host, IO.STATE))
+    stateQ.connect('tcp://{}:{}'.format(control_host, IO.STATE))
     stateQ.setsockopt(zmq.SUBSCRIBE, b'') 
 
     projector = context.socket(zmq.PUSH)
@@ -806,6 +800,7 @@ def learn_audio(host, debug=False):
                     rhyme = np.mean(sorted(all_hammings)[int(len(all_hammings)/2):]) < RHYME_HAMMERTIME
 
                     sender.send_json('rhyme {}'.format(rhyme))
+                    sender.send_json('last_segment_ids {}'.format(segment_ids))
                     t1 = time.time()
                     brainQ.send_pyobj(['audio_learn', filename, segment_ids, wavs, wav_segments, audio_recognizer, maxlen, maxlen_scaled, NAP_hashes])
                     print 'Audio learned in {} seconds, ZMQ time {} seconds'.format(t1 - t0, time.time() - t1)

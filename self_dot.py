@@ -37,6 +37,9 @@ def idle(host):
     poller = zmq.Poller()
     poller.register(face, zmq.POLLIN)
     
+    sender = context.socket(zmq.PUSH)
+    sender.connect('tcp://{}:{}'.format(host, IO.EXTERNAL))
+
     counter = 0
     while True:
         events = dict(poller.poll(timeout=np.random.randint(1000,2500)))
@@ -51,6 +54,8 @@ def idle(host):
         if counter%5 == 0:
             sender.send_json('saySomething')
         counter += 1
+        
+        counter %= 100000
 
 class Controller:
     def __init__(self, init_state, host):
@@ -80,6 +85,10 @@ class Controller:
         print '[self.] received:', message
 
         try:
+            if 'last_segment_ids' in message:
+                _, text_list = message.split()
+                self.event.send_json({'last_segment_ids': eval(text_list) })
+            
             if 'calculate_cochlear' in message:
                 _, wav_file = message.split()
                 t0 = time.time()
