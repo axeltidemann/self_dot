@@ -52,23 +52,48 @@ def cognition(host):
     eventQ.connect('tcp://{}:{}'.format(host, IO.EVENT))
     eventQ.setsockopt(zmq.SUBSCRIBE, b'') 
 
+    brainQ = context.socket(zmq.PULL)
+    brainQ.bind('tcp://*:{}'.format(IO.BRAIN))
+
+    poller = zmq.Poller()
+    poller.register(eventQ, zmq.POLLIN)
+    poller.register(brainQ, zmq.POLLIN)
+
     question = False
     rhyme = False
+    lastSentenceIds = []
 
     while True:
-        pushbutton = eventQ.recv_json()
+        events = dict(poller.poll())
+        if brainQ in events:
+            cells = brainQ.recv_pyobj()
+            if cells[0] == 'audio_learn':
+                lastSentenceIds = cells[2]
+                ## we could perhaps store more data from the cells? (e.g. filename?)
+                ##['audio_learn', filename, segment_ids, wavs, wav_segments, audio_recognizer, maxlen, maxlen_scaled, NAP_hashes])
         
-        if 'learn' in pushbutton or 'respond_sentence' in pushbutton:
-            filename = pushbutton['filename']
-            _,_,_,segmentData = utils.getSoundInfo(filename)
-            pitches = [ item[2] for item in segmentData ]
-            question = pitches[-1] > np.mean(pitches[:-1]) if len(pitches) > 1 else False
-            print 'QUESTION ?', question
+        if eventQ in events:
+            pushbutton = eventQ.recv_json()
 
-        if 'rhyme' in pushbutton:
-            rhyme = pushbutton['rhyme']
-            print 'RHYME ?', rhyme
-            
+            if 'learn' in pushbutton or 'respond_sentence' in pushbutton:
+                filename = pushbutton['filename']
+                _,_,_,segmentData = utils.getSoundInfo(filename)
+                pitches = [ item[2] for item in segmentData ]
+                question = pitches[-1] > np.mean(pitches[:-1]) if len(pitches) > 1 else False
+                print 'QUESTION ?', question
+    
+            if 'rhyme' in pushbutton:
+                rhyme = pushbutton['rhyme']
+                print 'RHYME ?', rhyme
+                
+            if 'saySomething' in pushbutton:
+                if rhyme:
+                    #association pushCurrentSettings
+                    # set similarWord to MAX
+                    # test generate sentence from all ids in lastSentenceIds
+                    # check which one generates a sentence with most similar words (most can be how many or how similar ...?)
+                    # pitch the best rhyming sentence and hit PLAY
+                    pass
 
 # LOOK AT EYES? CAN YOU DETERMINE ANYTHING FROM THEM?
 # PRESENT VISUAL INFORMATION - MOVE UP OR DOWN
