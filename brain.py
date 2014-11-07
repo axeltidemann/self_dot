@@ -36,7 +36,7 @@ except:
     
 FACE_HAAR_CASCADE_PATH = opencv_prefix + '/share/OpenCV/haarcascades/haarcascade_frontalface_default.xml'
 EYE_HAAR_CASCADE_PATH = opencv_prefix + '/share/OpenCV/haarcascades/haarcascade_eye_tree_eyeglasses.xml'
-AUDIO_HAMMERTIME = 8 # Hamming distance match criterion
+AUDIO_HAMMERTIME = 8#45 #8 # Hamming distance match criterion
 RHYME_HAMMERTIME = 10
 FACE_HAMMERTIME = 10
 FRAME_SIZE = (160,120) # Neural network image size, 1/4 of full frame size.
@@ -191,8 +191,8 @@ def _predict_audio_id(audio_recognizer, NAP_resampled):
 
 
 def _NAP_resampled(wav_file, maxlen, maxlen_scaled):
-    NAP = utils.trim_right(utils.scale(utils.load_cochlear(wav_file)))
-    return utils.zero_pad(resample(utils.trim_right(utils.scale(NAP)), float(maxlen)/NAP.shape[0], 'sinc_best'), maxlen_scaled), NAP
+    NAP = utils.trim_right(utils.load_cochlear(wav_file))
+    return utils.zero_pad(resample(NAP, float(maxlen)/NAP.shape[0], 'sinc_best'), maxlen_scaled), NAP
 
 def calculate_sai_video_marginals(host, debug=False):
     me = mp.current_process()
@@ -230,6 +230,19 @@ def calculate_sai_video_marginals(host, debug=False):
                 pickle.dump(marginals, open('{}-sai_video_marginals_segment_{}'.format(filename, segment_id), 'w'))
 
             print 'SAI video marginals for {} calculated in {} seconds'.format(filename, time.time() - t0)
+
+def _hamming_distance_predictor(audio_recognizer, NAP, maxlen, NAP_hashes):
+    NAP_hash = utils.d_hash(NAP, hash_size=8)
+    NAP_scales = [ utils.exact(NAP, maxlen), 
+                   utils.exact(resample(NAP, .5, 'sinc_best'), maxlen), 
+                   utils.exact(resample(NAP, min(2, float(maxlen)/NAP.shape[0]), 'sinc_best'), maxlen) ]
+
+    audio_id_candidates = [ _predict_audio_id(audio_recognizer, NAP_s) for NAP_s in NAP_scales ]
+    hamming_warped = [ np.mean([ utils.hamming_distance(NAP_hash, h) for h in NAP_hashes[audio_id] ]) for audio_id in audio_id_candidates ]
+    print 'HAMMING WARPED', zip(audio_id_candidates, hamming_warped)
+    winner = np.argsort(hamming_warped)[0]
+    return audio_id_candidates[winner], NAP_scales[winner]
+
 
 def respond(control_host, learn_host, debug=False):
     me = mp.current_process()
@@ -364,15 +377,17 @@ def respond(control_host, learn_host, debug=False):
                     segment_id = amps.index(max(amps))
                     #print 'Single selected to respond to segment {}'.format(segment_id)
 
-                    NAP = utils.trim_right(utils.scale(new_sentence[norm_segments[segment_id]:norm_segments[segment_id+1]]))
-                    NAP_resampled = utils.zero_pad(resample(NAP, float(maxlen)/NAP.shape[0], 'sinc_best'), maxlen_scaled)
+                    NAP = utils.trim_right(new_sentence[norm_segments[segment_id]:norm_segments[segment_id+1]])
+                    #NAP_resampled = utils.zero_pad(resample(NAP, float(maxlen)/NAP.shape[0], 'sinc_best'), maxlen_scaled)
                     
                     if debug:            
-                        plt.imshow(NAP_resampled.T, aspect='auto')
+                        plt.imshow(utils.exact(NAP, maxlen).T, aspect='auto')
+                        plt.title('respond NAP: {} to {}'.format(NAP.shape[0], maxlen))
                         plt.draw()
                     
                     try:
-                        audio_id = _predict_audio_id(audio_recognizer, NAP_resampled)
+                        #audio_id = _predict_audio_id(audio_recognizer, NAP_resampled)
+                        audio_id, _ = _hamming_distance_predictor(audio_recognizer, NAP, maxlen, NAP_hashes)
                     except:
                         audio_id = 0
                         print 'Responding having only heard 1 sound.'
@@ -419,7 +434,7 @@ def respond(control_host, learn_host, debug=False):
                     segment_id = amps.index(max(amps))
                     print '**Sentence selected to respond to segment {}'.format(segment_id)
 
-                    NAP = utils.trim_right(utils.scale(new_sentence[norm_segments[segment_id]:norm_segments[segment_id+1]]))
+                    NAP = utils.trim_right(new_sentence[norm_segments[segment_id]:norm_segments[segment_id+1]])
                     NAP_resampled = utils.zero_pad(resample(NAP, float(maxlen)/NAP.shape[0], 'sinc_best'), maxlen_scaled)
                     
                     if debug:            
@@ -598,6 +613,10 @@ def learn_audio(host, debug=False):
 
     state = stateQ.recv_json()
     
+    if debug:
+        import matplotlib.pyplot as plt
+        plt.ion()
+
     while True:
         events = dict(poller.poll())
         
@@ -622,27 +641,31 @@ def learn_audio(host, debug=False):
                     norm_segments = np.rint(new_sentence.shape[0]*audio_segments/audio_segments[-1]).astype('int')
 
                     segment_ids = []
-                    new_audio_hash = []
-                    for segment, new_sound in enumerate([ utils.trim_right(utils.scale(new_sentence[norm_segments[i]:norm_segments[i+1]])) for i in range(len(norm_segments)-1) ]):
+                    new_audio_hash = [] #utils.scale
+                    for segment, new_sound in enumerate([ utils.trim_right(new_sentence[norm_segments[i]:norm_segments[i+1]]) for i in range(len(norm_segments)-1) ]):
                         # Do we know this sound?
                         if debug:
                             plt.imshow(new_sound.T, aspect='auto')
+                            plt.title('learn_audio not resampled')
                             plt.draw()
                         
                         hammings = [ np.inf ]
-                        new_audio_hash.append(utils.d_hash(new_sound))
+                        new_audio_hash.append(utils.d_hash(new_sound, hash_size=8))
                         audio_id = 0
                         if len(NAPs) == 1:
                             hammings = [ utils.hamming_distance(new_audio_hash[-1], h) for h in NAP_hashes[0] ]
                         
                         if audio_recognizer:
-                            resampled_new_sound = utils.zero_pad(resample(new_sound, float(maxlen)/new_sound.shape[0], 'sinc_best'), maxlen_scaled)
-                            x_test = audio_recognizer.rPCA.transform(np.ndarray.flatten(resampled_new_sound))
-                            audio_id = audio_recognizer.predict(x_test)[0]
+                            audio_id, new_sound_scaled = _hamming_distance_predictor(audio_recognizer, new_sound, maxlen, NAP_hashes)
+                            #new_sound_exact = utils.exact(new_sound, maxlen)
+                            #audio_id = _predict_audio_id(audio_recognizer, new_sound_exact)
+
+                            #resampled_new_sound = utils.zero_pad(resample(new_sound, float(maxlen)/new_sound.shape[0], 'sinc_best'), maxlen_scaled)
+                            #audio_id = _predict_audio_id(audio_recognizer, resampled_new_sound)
                             hammings = [ utils.hamming_distance(new_audio_hash[-1], h) for h in NAP_hashes[audio_id] ]
 
                         if np.mean(hammings) < AUDIO_HAMMERTIME:
-                            NAPs[audio_id].append(new_sound)
+                            NAPs[audio_id].append(new_sound_scaled)
                             NAP_hashes[audio_id].append(new_audio_hash[-1])
                             wavs[audio_id].append(filename)
                             print 'Sound is similar to sound {}, hamming mean {}'.format(audio_id, np.mean(hammings))
@@ -659,16 +682,19 @@ def learn_audio(host, debug=False):
                         
                         # Scale the sizes of the samples according to the biggest one. The idea is that this scale well. Otherwise, create overlapping bins.
                         maxlen = max([ m.shape[0] for memory in NAPs for m in memory ])
-                        resampled_memories = [ [ resample(m, float(maxlen)/m.shape[0], 'sinc_best') for m in memory ] for memory in NAPs ]
-                        maxlen_scaled = max([ m.shape[0] for memory in resampled_memories for m in memory ])
+                        # resampled_memories = [ [ resample(m, float(maxlen)/m.shape[0], 'sinc_best') for m in memory ] for memory in NAPs ]
+                        # maxlen_scaled = max([ m.shape[0] for memory in resampled_memories for m in memory ])
+                        maxlen_scaled = -np.inf
+                        memories = [ np.ndarray.flatten(utils.zero_pad(m, maxlen)) for memory in NAPs for m in memory ]
 
                         if len(NAPs) > 1:
-                            resampled_memories = [ [ utils.zero_pad(m, maxlen_scaled) for m in memory ] for memory in resampled_memories ]
-                            resampled_flattened_memories = [ np.ndarray.flatten(m) for memory in resampled_memories for m in memory ]
+                            # resampled_memories = [ [ utils.zero_pad(m, maxlen_scaled) for m in memory ] for memory in resampled_memories ]
+                            # resampled_flattened_memories = [ np.ndarray.flatten(m) for memory in resampled_memories for m in memory ]
                             targets = [ i for i,f in enumerate(NAPs) for _ in f ]
                             
                             rPCA = RandomizedPCA(n_components=100)
-                            x_train = rPCA.fit_transform(resampled_flattened_memories)
+                            #x_train = rPCA.fit_transform(resampled_flattened_memories)
+                            x_train = rPCA.fit_transform(memories)
 
                             audio_recognizer = svm.LinearSVC()
                             audio_recognizer.fit(x_train, targets)
@@ -676,8 +702,6 @@ def learn_audio(host, debug=False):
 
                     all_hammings = [ utils.hamming_distance(new_audio_hash[i], new_audio_hash[j])
                                                             for i in range(len(new_audio_hash)) for j in range(len(new_audio_hash)) if i > j ]
-
-                                     
 
                     print 'RHYME VALUE', np.mean(sorted(all_hammings)[int(len(all_hammings)/2):])
                     rhyme = np.mean(sorted(all_hammings)[int(len(all_hammings)/2):]) < RHYME_HAMMERTIME
@@ -739,7 +763,7 @@ def learn_video(host, debug=False):
                 try:
                     t0 = time.time()
                     filename = pushbutton['filename']
-                    new_sentence = utils.trim_right(utils.scale(utils.load_cochlear(filename)))
+                    new_sentence = utils.trim_right(utils.load_cochlear(filename))
                     
                     video_segment = np.array(list(video))
                     if video_segment.shape[0] == 0:
