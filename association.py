@@ -77,6 +77,7 @@ timeLongDistance2 = 120.0
 durationWeight2 = 0.0
 posInSentenceWeight2 = 0.2   
 
+currentSettings = [] # for temporal storage of globals (association weights)
 
 def association(host):
     me = mp.current_process()
@@ -118,6 +119,13 @@ def association(host):
                     setParam(param,value)                    
                 if func == 'evolve':
                     evolve_sentence_parameters()
+                if func == 'getSimilarWords':
+                    _,predicate, distance = thing
+                    getSimilarWords(predicate, distance)
+                if func == 'pushCurrentSettings':
+                    pushCurrentSettings()
+                if func == 'popCurrentSettings':
+                    popCurrentSettings()
             except Exception, e:
                 print e, 'association receive failed on receiving:', thing
 
@@ -442,6 +450,7 @@ def generate(predicate, method,
 
     return nextWord
 
+
 def updateWordsInSentence(sentence):
     a = 0
     for word in sentence:
@@ -567,6 +576,14 @@ def getCandidatesFromContext(context, position, width):
         else:
             break
     return candidates
+
+def getSimilarWords(predicate, distance):
+    _similarWords = copy.copy(similarWords[predicate])
+    _similarWords = zeroMe(predicate, _similarWords)
+    for word in _similarWords:
+        if word[1] > distance: _similarWords.remove(word)
+    assoc_out.send_pyobj([_similarWords])
+
 
 def weightedSum(a_, weightA_, b_, weightB_):
     '''
@@ -714,6 +731,26 @@ def select(items, method):
         return words[scores.index(min(scores))]
     else:
         random.choice(words)
+
+def pushCurrentSettings():
+    global numWords,neighborsWeight,wordsInSentenceWeight,similarWordsWeight,wordFaceWeight,faceWordWeight
+    global timeShortBeforeWeight,timeShortAfterWeight,timeShortDistance,timeLongBeforeWeight,timeLongAfterWeight,timeLongDistance,durationWeight,posInSentenceWeight
+    global neighborsWeight2,wordsInSentenceWeight2,similarWordsWeight2,wordFaceWeight2,faceWordWeight2
+    global timeShortBeforeWeight2,timeShortAfterWeight2,timeShortDistance2,timeLongBeforeWeight2,timeLongAfterWeight2,timeLongDistance2,durationWeight2,posInSentenceWeight2   
+    currentSettings.append([numWords,neighborsWeight,wordsInSentenceWeight,similarWordsWeight,wordFaceWeight,faceWordWeight,\
+    timeShortBeforeWeight,timeShortAfterWeight,timeShortDistance,timeLongBeforeWeight,timeLongAfterWeight,timeLongDistance,durationWeight,posInSentenceWeight,\
+    neighborsWeight2,wordsInSentenceWeight2,similarWordsWeight2,wordFaceWeight2,faceWordWeight2,\
+    timeShortBeforeWeight2,timeShortAfterWeight2,timeShortDistance2,timeLongBeforeWeight2,timeLongAfterWeight2,timeLongDistance2,durationWeight2,posInSentenceWeight2])
+
+def popCurrentSettings():
+    global numWords,neighborsWeight,wordsInSentenceWeight,similarWordsWeight,wordFaceWeight,faceWordWeight
+    global timeShortBeforeWeight,timeShortAfterWeight,timeShortDistance,timeLongBeforeWeight,timeLongAfterWeight,timeLongDistance,durationWeight,posInSentenceWeight
+    global neighborsWeight2,wordsInSentenceWeight2,similarWordsWeight2,wordFaceWeight2,faceWordWeight2
+    global timeShortBeforeWeight2,timeShortAfterWeight2,timeShortDistance2,timeLongBeforeWeight2,timeLongAfterWeight2,timeLongDistance2,durationWeight2,posInSentenceWeight2   
+    numWords,neighborsWeight,wordsInSentenceWeight,similarWordsWeight,wordFaceWeight,faceWordWeight,\
+    timeShortBeforeWeight,timeShortAfterWeight,timeShortDistance,timeLongBeforeWeight,timeLongAfterWeight,timeLongDistance,durationWeight,posInSentenceWeight,\
+    neighborsWeight2,wordsInSentenceWeight2,similarWordsWeight2,wordFaceWeight2,faceWordWeight2,\
+    timeShortBeforeWeight2,timeShortAfterWeight2,timeShortDistance2,timeLongBeforeWeight2,timeLongAfterWeight2,timeLongDistance2,durationWeight2,posInSentenceWeight2 = currentSettings.pop(0)
 
 def setParam(param,value):
     #param is a string, so we must compile the statement to set the variable

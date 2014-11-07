@@ -37,6 +37,7 @@ def idle(host):
     poller = zmq.Poller()
     poller.register(face, zmq.POLLIN)
     
+    counter = 0
     while True:
         events = dict(poller.poll(timeout=np.random.randint(1000,2500)))
 
@@ -46,6 +47,10 @@ def idle(host):
             print '[self.] searches for a face'
             robocontrol.send_json([ 1, 'pan', (2*np.random.rand() -1)/10 ]) 
             robocontrol.send_json([ 1, 'tilt', (2*np.random.rand()-1)/10])
+
+        if counter%5 == 0:
+            sender.send_json('saySomething')
+        counter += 1
 
 class Controller:
     def __init__(self, init_state, host):
@@ -121,6 +126,9 @@ class Controller:
 
             if 'memoryRecording' in message:
                 self.state['memoryRecording'] = message[16:] in ['True', '1']
+
+            if '_audioLearningStatus' in message:
+                self.state['_audioLearningStatus'] = message[21:] in ['True', '1']
 
             if 'roboActive' in message:
                 self.state['roboActive'] = int(message[11:])
@@ -202,6 +210,7 @@ if __name__ == '__main__':
                          'brains': {},
                          'record': False,
                          'memoryRecording': False,
+                         '_audioLearningStatus':False,
                          'roboActive': False,
                          'ambientSound': False,
                          'fullscreen': 0,
