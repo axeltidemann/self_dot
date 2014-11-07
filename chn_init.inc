@@ -8,7 +8,7 @@
         chnset -10, "td_AmpAdjust"      ; approximate amp compensation for EQ
         
         ; transient detect parameters
-        chnset 1.0, "in_envelopeRelease"    ; envelope follower release
+        chnset 1.5, "in_envelopeRelease"    ; envelope follower release
         chnset 4, "transientThresh"         ; transient trig threshold 
         chnset 8, "transientDecThresh"       ; retrig threshold, how much must the level decay from its local max before allowing new transient trig
         chnset 0.6, "doubleLimit"       ; minimum duration between transients, (double trig limit)

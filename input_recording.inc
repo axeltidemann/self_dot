@@ -10,6 +10,13 @@
 	    ;print p1, p2, p3	
 	    ;puts Swavname, 1
         a1              chnget "rec_in1"
+; compress before recording
+	kthresh         = -20
+	kratio          = 4
+	kattack		= 15				; attack time 
+	krelease	= 20				; release time 
+#include "compressor.inc"
+
                 	    fout Swavname, 14, a1
                         
         ; for writing transient marker txt file
