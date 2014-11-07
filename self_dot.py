@@ -44,12 +44,11 @@ def idle(host):
             new_face = utils.recv_array(face)
         else:
             print '[self.] searches for a face'
-            robocontrol.send_json([ 1, 'pan', .55 if np.random.rand() < 0.5 else .45]) 
+            robocontrol.send_json([ 1, 'pan', (2*np.random.rand() -1)/10 ]) 
             robocontrol.send_json([ 1, 'tilt', (2*np.random.rand()-1)/10])
 
-
 class Controller:
-    def __init__(self, init_state):
+    def __init__(self, init_state, host):
         me = mp.current_process()
         print me.name, 'PID', me.pid
 
@@ -62,6 +61,9 @@ class Controller:
         
         self.event = context.socket(zmq.PUB)
         self.event.bind('tcp://*:{}'.format(IO.EVENT))
+
+        self.association_in = context.socket(zmq.PUSH)
+        self.association_in.connect('tcp://{}:{}'.format(host, IO.ASSOCIATION_IN))
 
         incoming = context.socket(zmq.PULL)
         incoming.bind('tcp://*:{}'.format(IO.EXTERNAL))
@@ -79,6 +81,9 @@ class Controller:
                 utils.write_cochlear(utils.wait_for_wav(wav_file))
                 print 'Calculating cochlear neural activation patterns took {} seconds'.format(time.time() - t0)
             
+            if message == 'evolve':
+                self.association_in.send_pyobj(['evolve'])
+
             if 'register' in message and 'BRAIN' in message:
                 _, name, free = message.split()
                 self.state['brains'][name] = int(free)
@@ -143,6 +148,10 @@ class Controller:
             if 'respondwav_sentence' in message:
                 _, filename = message.split()
                 self.event.send_json({ 'respond_sentence': True, 'filename': filename })
+
+            if 'rhyme' in message:
+                _, value = message.split()
+                self.event.send_json({'rhyme': value == 'True'})
 
             if 'autolearn' in message:
                 self.state['autolearn'] = message[10:] in ['True', '1']
@@ -209,10 +218,11 @@ if __name__ == '__main__':
     mp.Process(target=brain.learn_audio, args=('localhost',), name='AUDIO LEARN').start()
     mp.Process(target=brain.learn_video, args=('localhost',), name='VIDEO LEARN').start()
     mp.Process(target=brain.learn_faces, args=('localhost',), name='FACES LEARN').start()
-    mp.Process(target=brain.calculate_sai_video_marginals, args=('localhost',), name='SAI VIDEO CALCULATION').start()
+    #mp.Process(target=brain.calculate_sai_video_marginals, args=('localhost',), name='SAI VIDEO CALCULATION').start()
     mp.Process(target=robocontrol.robocontrol, args=('localhost',), name='ROBOCONTROL').start()
     mp.Process(target=association.association, args=('localhost',), name='ASSOCIATION').start()
-    mp.Process(target=Controller, args=(persistent_states,), name='CONTROLLER').start()
+    mp.Process(target=brain.cognition, args=('localhost',), name='COGNITION').start()
+    mp.Process(target=Controller, args=(persistent_states,'localhost',), name='CONTROLLER').start()
     mp.Process(target=idle, args=('localhost',), name='IDLER').start()
     try:
         raw_input('')

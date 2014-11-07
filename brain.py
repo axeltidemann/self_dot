@@ -36,9 +36,39 @@ except:
     
 FACE_HAAR_CASCADE_PATH = opencv_prefix + '/share/OpenCV/haarcascades/haarcascade_frontalface_default.xml'
 EYE_HAAR_CASCADE_PATH = opencv_prefix + '/share/OpenCV/haarcascades/haarcascade_eye_tree_eyeglasses.xml'
-AUDIO_HAMMERTIME = 6 # Hamming distance match criterion
+AUDIO_HAMMERTIME = 8 # Hamming distance match criterion
+RHYME_HAMMERTIME = 10
 FACE_HAMMERTIME = 10
 FRAME_SIZE = (160,120) # Neural network image size, 1/4 of full frame size.
+
+
+def cognition(host):
+    me = mp.current_process()
+    print me.name, 'PID', me.pid
+    
+    context = zmq.Context()
+
+    eventQ = context.socket(zmq.SUB)
+    eventQ.connect('tcp://{}:{}'.format(host, IO.EVENT))
+    eventQ.setsockopt(zmq.SUBSCRIBE, b'') 
+
+    question = False
+    rhyme = False
+
+    while True:
+        pushbutton = eventQ.recv_json()
+        
+        if 'learn' in pushbutton or 'respond_sentence' in pushbutton:
+            filename = pushbutton['filename']
+            _,_,_,segmentData = utils.getSoundInfo(filename)
+            pitches = [ item[2] for item in segmentData ]
+            question = pitches[-1] > np.mean(pitches[:-1]) if len(pitches) > 1 else False
+            print 'QUESTION ?', question
+
+        if 'rhyme' in pushbutton:
+            rhyme = pushbutton['rhyme']
+            print 'RHYME ?', rhyme
+            
 
 # LOOK AT EYES? CAN YOU DETERMINE ANYTHING FROM THEM?
 # PRESENT VISUAL INFORMATION - MOVE UP OR DOWN
@@ -101,16 +131,14 @@ def face_extraction(host, extended_search=False, show=False):
         if faces:
             faces_sorted = sorted(faces, key=lambda x: x[2]*x[3], reverse=True)
             x,y,w,h = faces_sorted[0]
-            #x_diff = (x + w/2. - rows/2.)/rows # [-1, 1]
-            x_diff = (rows/2. - (x + w/2.))/rows # [-1, 1]
+            x_diff = (rows/2. - (x + w/2.))/rows
             y_diff = (y + h/2. - cols/2.)/cols
             utils.send_array(publisher, cv2.resize(frame[y:y+h, x:x+w], (100,100)))
             i += 1
-            if i%5 == 0:
+            if i%1 == 0:
                 if abs(x_diff) > .1:
-                    robocontrol.send_json([ 1, 'pan', x_diff**2]) 
-                    #robocontrol.send_json([ 1, 'pan', .52 if x_diff < 0 else .47]) 
-                robocontrol.send_json([ 1, 'tilt', y_diff])
+                    robocontrol.send_json([ 1, 'pan', .25*np.sign(x_diff)*x_diff**2]) 
+                robocontrol.send_json([ 1, 'tilt', .5*np.sign(y_diff)*y_diff**2])
                 i = 0
     
         if show:
@@ -191,7 +219,6 @@ def calculate_sai_video_marginals(host, debug=False):
                                                trigger_window_width=input_segment_width,
                                                sai_width=1024)
             sai = pysai.SAI(sai_params)
-
 
             input_segment_width = 2048
             norm_segments = np.rint(NAP.shape[0]*audio_segments/audio_segments[-1]).astype('int')
@@ -550,6 +577,9 @@ def learn_audio(host, debug=False):
     mic.setsockopt(zmq.SUBSCRIBE, b'')
 
     stateQ, eventQ, brainQ = _three_amigos(context, host)
+
+    sender = context.socket(zmq.PUSH)
+    sender.connect('tcp://{}:{}'.format(host, IO.EXTERNAL))
     
     poller = zmq.Poller()
     poller.register(mic, zmq.POLLIN)
@@ -592,6 +622,7 @@ def learn_audio(host, debug=False):
                     norm_segments = np.rint(new_sentence.shape[0]*audio_segments/audio_segments[-1]).astype('int')
 
                     segment_ids = []
+                    new_audio_hash = []
                     for segment, new_sound in enumerate([ utils.trim_right(utils.scale(new_sentence[norm_segments[i]:norm_segments[i+1]])) for i in range(len(norm_segments)-1) ]):
                         # Do we know this sound?
                         if debug:
@@ -599,26 +630,26 @@ def learn_audio(host, debug=False):
                             plt.draw()
                         
                         hammings = [ np.inf ]
-                        new_audio_hash = utils.d_hash(new_sound)
+                        new_audio_hash.append(utils.d_hash(new_sound))
                         audio_id = 0
                         if len(NAPs) == 1:
-                            hammings = [ utils.hamming_distance(new_audio_hash, h) for h in NAP_hashes[0] ]
+                            hammings = [ utils.hamming_distance(new_audio_hash[-1], h) for h in NAP_hashes[0] ]
                         
                         if audio_recognizer:
                             resampled_new_sound = utils.zero_pad(resample(new_sound, float(maxlen)/new_sound.shape[0], 'sinc_best'), maxlen_scaled)
                             x_test = audio_recognizer.rPCA.transform(np.ndarray.flatten(resampled_new_sound))
                             audio_id = audio_recognizer.predict(x_test)[0]
-                            hammings = [ utils.hamming_distance(new_audio_hash, h) for h in NAP_hashes[audio_id] ]
+                            hammings = [ utils.hamming_distance(new_audio_hash[-1], h) for h in NAP_hashes[audio_id] ]
 
                         if np.mean(hammings) < AUDIO_HAMMERTIME:
                             NAPs[audio_id].append(new_sound)
-                            NAP_hashes[audio_id].append(new_audio_hash)
+                            NAP_hashes[audio_id].append(new_audio_hash[-1])
                             wavs[audio_id].append(filename)
                             print 'Sound is similar to sound {}, hamming mean {}'.format(audio_id, np.mean(hammings))
                         else:
                             print 'New sound, hamming mean {} from sound {}'.format(np.mean(hammings), audio_id)
                             NAPs.append([new_sound])
-                            NAP_hashes.append([new_audio_hash])
+                            NAP_hashes.append([new_audio_hash[-1]])
                             wavs.append([filename])
                             audio_id = len(NAPs) - 1
 
@@ -643,6 +674,15 @@ def learn_audio(host, debug=False):
                             audio_recognizer.fit(x_train, targets)
                             audio_recognizer.rPCA = rPCA
 
+                    all_hammings = [ utils.hamming_distance(new_audio_hash[i], new_audio_hash[j])
+                                                            for i in range(len(new_audio_hash)) for j in range(len(new_audio_hash)) if i > j ]
+
+                                     
+
+                    print 'RHYME VALUE', np.mean(sorted(all_hammings)[int(len(all_hammings)/2):])
+                    rhyme = np.mean(sorted(all_hammings)[int(len(all_hammings)/2):]) < RHYME_HAMMERTIME
+
+                    sender.send_json('rhyme {}'.format(rhyme))
                     t1 = time.time()
                     brainQ.send_pyobj(['audio_learn', filename, segment_ids, wavs, wav_segments, audio_recognizer, maxlen, maxlen_scaled, NAP_hashes])
                     print 'Audio learned in {} seconds, ZMQ time {} seconds'.format(t1 - t0, time.time() - t1)

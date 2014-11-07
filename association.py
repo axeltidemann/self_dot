@@ -31,6 +31,8 @@ import math
 import utils
 import time
 
+from pyevolve import G1DList, GSimpleGA, Mutators, Selectors, Initializators, Mutators
+
 #wavSegments = {}        # {(wavefile, id):[segstart,segend], (wavefile, id):[segstart,segend], ...} 
 #wavs_as_words = []      # list of wave files for each word (audio id) [[w1,w2,w3],[w4],...]
 wordTime = {}           # {id1:[time1, time2, t3...]], id2: ...}
@@ -114,6 +116,8 @@ def association(host):
                 if func == 'setParam':
                     _,param,value = thing
                     setParam(param,value)                    
+                if func == 'evolve':
+                    evolve_sentence_parameters()
             except Exception, e:
                 print e, 'association receive failed on receiving:', thing
 
@@ -255,6 +259,109 @@ def makeSentence(assoc_out, predicate):
         
     #print 'processing time for %i words: %f secs'%(numWords, time.time() - timeThen)
     assoc_out.send_pyobj([sentence, secondaryStream])
+
+def sentence_fitness(genome):
+    debug = False
+    global neighborsWeight, wordsInSentenceWeight, similarWordsWeight, wordFaceWeight, faceWordWeight, timeShortBeforeWeight, timeShortAfterWeight, timeLongBeforeWeight, timeLongAfterWeight, posInSentenceWeight
+    neighborsWeight, wordsInSentenceWeight, similarWordsWeight, wordFaceWeight, faceWordWeight, timeShortBeforeWeight, timeShortAfterWeight, timeLongBeforeWeight, timeLongAfterWeight, posInSentenceWeight = genome
+    fitness = 0
+    for predicate in [10]:#range(len(wordTime.keys())):
+        if debug: print 'PREDICATE', predicate, '/', len(wordTime.keys())
+        sentence = simple_make_sentence(predicate)
+
+        neighbors_to_this = [ item[0] for item in neighbors[predicate] if item[1] ]
+        if debug: print 'neighbors_to_this', neighbors_to_this
+        fitness += numpy.mean([ word in neighbors_to_this for word in sentence ])
+
+        in_sentence = [ item[0] for item in wordsInSentence[predicate] if item[1] ]
+        if debug: print 'in_sentence', in_sentence
+        fitness += numpy.mean([ word in in_sentence for word in sentence ])
+
+        faces = [item[0] for item in wordFace[predicate]]
+        if debug: print 'faces', faces
+        if -1 in faces: faces.remove(-1)
+        if faces == []: face = 0
+        else: face = random.choice(faces)
+
+        try:
+            face_word =  [ item[0] for item in faceWord[face] if item[1] ]
+            if debug: print 'face_word', face_word
+            fitness += numpy.mean([ word in face_word for word in sentence ])
+        except:
+            pass
+
+        similar_scores = similarWords[predicate]
+        idxs = numpy.argsort(similar_scores)
+        winners = idxs[-int(len(idxs)/3):]
+        if debug: print 'winners', winners
+        fitness += numpy.mean([ word in winners for word in sentence ])
+
+        time_short_before, time_short_after = getTimeContext(predicate, timeShortDistance)
+        time_short_before = [ item[0] for item in time_short_before ]
+        time_short_after = [ item[0] for item in time_short_after ]
+        if debug: print 'time_short_before', time_short_before
+        if debug: print 'time_short_after', time_short_after
+        fitness += numpy.mean([ word in time_short_before for word in sentence ])
+        fitness += numpy.mean([ word in time_short_after for word in sentence ])
+
+        time_long_before, time_long_after = getTimeContext(predicate, timeLongDistance)
+        time_long_before = [ item[0] for item in time_long_before ]
+        time_long_after = [ item[0] for item in time_long_after ]
+
+        if debug: print 'time_long_before', time_long_before
+        if debug: print 'time_long_after', time_long_after
+        fitness += numpy.mean([ word in time_long_before for word in sentence ])
+        fitness += numpy.mean([ word in time_long_after for word in sentence ])
+
+        # HERE BE DRAGONS!
+        posInSentenceWidth = .2     
+        posInSentence = .5
+        pos_in_sentence_context = getCandidatesFromContext(sentencePosition_item, posInSentence, posInSentenceWidth)
+        pos_in_sentence_context = [ item[0] for item in pos_in_sentence_context ]
+        if debug: print 'pos_in_sentence_context', pos_in_sentence_context 
+        fitness += numpy.mean([ word in pos_in_sentence_context for word in sentence ])    
+
+    return fitness
+    
+def evolve_sentence_parameters():
+    print 'Using artificial evolution to find associations weights'
+    genome = G1DList.G1DList(10)
+    genome.evaluator.set(sentence_fitness)
+    genome.setParams(rangemin=0.0, rangemax=1.0)   
+    genome.initializator.set(Initializators.G1DListInitializatorReal)
+    genome.mutator.set(Mutators.G1DListMutatorRealGaussian)
+    ga = GSimpleGA.GSimpleGA(genome)
+    ga.setMutationRate(.5)
+    ga.setPopulationSize(100)
+    ga.setGenerations(100)
+    ga.setElitism(True)
+    ga.setElitismReplacement(1)
+    ga.evolve(freq_stats=10)
+    print ga.bestIndividual()
+    global neighborsWeight, wordsInSentenceWeight, similarWordsWeight, wordFaceWeight, faceWordWeight, timeShortBeforeWeight, timeShortAfterWeight, timeLongBeforeWeight, timeLongAfterWeight, posInSentenceWeight
+    neighborsWeight, wordsInSentenceWeight, similarWordsWeight, wordFaceWeight, faceWordWeight, timeShortBeforeWeight, timeShortAfterWeight, timeLongBeforeWeight, timeLongAfterWeight, posInSentenceWeight = ga.bestIndividual()
+    print 'Weights updated after evolution'
+
+def simple_make_sentence(predicate):
+    sentence = [predicate]
+    for i in range(numWords):
+        posInSentence = i/float(numWords)
+        posInSentenceWidth = 0.2
+        if posInSentence < 0.5:
+            preferredDuration = posInSentence*20 # longer words in the middle of a sentence (just as a test...)
+        else:
+            preferredDuration = (1-posInSentence)*20
+        preferredDurationWidth = 3
+        prevPredicate = predicate # save it for the secondary association
+        predicate = generate(predicate, method, 
+                            neighborsWeight, wordsInSentenceWeight, similarWordsWeight, 
+                            wordFaceWeight,faceWordWeight,
+                            timeShortBeforeWeight, timeShortAfterWeight, timeShortDistance, 
+                            timeLongBeforeWeight, timeLongAfterWeight, timeLongDistance, 
+                            posInSentence, posInSentenceWidth, posInSentenceWeight, 
+                            preferredDuration, preferredDurationWidth, durationWeight)
+        sentence.append(predicate)
+    return sentence
     
 def generate(predicate, method, 
             neighborsWeight, wordsInSentenceWeight, similarWordsWeight, 
@@ -262,16 +369,17 @@ def generate(predicate, method,
             timeShortBeforeWeight, timeShortAfterWeight, timeShortDistance, 
             timeLongBeforeWeight, timeLongAfterWeight, timeLongDistance, 
             posInSentence, posInSentenceWidth, posInSentenceWeight, 
-            preferredDuration, preferredDurationWidth, durationWeight):
+             preferredDuration, preferredDurationWidth, durationWeight):
 
+    debug = False
     # get the lists we need
-    print '***get lists for predicate', predicate
+    if debug: print '***get lists for predicate', predicate
     _neighbors = normalizeItemScore(copy.copy(neighbors[predicate]))
     #print '\n_neighbors', _neighbors
     _wordsInSentence = normalizeItemScore(copy.copy(wordsInSentence[predicate]))
     #print '\n_wordsInSentence', _wordsInSentence
     _wordFace = normalizeItemScore(copy.copy(wordFace[predicate]))
-    print '\n* faces that have said this word', _wordFace
+    if debug: print '\n* faces that have said this word', _wordFace
     #print '\n_wordFace', _wordFace
     # temporary solution to using faces
     faces = [item[0] for item in _wordFace]
@@ -282,12 +390,12 @@ def generate(predicate, method,
     #print 'faceWord', faceWord
     try:_faceWord = normalizeItemScore(copy.copy(faceWord[face]))
     except:_faceWord = [] # if for some reason we can't find any faces
-    print '\n_faceWord', _faceWord
+    if debug: print '\n_faceWord', _faceWord
     _similarWords = copy.copy(similarWords[predicate])
     _similarWords = list(numpy.add(scale(_similarWords, -1), 1.0)) # invert scores (keeping in 0 to 1 range)
     _similarWords = normalizeItemScore(formatAsMembership(_similarWords))
     _similarWords = zeroMe(predicate, _similarWords)
-    print '\n_similarWords', _similarWords
+    if debug: print '\n_similarWords', _similarWords
     #print '\*similarWords*'
     #for k,v in similarWords.iteritems():
     #    print 'audio id %i has %i similar sounds'%(k, len(v))
@@ -328,11 +436,12 @@ def generate(predicate, method,
     # select the one with the highest score
     if len(temp) < 1:
         nextWord = predicate
-        print '** WARNING: ASSOCIATION GENERATE HAS NO VALID ASSOCIATIONS, RETURNING PREDICATE'
+        if debug: print '** WARNING: ASSOCIATION GENERATE HAS NO VALID ASSOCIATIONS, RETURNING PREDICATE'
     else:
         nextWord = select(temp, 'from_highest') # from_highest method introduce random selection between highest scores, BEWARE for confusion in debugging of scores/weights
+
     return nextWord
-    
+
 def updateWordsInSentence(sentence):
     a = 0
     for word in sentence:
