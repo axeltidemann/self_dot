@@ -55,6 +55,12 @@ def cognition(host):
     brainQ = context.socket(zmq.PULL)
     brainQ.bind('tcp://*:{}'.format(IO.BRAIN))
 
+    association_in = context.socket(zmq.PUSH)
+    association_in.connect('tcp://{}:{}'.format(learn_host, IO.ASSOCIATION_IN))
+
+    association_out = context.socket(zmq.PULL)
+    association_out.bind('tcp://*:{}'.format(IO.ASSOCIATION_OUT))
+
     poller = zmq.Poller()
     poller.register(eventQ, zmq.POLLIN)
     poller.register(brainQ, zmq.POLLIN)
@@ -88,13 +94,33 @@ def cognition(host):
                 
             if 'saySomething' in pushbutton:
                 if rhyme:
-                    #association pushCurrentSettings
-                    # set similarWord to MAX
-                    # test generate sentence from all ids in lastSentenceIds
+                    possibleRhymes = []
+                    for id in lastSentenceIds:
+                        association_in.send_pyobj(['getSimilarWords',id, RHYME_HAMMERTIME])
+                        possibleRhymes.append(association_out.recv_pyobj())
                     # check which one generates a sentence with most similar words (most can be how many or how similar ...?)
+                    longest = 0
+                    longestIndex = 0
+                    lowestSimilar = 9999
+                    lowestIndex = 0
+                    for i in len(possibleRhymes):
+                        item = possibleRhymes[i]
+                        if len(item) > longest: 
+                            longest = len(item)
+                            longestIndex = i
+                        if np.mean(item) < lowestSimilar:
+                            lowestSimilar = np.mean(item)
+                            lowestIndex = i
+                    mostRhymes = possibleRhymes[longestIndex]
+                    bestRhymes = possibleRhymes[lowestIndex]
+                    # which one is best ??
+                    select = 'most'
+                    print 'saySomething RHYME using *{}* rhymes'.format(select)
+                    if select == 'most': rhymes = mostRhymes
+                    if select == 'best': rhymes = bestRhymes
                     # pitch the best rhyming sentence and hit PLAY
-                    pass
-
+                    self.event.send_json({ 'play_sentence': True, 'sentence': rhymes })
+                    
 # LOOK AT EYES? CAN YOU DETERMINE ANYTHING FROM THEM?
 # PRESENT VISUAL INFORMATION - MOVE UP OR DOWN
 def face_extraction(host, extended_search=False, show=False):
@@ -436,6 +462,43 @@ def respond(control_host, learn_host, debug=False):
                 except:
                     utils.print_exception('Single response aborted.')
 
+            if 'play_sentence' in pushbutton:
+                    sentence = pushbutton['sentence']
+                    print '*** (play) Play sentence', sentence
+                    start = 0 
+                    nextTime1 = 0
+                    for i in range(len(sentence)):
+                        word_id = sentence[i]
+                        soundfile = np.random.choice(wavs[word_id])
+                        speed = 1
+                        
+                        # segment start and end within sound file, if zero, play whole file
+                        segstart, segend = wav_segments[(soundfile, word_id)]
+                        amp = -3 # voice amplitude in dB
+                        _,totaldur,maxamp,_ = utils.getSoundInfo(soundfile)
+                        dur = segend-segstart
+                        if dur <= 0: dur = totaldur
+                        # play in both voices
+                        sender.send_json('playfile {} {} {} {} {} {} {} {} {}'.format(1, voiceType1, start, soundfile, speed, segstart, segend, amp, maxamp))
+                        sender.send_json('playfile {} {} {} {} {} {} {} {} {}'.format(2, voiceType1, start, soundfile, speed, segstart, segend, amp, maxamp))
+                        wordSpacing1 = wordSpace1 + np.random.random()*wordSpaceDev1
+                        nextTime1 += (dur/speed)+wordSpacing1
+
+                        face_id = np.random.choice(sound_to_face[word_id])
+                        video_time = (1000*dur)/IO.VIDEO_SAMPLE_TIME
+                        stride = int(np.ceil(NAP.shape[0]/video_time))
+                        projection = video_producer[(audio_id, face_id)](NAP[::stride])
+
+                        for row in projection:
+                            utils.send_array(projector, np.resize(row, FRAME_SIZE[::-1]))
+
+                        # as the first crude method of assembling a sentence, just wait for the word duration here
+                        time.sleep(dur+wordSpacing1)
+                        # check if someone is talking to us, if so, abort sentence
+                        if state['_audioLearningStatus']:
+                            print 'Darn, my beautiful playrhyme sentence was interrupted by this crackface... oh well'
+                            break
+
             if 'respond_sentence' in pushbutton:
                 print 'SENTENCE Respond to', pushbutton['filename'][-12:]
                 
@@ -472,7 +535,7 @@ def respond(control_host, learn_host, debug=False):
                     print 'respond_sentence waiting for association output...'
                     sentence, secondaryStream = association_out.recv_pyobj()
 
-                    print '*** Play sentence', sentence, secondaryStream
+                    print '*** (respond) Play sentence', sentence, secondaryStream
                     start = 0 
                     nextTime1 = 0
                     nextTime2 = 0

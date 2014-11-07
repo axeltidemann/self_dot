@@ -119,6 +119,13 @@ def association(host):
                     setParam(param,value)                    
                 if func == 'evolve':
                     evolve_sentence_parameters()
+                if func == 'getSimilarWords':
+                    _,predicate, distance = thing
+                    getSimilarWords(predicate, distance)
+                if func == 'pushCurrentSettings':
+                    pushCurrentSettings()
+                if func == 'popCurrentSettings':
+                    popCurrentSettings()
             except Exception, e:
                 print e, 'association receive failed on receiving:', thing
 
@@ -443,6 +450,7 @@ def generate(predicate, method,
 
     return nextWord
 
+
 def updateWordsInSentence(sentence):
     a = 0
     for word in sentence:
@@ -568,6 +576,14 @@ def getCandidatesFromContext(context, position, width):
         else:
             break
     return candidates
+
+def getSimilarWords(predicate, distance):
+    _similarWords = copy.copy(similarWords[predicate])
+    _similarWords = zeroMe(predicate, _similarWords)
+    for word in _similarWords:
+        if word[1] > distance: _similarWords.remove(word)
+    assoc_out.send_pyobj([_similarWords])
+
 
 def weightedSum(a_, weightA_, b_, weightB_):
     '''
