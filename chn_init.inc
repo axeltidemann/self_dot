@@ -52,7 +52,7 @@
 	chnset  1, "Master2HiShelfGain"
 	chnset  250, "Master2LoShelfFq"
 	chnset  -9, "Master2LoShelfGain" 
-	chnset  2500, "Master2Band1Fq"
+	chnset  3500, "Master2Band1Fq"
 	chnset  -3, "Master2Band1Gain"
 	chnset  0.6, "Master2Band1Q"
 	
