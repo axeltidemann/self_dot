@@ -227,9 +227,9 @@ def cochlear(filename, db=-40, stride=441, new_rate=22050, ears=1, apply_filter=
     return np.sqrt(np.maximum(0, naps)/np.max(naps))
 
 
-def _predict_audio_id(audio_recognizer, NAP):
-    x_test = audio_recognizer.rPCA.transform(np.ndarray.flatten(NAP))
-    return audio_recognizer.predict(x_test)[0]
+def _predict_audio_id(audio_classifier, NAP):
+    x_test = audio_classifier.rPCA.transform(np.ndarray.flatten(NAP))
+    return audio_classifier.predict(x_test)[0]
 
 
 def _NAP_resampled(wav_file, maxlen, maxlen_scaled):
@@ -273,18 +273,21 @@ def calculate_sai_video_marginals(host, debug=False):
 
             print 'SAI video marginals for {} calculated in {} seconds'.format(filename, time.time() - t0)
 
-def _hamming_distance_predictor(audio_recognizer, NAP, maxlen, NAP_hashes):
+def _hamming_distance_predictor(audio_classifier, NAP, maxlen, NAP_hashes):
     NAP_hash = utils.d_hash(NAP, hash_size=8)
     NAP_scales = [ utils.exact(NAP, maxlen), 
                    utils.exact(resample(NAP, .5, 'sinc_best'), maxlen), 
                    utils.exact(resample(NAP, min(2, float(maxlen)/NAP.shape[0]), 'sinc_best'), maxlen) ]
 
-    audio_id_candidates = [ _predict_audio_id(audio_recognizer, NAP_s) for NAP_s in NAP_scales ]
+    audio_id_candidates = [ _predict_audio_id(audio_classifier, NAP_s) for NAP_s in NAP_scales ]
     hamming_warped = [ np.mean([ utils.hamming_distance(NAP_hash, h) for h in NAP_hashes[audio_id] ]) for audio_id in audio_id_candidates ]
     print 'HAMMING WARPED', zip(audio_id_candidates, hamming_warped)
     winner = np.argsort(hamming_warped)[0]
     return audio_id_candidates[winner], NAP_scales[winner]
 
+def _recognize_audio_id(audio_recognizer, NAP):
+    for audio_id, net in enumerate(audio_recognizer):
+        print 'AUDIO ID: {} OUTPUT MEAN: {}'.format(audio_id, np.mean(net(NAP)))
 
 def respond(control_host, learn_host, debug=False):
     me = mp.current_process()
@@ -359,7 +362,7 @@ def respond(control_host, learn_host, debug=False):
             if all(register[wav_file]):
                 print 'Audio - video - face recognizers related to {} arrived at responder'.format(wav_file)
                 # segment_ids: list of audio_ids in sentence
-                _, _, segment_ids, wavs, wav_segments, audio_recognizer, maxlen, NAP_hashes = register[wav_file][0]
+                _, _, segment_ids, wavs, wav_segments, audio_classifier, audio_recognizer, global_audio_recognizer, maxlen, NAP_hashes = register[wav_file][0]
                 _, _, tarantino = register[wav_file][1]
                 _, _, face_id, face_recognizer = register[wav_file][2]          
 
@@ -426,15 +429,19 @@ def respond(control_host, learn_host, debug=False):
 
                     NAP = utils.trim_right(new_sentence[norm_segments[segment_id]:norm_segments[segment_id+1]])
                     NAP_exact = utils.exact(NAP, maxlen)
-                    
+           
+                    _recognize_audio_id(audio_recognizer, NAP_exact)         
+                    _recognize_global_audio_id(global_audio_recognizer, NAP_exact)
+
                     if debug:            
                         plt.imshow(NAP_exact.T, aspect='auto')
                         plt.title('respond NAP: {} to {}'.format(NAP.shape[0], maxlen))
                         plt.draw()
                     
                     try:
-                        audio_id = _predict_audio_id(audio_recognizer, NAP_exact)
-                        #audio_id, _ = _hamming_distance_predictor(audio_recognizer, NAP, maxlen, NAP_hashes)
+           
+                        audio_id = _predict_audio_id(audio_classifier, NAP_exact)
+                        #audio_id, _ = _hamming_distance_predictor(audio_classifier, NAP, maxlen, NAP_hashes)
                     except:
                         audio_id = 0
                         print 'Responding having only heard 1 sound.'
@@ -526,7 +533,7 @@ def respond(control_host, learn_host, debug=False):
                         plt.draw()
                     
                     try:
-                        audio_id = _predict_audio_id(audio_recognizer, NAP_exact)
+                        audio_id = _predict_audio_id(audio_classifier, NAP_exact)
                     except:
                         audio_id = 0
                         print 'Responding having only heard 1 sound.'
@@ -665,11 +672,35 @@ def respond(control_host, learn_host, debug=False):
                     print e, 'showme print failed.'
 
             if 'save' in pushbutton:
-                utils.save('{}.{}'.format(pushbutton['save'], me.name), [ sound_to_face, wordFace, face_to_sound, faceWord, video_producer, segment_ids, wavs, wav_segments, audio_recognizer, maxlen, NAP_hashes, face_id, face_recognizer ])
+                utils.save('{}.{}'.format(pushbutton['save'], me.name), [ sound_to_face, wordFace, face_to_sound, faceWord, video_producer, segment_ids, wavs, wav_segments, audio_classifier, maxlen, NAP_hashes, face_id, face_recognizer ])
 
             if 'load' in pushbutton:
-                sound_to_face, wordFace, face_to_sound, faceWord, video_producer, segment_ids, wavs, wav_segments, audio_recognizer, maxlen, NAP_hashes, face_id, face_recognizer = utils.load('{}.{}'.format(pushbutton['load'], me.name))
+                sound_to_face, wordFace, face_to_sound, faceWord, video_producer, segment_ids, wavs, wav_segments, audio_classifier, maxlen, NAP_hashes, face_id, face_recognizer = utils.load('{}.{}'.format(pushbutton['load'], me.name))
                     
+
+def _train_audio_recognizer(signal):
+    noise = np.random.rand(signal.shape[0], signal.shape[1])
+    x_train = np.vstack((noise, signal))
+    targets = np.array([-1]*noise.shape[0] + [1]*signal.shape[0])
+    targets.shape = (len(targets), 1)
+    return train_network(x_train, targets, output_dim=100, leak_rate=.9)
+
+def _train_global_audio_recognizer(NAPs):
+    x_train = np.vstack([m for memory in NAPs for m in memory])
+    targets = np.zeros((x_train.shape[0], len(NAPs))) - 1
+    idxs = [ i for i,nappers in enumerate(NAPs) for nap in nappers for _ in range(nap.shape[0]) ]
+    for row, ix in zip(targets, idxs):
+        row[ix] = 1
+    return train_network(x_train, targets, output_dim=100, leak_rate=.5)
+    
+def _recognize_audio_id(audio_recognizer, NAP):
+    for audio_id, net in enumerate(audio_recognizer):
+        print 'AUDIO ID: {} OUTPUT MEAN: {}'.format(audio_id, np.mean(net(NAP)))
+
+def _recognize_global_audio_id(audio_recognizer, new_sound):
+    output = audio_recognizer(new_sound)
+    print 'AUDIO IDS:', np.mean(output, axis=0)
+    
 
 def learn_audio(host, debug=False):
     me = mp.current_process()
@@ -697,7 +728,9 @@ def learn_audio(host, debug=False):
     wav_segments = {}
     NAP_hashes = []
 
+    audio_classifier = []
     audio_recognizer = []
+    global_audio_recognizer = []
     maxlen = []
 
     state = stateQ.recv_json()
@@ -744,10 +777,10 @@ def learn_audio(host, debug=False):
                         if len(NAPs) == 1:
                             hammings = [ utils.hamming_distance(new_audio_hash[-1], h) for h in NAP_hashes[0] ]
                         
-                        if audio_recognizer:
-                            #audio_id, new_sound_scaled = _hamming_distance_predictor(audio_recognizer, new_sound, maxlen, NAP_hashes)
+                        if audio_classifier:
+                            #audio_id, new_sound_scaled = _hamming_distance_predictor(audio_classifier, new_sound, maxlen, NAP_hashes)
                             new_sound_exact = utils.exact(new_sound, maxlen)
-                            audio_id = _predict_audio_id(audio_recognizer, new_sound_exact)
+                            audio_id = _predict_audio_id(audio_classifier, new_sound_exact)
 
                             hammings = [ utils.hamming_distance(new_audio_hash[-1], h) for h in NAP_hashes[audio_id] ]
 
@@ -757,11 +790,15 @@ def learn_audio(host, debug=False):
                             NAP_hashes[audio_id].append(new_audio_hash[-1])
                             wavs[audio_id].append(filename)
                             print 'Sound is similar to sound {}, hamming mean {}'.format(audio_id, np.mean(hammings))
+                            # Training audio recognizer network
+                            audio_recognizer[audio_id] = _train_audio_recognizer(np.vstack(NAPs[audio_id]))
+                            
                         else:
                             print 'New sound, hamming mean {} from sound {}'.format(np.mean(hammings), audio_id)
                             NAPs.append([new_sound])
                             NAP_hashes.append([new_audio_hash[-1]])
                             wavs.append([filename])
+                            audio_recognizer.append(_train_audio_recognizer(new_sound))
                             audio_id = len(NAPs) - 1
 
                         # The mapping from wavfile and audio ID to the segment within the audio file
@@ -777,9 +814,9 @@ def learn_audio(host, debug=False):
                             rPCA = RandomizedPCA(n_components=100)
                             x_train = rPCA.fit_transform(memories)
 
-                            audio_recognizer = svm.LinearSVC()
-                            audio_recognizer.fit(x_train, targets)
-                            audio_recognizer.rPCA = rPCA
+                            audio_classifier = svm.LinearSVC()
+                            audio_classifier.fit(x_train, targets)
+                            audio_classifier.rPCA = rPCA
 
                     all_hammings = [ utils.hamming_distance(new_audio_hash[i], new_audio_hash[j])
                                                             for i in range(len(new_audio_hash)) for j in range(len(new_audio_hash)) if i > j ]
@@ -787,10 +824,11 @@ def learn_audio(host, debug=False):
                     print 'RHYME VALUE', np.mean(sorted(all_hammings)[int(len(all_hammings)/2):])
                     rhyme = np.mean(sorted(all_hammings)[int(len(all_hammings)/2):]) < RHYME_HAMMERTIME
 
+                    global_audio_recognizer = _train_global_audio_recognizer(NAPs)
                     sender.send_json('rhyme {}'.format(rhyme))
                     sender.send_json('last_segment_ids {}'.format(dumps(segment_ids)))
                     t1 = time.time()
-                    brainQ.send_pyobj(['audio_learn', filename, segment_ids, wavs, wav_segments, audio_recognizer, maxlen, NAP_hashes])
+                    brainQ.send_pyobj(['audio_learn', filename, segment_ids, wavs, wav_segments, audio_classifier, audio_recognizer, global_audio_recognizer, maxlen, NAP_hashes])
                     print 'Audio learned in {} seconds, ZMQ time {} seconds'.format(t1 - t0, time.time() - t1)
                 except:
                     utils.print_exception('Audio learning aborted.')
@@ -798,10 +836,10 @@ def learn_audio(host, debug=False):
                 audio.clear()
 
             if 'save' in pushbutton:
-                utils.save('{}.{}'.format(pushbutton['save'], me.name), [ NAPs, wavs, wav_segments, NAP_hashes, audio_recognizer, maxlen ])
+                utils.save('{}.{}'.format(pushbutton['save'], me.name), [ NAPs, wavs, wav_segments, NAP_hashes, audio_classifier, maxlen ])
 
             if 'load' in pushbutton:
-                NAPs, wavs, wav_segments, NAP_hashes, audio_recognizer, maxlen = utils.load('{}.{}'.format(pushbutton['load'], me.name))
+                NAPs, wavs, wav_segments, NAP_hashes, audio_classifier, maxlen = utils.load('{}.{}'.format(pushbutton['load'], me.name))
 
                 
 def learn_video(host, debug=False):
