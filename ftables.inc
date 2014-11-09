@@ -32,10 +32,15 @@
 	giTriangleWin 	ftgen	0, 0, 8193, 7, 0, 4096, 1, 4096, 0			; triangular window 
 
 ; default init (silent) ambient background tables (STATIC TABLE NUMS 91-98)
-    giAmbient1          ftgen	95, 0, 1024, 2, 0	; empty buffer
-    giAmbient2          ftgen	96, 0, 1024, 2, 0	; empty buffer
-    giAmbient3          ftgen	97, 0, 1024, 2, 0	; empty buffer
-    giAmbient4          ftgen	98, 0, 1024, 2, 0	; empty buffer
+    iAmbInitSize        = 262144
+    giAmbient5          ftgen	91, 0, iAmbInitSize, 2, 0	; empty buffer
+    giAmbient6          ftgen	92, 0, iAmbInitSize, 2, 0	; empty buffer
+    giAmbient7          ftgen	93, 0, iAmbInitSize, 2, 0	; empty buffer
+    giAmbient8          ftgen	94, 0, iAmbInitSize, 2, 0	; empty buffer
+    giAmbient1          ftgen	95, 0, iAmbInitSize, 2, 0	; empty buffer
+    giAmbient2          ftgen	96, 0, iAmbInitSize, 2, 0	; empty buffer
+    giAmbient3          ftgen	97, 0, iAmbInitSize, 2, 0	; empty buffer
+    giAmbient4          ftgen	98, 0, iAmbInitSize, 2, 0	; empty buffer
     giAmbientTabNum     = 0
     giAmbientTabs       ftgen   0, 0, 8, -2, 95,96,97,98,giAmbient1,giAmbient2,giAmbient3,giAmbient4
 
