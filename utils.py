@@ -251,6 +251,8 @@ def hamming_distance(s1, s2):
 def zero_pad(signal, length):
     return np.vstack(( signal, np.zeros(( length - signal.shape[0], signal.shape[1])) )) if signal.shape[0] < length else signal
 
+def exact(signal, length):
+    return zero_pad(signal, length)[:length]
 
 def scale(image):
     return (image - np.min(image))/(np.max(image) - np.min(image))

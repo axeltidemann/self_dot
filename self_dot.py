@@ -37,6 +37,9 @@ def idle(host):
     poller = zmq.Poller()
     poller.register(face, zmq.POLLIN)
     
+    sender = context.socket(zmq.PUSH)
+    sender.connect('tcp://{}:{}'.format(host, IO.EXTERNAL))
+
     counter = 0
     while True:
         events = dict(poller.poll(timeout=np.random.randint(1000,2500)))
@@ -51,6 +54,8 @@ def idle(host):
         if counter%5 == 0:
             sender.send_json('saySomething')
         counter += 1
+        
+        counter %= 100000
 
 class Controller:
     def __init__(self, init_state, host):
@@ -80,6 +85,10 @@ class Controller:
         print '[self.] received:', message
 
         try:
+            if 'last_segment_ids' in message:
+                _, text_list = message.split()
+                self.event.send_json({'last_segment_ids': eval(text_list) })
+            
             if 'calculate_cochlear' in message:
                 _, wav_file = message.split()
                 t0 = time.time()
@@ -223,8 +232,8 @@ if __name__ == '__main__':
     mp.Process(target=IO.audio, name='AUDIO').start() 
     mp.Process(target=IO.video, name='VIDEO').start()
     mp.Process(target=brain.face_extraction, args=('localhost',False,True,), name='FACE EXTRACTION').start()
-    mp.Process(target=brain.respond, args=('localhost','localhost',), name='RESPONDER').start()
-    mp.Process(target=brain.learn_audio, args=('localhost',), name='AUDIO LEARN').start()
+    mp.Process(target=brain.respond, args=('localhost','localhost',True,), name='RESPONDER').start()
+    mp.Process(target=brain.learn_audio, args=('localhost',True,), name='AUDIO LEARN').start()
     mp.Process(target=brain.learn_video, args=('localhost',), name='VIDEO LEARN').start()
     mp.Process(target=brain.learn_faces, args=('localhost',), name='FACES LEARN').start()
     #mp.Process(target=brain.calculate_sai_video_marginals, args=('localhost',), name='SAI VIDEO CALCULATION').start()
