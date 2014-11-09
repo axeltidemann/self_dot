@@ -56,7 +56,7 @@ def cognition(host):
     brainQ.bind('tcp://*:{}'.format(IO.BRAIN))
 
     association_in = context.socket(zmq.PUSH)
-    association_in.connect('tcp://{}:{}'.format(learn_host, IO.ASSOCIATION_IN))
+    association_in.connect('tcp://{}:{}'.format(host, IO.ASSOCIATION_IN))
 
     association_out = context.socket(zmq.PULL)
     association_out.bind('tcp://*:{}'.format(IO.ASSOCIATION_OUT))
