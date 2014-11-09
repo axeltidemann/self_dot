@@ -30,6 +30,7 @@ import numpy
 import math
 import utils
 import time
+import cPickle as pickle
 
 from pyevolve import G1DList, GSimpleGA, Mutators, Selectors, Initializators, Mutators
 
@@ -85,35 +86,33 @@ def association(host):
 
     context = zmq.Context()
 
-    assoc_in = context.socket(zmq.PULL)
-    assoc_in.bind('tcp://*:{}'.format(IO.ASSOCIATION_IN))
-
-    assoc_out = context.socket(zmq.PUSH)
-    assoc_out.connect('tcp://{}:{}'.format(host, IO.ASSOCIATION_OUT))        
+    association = context.socket(zmq.ROUTER)
+    association.bind('tcp://*:{}'.format(IO.ASSOCIATION))
 
     eventQ = context.socket(zmq.SUB)
     eventQ.connect('tcp://{}:{}'.format(host, IO.EVENT))
     eventQ.setsockopt(zmq.SUBSCRIBE, b'') 
 
     poller = zmq.Poller()
-    poller.register(assoc_in, zmq.POLLIN)
+    poller.register(association, zmq.POLLIN)
     poller.register(eventQ, zmq.POLLIN)
     
     while True:
         #print 'assoc is running %i', time.time()
         #time.sleep(.1)
         events = dict(poller.poll())
-        if assoc_in in events:
-            thing = assoc_in.recv_pyobj()
-            #print 'thing', thing 
+        if association in events:
+            address, _, message = association.recv_multipart()
+            thing = pickle.loads(message)
             try:
                 func = thing[0]
+                answer = 'Done'
                 if func == 'analyze':
                     _,wav_file,wav_segments,segment_ids,wavs,similar_ids,wordFace,faceWord = thing
                     analyze(wav_file,wav_segments,segment_ids,wavs,similar_ids,wordFace,faceWord)
                 if func == 'makeSentence':
                     _,audio_id = thing
-                    makeSentence(assoc_out, audio_id)                    
+                    answer = makeSentence(audio_id)                    
                 if func == 'setParam':
                     _,param,value = thing
                     setParam(param,value)                    
@@ -126,6 +125,11 @@ def association(host):
                     pushCurrentSettings()
                 if func == 'popCurrentSettings':
                     popCurrentSettings()
+
+                association.send_multipart([ address,
+                                             b'',
+                                             pickle.dumps(answer) ])
+
             except Exception, e:
                 print e, 'association receive failed on receiving:', thing
 
@@ -211,7 +215,7 @@ def analyze(wav_file,wav_segments,segment_ids,wavs,similar_ids,_wordFace,_faceWo
     updatePositionMembership(segment_ids) 
     print '...analysis done'
         
-def makeSentence(assoc_out, predicate):
+def makeSentence(predicate):
 
     print 'makeSentence predicate', predicate, 'numWords', numWords, 'similarWordsWeight', similarWordsWeight
 
@@ -266,7 +270,7 @@ def makeSentence(assoc_out, predicate):
         secondaryStream.append(secondaryAssoc)
         
     #print 'processing time for %i words: %f secs'%(numWords, time.time() - timeThen)
-    assoc_out.send_pyobj([sentence, secondaryStream])
+    return [sentence, secondaryStream]
 
 def sentence_fitness(genome):
     debug = False

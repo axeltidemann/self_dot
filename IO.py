@@ -31,9 +31,7 @@ ROBO = 5570
 #ROBOBACK = 5571
 FACE = 5572
 BRAIN = 5573
-ASSOCIATION_IN = 5574 
-# 5575 not available(?)
-ASSOCIATION_OUT = 5576
+ASSOCIATION = 5574 
 
 def video():
     me = mp.current_process()

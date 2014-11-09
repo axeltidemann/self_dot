@@ -10,9 +10,10 @@
 
 import multiprocessing as mp
 import time
+import cPickle as pickle
 
 import zmq
-from zmq.utils.jsonapi import dumps
+from zmq.utils.jsonapi import dumps, loads
 import numpy as np
 
 import IO
@@ -72,8 +73,8 @@ class Controller:
         self.event = context.socket(zmq.PUB)
         self.event.bind('tcp://*:{}'.format(IO.EVENT))
 
-        self.association_in = context.socket(zmq.PUSH)
-        self.association_in.connect('tcp://{}:{}'.format(host, IO.ASSOCIATION_IN))
+        self.association = context.socket(zmq.REQ)
+        self.association.connect('tcp://{}:{}'.format(host, IO.ASSOCIATION))
 
         incoming = context.socket(zmq.PULL)
         incoming.bind('tcp://*:{}'.format(IO.EXTERNAL))
@@ -86,8 +87,8 @@ class Controller:
 
         try:
             if 'last_segment_ids' in message:
-                _, text_list = message.split()
-                self.event.send_json({'last_segment_ids': eval(text_list) })
+                the_ids = message[17:]
+                self.event.send_json({'last_segment_ids': loads(the_ids) })
             
             if 'calculate_cochlear' in message:
                 _, wav_file = message.split()
@@ -96,7 +97,8 @@ class Controller:
                 print 'Calculating cochlear neural activation patterns took {} seconds'.format(time.time() - t0)
             
             if message == 'evolve':
-                self.association_in.send_pyobj(['evolve'])
+                self.association.send_pyobj(['evolve'])
+                self.association.recv_pyobj()
 
             if 'register' in message and 'BRAIN' in message:
                 _, name, free = message.split()
