@@ -25,18 +25,18 @@
         kwavekey4       = 1
 
 ; set original key dependant on waveform length 
-        kwavekey1       = kwavekey1/kfildur1
-        kwavekey2       = kwavekey2/kfildur2
-        kwavekey3       = kwavekey3/kfildur3
-        kwavekey4       = kwavekey4/kfildur4
+        kwavekey1       = divz(kwavekey1, kfildur1, 1)
+        kwavekey2       = divz(kwavekey2, kfildur2, 1)
+        kwavekey3       = divz(kwavekey3, kfildur3, 1)
+        kwavekey4       = divz(kwavekey4, kfildur4, 1)
 
 ; time pointer (phase). This can be independent for each source waveform.
 
-        kTimeRate       = 1                             ; time pointer rate
-        asamplepos1     phasor kTimeRate / kfildur1     ; phasor from 0 to 1, scaled to the length of the first source waveform
-        asamplepos2     phasor kTimeRate / kfildur2     ; same as above, scaled for source wave 2
-        asamplepos3     phasor kTimeRate / kfildur3     ; same as above, scaled for source wave 3
-        asamplepos4     phasor kTimeRate / kfildur4     ; same as above, scaled for source wave 4
+        kTimeRate       = 1                                 ; time pointer rate
+        asamplepos1     phasor divz(kTimeRate, kfildur1, 1)     ; phasor from 0 to 1, scaled to the length of the first source waveform
+        asamplepos2     phasor divz(kTimeRate, kfildur2, 1)     ; same as above, scaled for source wave 2
+        asamplepos3     phasor divz(kTimeRate, kfildur3, 1)     ; same as above, scaled for source wave 3
+        asamplepos4     phasor divz(kTimeRate, kfildur4, 1)     ; same as above, scaled for source wave 4
 
 ;*******************************
 ; other granular synthesis parameters
@@ -74,8 +74,8 @@
         idisttab        ftgenonce       0, 0, 16, 16, 1, 16, -10, 0     ; probability distribution for random grain masking
 
 ; grain shape
-        kGrainDur       = 0.2                                   ; length of each grain relative to grain rate 
-        kRelDur         = (kGrainDur*1000)/kgrainrate           ; grain dur in milliseconds, relative to grain rate
+        kGrainDur       = 0.2                                       ; length of each grain relative to grain rate 
+        kRelDur         = divz((kGrainDur*1000),kgrainrate, 1)      ; grain dur in milliseconds, relative to grain rate
         kduration       = 25+kRelDur
 
         ienv_attack     = giSigmoRise                           ; grain attack shape (from table)
@@ -160,17 +160,17 @@ a1,a2                   partikkel \                                             
         krateDev2       randh 1, kgrainrate2
         krateDev2       pow krateDev2, 2
         ;kgrainrate2     = kgrainrate2+(krateDev2*kgrainrate2)
-        kGrainDur2      = 3                                     ; length of each grain relative to grain rate 
-        kduration2      = (kGrainDur2*1000)/kgrainrate2         ; grain dur in milliseconds, relative to grain rate
+        kGrainDur2      = 3                                         ; length of each grain relative to grain rate 
+        kduration2      = divz((kGrainDur2*1000),kgrainrate2, 1)         ; grain dur in milliseconds, relative to grain rate
         kwavDev2        rspline -1, 1, 0.3, 2
         kwavfreq2       = 1*semitone(kwavDev2)
         ka_d_ratio2     = 0.3                                   ; balance between attack time and decay time, 0.0 = zero attack time and full decay time
   
-        kTimeRate2      = 0.5                           ; time pointer rate
-        asamplepos21    phasor kTimeRate2 / kfildur1    ; phasor from 0 to 1, scaled to the length of the first source waveform
-        asamplepos22    phasor kTimeRate2 / kfildur2    ; same as above, scaled for source wave 2
-        asamplepos23    phasor kTimeRate2 / kfildur3    ; same as above, scaled for source wave 3
-        asamplepos24    phasor kTimeRate2 / kfildur4    ; same as above, scaled for source wave 4
+        kTimeRate2      = 0.5                                   ; time pointer rate
+        asamplepos21    phasor divz(kTimeRate2, kfildur1, 1)    ; phasor from 0 to 1, scaled to the length of the first source waveform
+        asamplepos22    phasor divz(kTimeRate2, kfildur2, 1)    ; same as above, scaled for source wave 2
+        asamplepos23    phasor divz(kTimeRate2, kfildur3, 1)   ; same as above, scaled for source wave 3
+        asamplepos24    phasor divz(kTimeRate2, kfildur4, 1)   ; same as above, scaled for source wave 4
 
         kposDevAmt2     = 0.4
         kposDev21       randh kposDevAmt2, kgrainrate2

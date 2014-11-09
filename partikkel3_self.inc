@@ -26,12 +26,12 @@
         kwavekey4       = 1.02          ; individual source pitch
 
 ; set original key dependant on waveform length 
-        kwavekey1       = kwavekey1/ifildur1
-        kwavekey2       = kwavekey2/ifildur2
-        kwavekey3       = kwavekey3/ifildur3
-        kwavekey4       = kwavekey4/ifildur4
+        kwavekey1       divz kwavekey1, ifildur1, 1
+        kwavekey2       divz kwavekey2, ifildur2, 1
+        kwavekey3       divz kwavekey3, ifildur3, 1
+        kwavekey4       divz kwavekey4, ifildur4, 1
     
-        isposEnd        = idur/ifildur1 ; section of table used, (normalized) 
+        isposEnd        = divz(idur,ifildur1, 1) ; section of table used, (normalized) 
         asamplepos0     line 0, idurSamplepos, isposEnd
         ksamplepos0     downsamp asamplepos0
         asamplepos1     init 0
@@ -63,35 +63,35 @@
 spos1:
         iduramp1        divz 1, i(kcpsamp1), 1/kr
         ks1amp          oscil1, 0, 1, iduramp1, giHanning
-        aspos1          phasor iTimeRate2 / ifildur1
+        aspos1          phasor divz(iTimeRate2, ifildur1, 1)
         ipos1           = i(ksamplepos0)
         asamplepos1     = ipos1 + aspos1
         rireturn
 spos2:
         iduramp2        divz 1, i(kcpsamp2), 1/kr
         ks2amp          oscil1, 0, 1, iduramp2, giHanning
-        aspos2          phasor iTimeRate2 / ifildur1
+        aspos2          phasor divz(iTimeRate2, ifildur1, 1)
         ipos2           = i(ksamplepos0)
         asamplepos2     = ipos2 + aspos2
         rireturn
 spos3:
         iduramp3        divz 1, i(kcpsamp3), 1/kr
         ks3amp          oscil1, 0, 1, iduramp3, giHanning
-        aspos3          phasor iTimeRate2 / ifildur1
+        aspos3          phasor divz(iTimeRate2, ifildur1, 1)
         ipos3           = i(ksamplepos0)
         asamplepos3     = ipos3 + aspos3
         rireturn
 spos4:
         iduramp4        divz 1, i(kcpsamp4), 1/kr
         ks4amp          oscil1, 0, 1, iduramp4, giHanning
-        aspos4          phasor iTimeRate2 / ifildur1
+        aspos4          phasor divz(iTimeRate2, ifildur1, 1)
         ipos4           = i(ksamplepos0)
         asamplepos4     = ipos4 + aspos4
         rireturn
 donespos:
 
 ; samplepos rDev
-        ksampRdevAmt    = 0.001/ifildur1
+        ksampRdevAmt    = divz(0.001, ifildur1, 0.0001)
         ksampRdev1      randh ksampRdevAmt, 30
         ksampRdev2      randh ksampRdevAmt, 30
         ksampRdev3      randh ksampRdevAmt, 30
@@ -144,8 +144,8 @@ donespos:
         idisttab        ftgentmp        0, 0, 16, 16, 1, 16, -10, 0     ; probability distribution for random grain masking
 
 ; grain shape
-        kGrainDur       = 4                                     ; length of each grain relative to grain rate 
-        kduration       = (kGrainDur*1000)/kGrainRate           ; grain dur in milliseconds, relative to grain rate
+        kGrainDur       = 4                                         ; length of each grain relative to grain rate 
+        kduration       = divz((kGrainDur*1000), kGrainRate, 100)    ; grain dur in milliseconds, relative to grain rate
 
         ienv_attack     = giSigmoRise                           ; grain attack shape (from table)
         ienv_decay      = giSigmoFall                           ; grain decay shape (from table)

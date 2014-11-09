@@ -32,10 +32,10 @@
 	;kwavekey4	= 1
 
 ; set original key dependant on waveform length (only for sampled waveforms, not for single cycle waves)
-	kwavekey1	= (kwave1Single > 0 ? kwavekey1 : kwavekey1/kfildur1)
-	kwavekey2	= (kwave2Single > 0 ? kwavekey2 : kwavekey2/kfildur2)
-	kwavekey3	= (kwave3Single > 0 ? kwavekey3 : kwavekey3/kfildur3)
-	kwavekey4	= (kwave4Single > 0 ? kwavekey4 : kwavekey4/kfildur4)
+	kwavekey1	= (kwave1Single > 0 ? kwavekey1 : divz(kwavekey1,kfildur1,1))
+	kwavekey2	= (kwave2Single > 0 ? kwavekey2 : divz(kwavekey2,kfildur2,1))
+	kwavekey3	= (kwave3Single > 0 ? kwavekey3 : divz(kwavekey3,kfildur3,1))
+	kwavekey4	= (kwave4Single > 0 ? kwavekey4 : divz(kwavekey4,kfildur4,1))
 
 ; time pointer (phase). This can be independent for each source waveform.
 	isamplepos1	= 0				; initial phase for wave source 1
@@ -43,11 +43,11 @@
 	isamplepos3	= 0				; initial phase for wave source 3
 	isamplepos4	= 0				; initial phase for wave source 4
 
-	kTimeRate	= 1				; time pointer rate
-	asamplepos1	phasor kTimeRate / kfildur1	; phasor from 0 to 1, scaled to the length of the first source waveform
-	asamplepos2	phasor kTimeRate / kfildur2	; same as above, scaled for source wave 2
-	asamplepos3	phasor kTimeRate / kfildur3	; same as above, scaled for source wave 3
-	asamplepos4	phasor kTimeRate / kfildur4	; same as above, scaled for source wave 4
+	kTimeRate	    = 1				; time pointer rate
+    asamplepos1     phasor divz(kTimeRate, kfildur1, 1)     ; phasor from 0 to 1, scaled to the length of the first source waveform
+    asamplepos2     phasor divz(kTimeRate, kfildur2, 1)     ; same as above, scaled for source wave 2
+    asamplepos3     phasor divz(kTimeRate, kfildur3, 1)     ; same as above, scaled for source wave 3
+    asamplepos4     phasor divz(kTimeRate, kfildur4, 1)     ; same as above, scaled for source wave 4
 
 	; mix initial phase and moving phase value (moving phase only for sampled waveforms, single cycle waveforms use static samplepos)
 	asamplepos1	= asamplepos1*(1-kwave1Single) + isamplepos1
