@@ -35,13 +35,21 @@ def idle(host):
     robocontrol = context.socket(zmq.PUSH)
     robocontrol.connect('tcp://{}:{}'.format(host, IO.ROBO))
 
+    snapshot = context.socket(zmq.REQ)
+    snapshot.connect('tcp://{}:{}'.format(host, IO.SNAPSHOT))
+
+    snapshot.send_json('Give me state!')
+    state = snapshot.recv_json()
+
     poller = zmq.Poller()
     poller.register(face, zmq.POLLIN)
     
     sender = context.socket(zmq.PUSH)
     sender.connect('tcp://{}:{}'.format(host, IO.EXTERNAL))
 
-    counter = 0
+    saySomethingCounter = 0
+    saySomethingModulo = 8
+
     while True:
         events = dict(poller.poll(timeout=np.random.randint(1000,2500)))
 
@@ -52,11 +60,16 @@ def idle(host):
             robocontrol.send_json([ 1, 'pan', (2*np.random.rand() -1)/10 ]) 
             robocontrol.send_json([ 1, 'tilt', (2*np.random.rand()-1)/10])
 
-        if counter%5 == 0:
+        if state['_audioLearningStatus']:
+            saySomethingCounter = 0 
+            saySomethingModulo = 8
+       
+        if saySomethingCounter%(saySomethingModulo+np.random.randint(saySomethingModulo/2)) == 0:
             sender.send_json('saySomething')
-        counter += 1
-        
-        counter %= 100000
+            saySomethingModulo += 2
+            if saySomethingModulo >= 20: saySomethingModulo = 20
+
+        saySomethingCounter += 1
 
 class Controller:
     def __init__(self, init_state, host):
@@ -73,14 +86,30 @@ class Controller:
         self.event = context.socket(zmq.PUB)
         self.event.bind('tcp://*:{}'.format(IO.EVENT))
 
+        snapshot = context.socket(zmq.ROUTER)
+        snapshot.bind('tcp://*:{}'.format(IO.SNAPSHOT))
+
         self.association = context.socket(zmq.REQ)
         self.association.connect('tcp://{}:{}'.format(host, IO.ASSOCIATION))
 
         incoming = context.socket(zmq.PULL)
         incoming.bind('tcp://*:{}'.format(IO.EXTERNAL))
 
+        poller = zmq.Poller()
+        poller.register(incoming, zmq.POLLIN)
+        poller.register(snapshot, zmq.POLLIN)
+
         while True:
-            self.parse(incoming.recv_json())
+            events = dict(poller.poll())
+            
+            if incoming in events:
+                self.parse(incoming.recv_json())
+                 
+            if snapshot in events:
+                address, _, message = snapshot.recv_multipart()
+                snapshot.send_multipart([ address, 
+                                          b'',
+                                          dumps(self.state) ])
 
     def parse(self, message):
         print '[self.] received:', message
@@ -137,9 +166,10 @@ class Controller:
 
             if 'memoryRecording' in message:
                 self.state['memoryRecording'] = message[16:] in ['True', '1']
-
+               
             if '_audioLearningStatus' in message:
                 self.state['_audioLearningStatus'] = message[21:] in ['True', '1']
+                #print '** audio learning status set to', self.state['_audioLearningStatus']
 
             if 'roboActive' in message:
                 self.state['roboActive'] = int(message[11:])
@@ -168,9 +198,17 @@ class Controller:
                 _, filename = message.split()
                 self.event.send_json({ 'respond_sentence': True, 'filename': filename })
 
+            if 'play_sentence' in message:
+                print 'playSentence', message
+                sentence = message[13:]
+                self.event.send_json({ 'play_sentence':True, 'sentence': sentence })
+
             if 'rhyme' in message:
                 _, value = message.split()
                 self.event.send_json({'rhyme': value == 'True'})
+
+            if 'saySomething' in message:
+                self.event.send_json({'saySomething': True})
 
             if 'autolearn' in message:
                 self.state['autolearn'] = message[10:] in ['True', '1']

@@ -24,7 +24,7 @@ MIC = 5563
 SPEAKER = 5564
 STATE = 5565
 EXTERNAL = 5566 # If you change this, you're out of luck.
-#5567 available
+SNAPSHOT= 5567
 EVENT = 5568
 #5569 available 
 ROBO = 5570

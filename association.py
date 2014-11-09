@@ -120,7 +120,7 @@ def association(host):
                     evolve_sentence_parameters()
                 if func == 'getSimilarWords':
                     _,predicate, distance = thing
-                    getSimilarWords(predicate, distance)
+                    answer = getSimilarWords(predicate, distance)
                 if func == 'pushCurrentSettings':
                     pushCurrentSettings()
                 if func == 'popCurrentSettings':
@@ -583,10 +583,15 @@ def getCandidatesFromContext(context, position, width):
 
 def getSimilarWords(predicate, distance):
     _similarWords = copy.copy(similarWords[predicate])
+    print 'getSimilarWords1', _similarWords
+    _similarWords = formatAsMembership(_similarWords)
+    print 'getSimilarWords2', _similarWords
     _similarWords = zeroMe(predicate, _similarWords)
-    for word in _similarWords:
-        if word[1] > distance: _similarWords.remove(word)
-    assoc_out.send_pyobj([_similarWords])
+    print 'getSimilarWords3', _similarWords
+    simIds = []
+    for item in _similarWords:
+        if item[1] < distance: simIds.append(item[0])
+    return simIds
 
 
 def weightedSum(a_, weightA_, b_, weightB_):

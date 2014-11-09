@@ -38,7 +38,7 @@ except:
 FACE_HAAR_CASCADE_PATH = opencv_prefix + '/share/OpenCV/haarcascades/haarcascade_frontalface_default.xml'
 EYE_HAAR_CASCADE_PATH = opencv_prefix + '/share/OpenCV/haarcascades/haarcascade_eye_tree_eyeglasses.xml'
 AUDIO_HAMMERTIME = 8 # Hamming distance match criterion
-RHYME_HAMMERTIME = 10
+RHYME_HAMMERTIME = 11
 FACE_HAMMERTIME = 10
 FRAME_SIZE = (160,120) # Neural network image size, 1/4 of full frame size.
 
@@ -55,6 +55,9 @@ def cognition(host):
 
     association = context.socket(zmq.REQ)
     association.connect('tcp://{}:{}'.format(host, IO.ASSOCIATION))
+
+    sender = context.socket(zmq.PUSH)
+    sender.connect('tcp://{}:{}'.format(host, IO.EXTERNAL))
 
     poller = zmq.Poller()
     poller.register(eventQ, zmq.POLLIN)
@@ -85,33 +88,42 @@ def cognition(host):
                 print 'RHYME ?', rhyme
                 
             if 'saySomething' in pushbutton:
-                if rhyme:
-                    possibleRhymes = []
-                    for id in lastSentenceIds:
-                        association.send_pyobj(['getSimilarWords',id, RHYME_HAMMERTIME])
-                        possibleRhymes.append(association.recv_pyobj())
-                    # check which one generates a sentence with most similar words (most can be how many or how similar ...?)
-                    longest = 0
-                    longestIndex = 0
-                    lowestSimilar = 9999
-                    lowestIndex = 0
-                    for i in len(possibleRhymes):
-                        item = possibleRhymes[i]
-                        if len(item) > longest: 
-                            longest = len(item)
-                            longestIndex = i
-                        if np.mean(item) < lowestSimilar:
-                            lowestSimilar = np.mean(item)
-                            lowestIndex = i
-                    mostRhymes = possibleRhymes[longestIndex]
-                    bestRhymes = possibleRhymes[lowestIndex]
-                    # which one is best ??
-                    select = 'most'
-                    print 'saySomething RHYME using *{}* rhymes'.format(select)
-                    if select == 'most': rhymes = mostRhymes
-                    if select == 'best': rhymes = bestRhymes
-                    # pitch the best rhyming sentence and hit PLAY
-                    self.event.send_json({ 'play_sentence': True, 'sentence': rhymes })
+                #if rhyme:
+                    print '*\n*I will now try to do a rhyme'
+                    print lastSentenceIds
+                    if len(lastSentenceIds) > 0:
+                        try:
+                            possibleRhymes = []
+                            for id in lastSentenceIds:
+                                association.send_pyobj(['getSimilarWords',id, RHYME_HAMMERTIME])
+                                possibleRhymes.append(association.recv_pyobj())
+                            # check which one generates a sentence with most similar words (most can be how many or how similar ...?)
+                            longest = 0
+                            longestIndex = 0
+                            lowestSimilar = 9999
+                            lowestIndex = 0
+                            for i in range(len(possibleRhymes)):
+                                item = possibleRhymes[i]
+                                if len(item) > longest: 
+                                    longest = len(item)
+                                    longestIndex = i
+                                if np.mean(item) < lowestSimilar:
+                                    lowestSimilar = np.mean(item)
+                                    lowestIndex = i
+                            mostRhymes = possibleRhymes[longestIndex]
+                            bestRhymes = possibleRhymes[lowestIndex]
+                            # which one is best ??
+                            select = 'most'
+                            print 'saySomething RHYME using *{}* rhymes'.format(select)
+                            if select == 'most': rhymes = mostRhymes
+                            if select == 'best': rhymes = bestRhymes
+                            print 'Rhyme sentence:', rhymes
+                            # pick the best rhyming sentence and hit PLAY
+                            sender.send_json('play_sentence {}'.format(rhymes))
+                            rhyme = False
+                        except Exception, e:
+                            print e, 'Rhyme failed.'
+
                     
 # LOOK AT EYES? CAN YOU DETERMINE ANYTHING FROM THEM?
 # PRESENT VISUAL INFORMATION - MOVE UP OR DOWN
@@ -296,10 +308,6 @@ def respond(control_host, learn_host, debug=False):
     eventQ.connect('tcp://{}:{}'.format(control_host, IO.EVENT))
     eventQ.setsockopt(zmq.SUBSCRIBE, b'') 
 
-    stateQ = context.socket(zmq.SUB)
-    stateQ.connect('tcp://{}:{}'.format(control_host, IO.STATE))
-    stateQ.setsockopt(zmq.SUBSCRIBE, b'') 
-
     projector = context.socket(zmq.PUSH)
     projector.connect('tcp://{}:{}'.format(control_host, IO.PROJECTOR)) 
 
@@ -312,12 +320,15 @@ def respond(control_host, learn_host, debug=False):
     association = context.socket(zmq.REQ)
     association.connect('tcp://{}:{}'.format(learn_host, IO.ASSOCIATION))
 
+    snapshot = context.socket(zmq.REQ)
+    snapshot.connect('tcp://{}:{}'.format(control_host, IO.SNAPSHOT))
+
+    snapshot.send_json('Give me state!')
+    state = snapshot.recv_json()
+
     poller = zmq.Poller()
     poller.register(eventQ, zmq.POLLIN)
-    poller.register(stateQ, zmq.POLLIN)
     poller.register(brainQ, zmq.POLLIN)
-
-    state = stateQ.recv_json()
 
     sound_to_face = []
     wordFace = {}
@@ -338,6 +349,7 @@ def respond(control_host, learn_host, debug=False):
     
     while True:
         events = dict(poller.poll())
+
         if brainQ in events:
             cells = brainQ.recv_pyobj()
 
@@ -468,6 +480,7 @@ def respond(control_host, learn_host, debug=False):
 
             if 'play_sentence' in pushbutton:
                     sentence = pushbutton['sentence']
+                    sentence = eval(sentence)
                     print '*** (play) Play sentence', sentence
                     start = 0 
                     nextTime1 = 0
@@ -593,9 +606,11 @@ def respond(control_host, learn_host, debug=False):
 
                         # as the first crude method of assembling a sentence, just wait for the word duration here
                         time.sleep(dur+wordSpacing1)
+                        snapshot.send_json('Give me the state!')
+                        state = snapshot.recv_json()
                         # check if someone is talking to us, if so, abort sentence
                         if state['_audioLearningStatus']:
-                            print 'Darn, my beautiful sentence was interrupted by this crackface... oh well'
+                            print '\nDarn, my beautiful sentence was interrupted by this crackface... oh well'
                             break
 
                 except:
