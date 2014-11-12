@@ -39,13 +39,13 @@
                 chnmix a2, "in2clean"
 
         aref    chnget "MyOutput"
-        aenv    follow2 aref, 0.001, 0.9    ; amp of output
+        aenv    follow2 aref, 0.001, 0.6    ; amp of output
         kenv    downsamp aenv
         kgate   init 1
         kgate   = (dbfsamp(kenv)>-40?0:kgate) ; hysteresis gate, turn off when signal is over
         kgate   = (dbfsamp(kenv)<-60?1:kgate) ; complement of above
         agate   upsamp 1-kgate              ; upsample and invert, input conditioning for follow2
-        aenv2   follow2 agate, 0.001, 0.8   ; follow2 add release fade out
+        aenv2   follow2 agate, 0.001, 0.5   ; follow2 add release fade out
         kduck   chnget "selfDucking"
         aenv2   = (aenv2*kduck)             ; user control for activation
         aenv2   = 1-aenv2    ; invert (normally at 1, duck to zero, then fade back in)

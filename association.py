@@ -30,6 +30,7 @@ import numpy
 import math
 import utils
 import time
+import cPickle as pickle
 
 from pyevolve import G1DList, GSimpleGA, Mutators, Selectors, Initializators, Mutators
 
@@ -75,7 +76,9 @@ timeLongBeforeWeight2 = 0.02
 timeLongAfterWeight2 = 0.05
 timeLongDistance2 = 120.0
 durationWeight2 = 0.0
-posInSentenceWeight2 = 0.2   
+posInSentenceWeight2 = 0.2  
+
+LastSentenceID_debug = 0
 
 currentSettings = [] # for temporal storage of globals (association weights)
 
@@ -85,35 +88,33 @@ def association(host):
 
     context = zmq.Context()
 
-    assoc_in = context.socket(zmq.PULL)
-    assoc_in.bind('tcp://*:{}'.format(IO.ASSOCIATION_IN))
-
-    assoc_out = context.socket(zmq.PUSH)
-    assoc_out.connect('tcp://{}:{}'.format(host, IO.ASSOCIATION_OUT))        
+    association = context.socket(zmq.ROUTER)
+    association.bind('tcp://*:{}'.format(IO.ASSOCIATION))
 
     eventQ = context.socket(zmq.SUB)
     eventQ.connect('tcp://{}:{}'.format(host, IO.EVENT))
     eventQ.setsockopt(zmq.SUBSCRIBE, b'') 
 
     poller = zmq.Poller()
-    poller.register(assoc_in, zmq.POLLIN)
+    poller.register(association, zmq.POLLIN)
     poller.register(eventQ, zmq.POLLIN)
     
     while True:
         #print 'assoc is running %i', time.time()
         #time.sleep(.1)
         events = dict(poller.poll())
-        if assoc_in in events:
-            thing = assoc_in.recv_pyobj()
-            #print 'thing', thing 
+        if association in events:
+            address, _, message = association.recv_multipart()
+            thing = pickle.loads(message)
             try:
                 func = thing[0]
+                answer = 'Done'
                 if func == 'analyze':
                     _,wav_file,wav_segments,segment_ids,wavs,similar_ids,wordFace,faceWord = thing
                     analyze(wav_file,wav_segments,segment_ids,wavs,similar_ids,wordFace,faceWord)
                 if func == 'makeSentence':
                     _,audio_id = thing
-                    makeSentence(assoc_out, audio_id)                    
+                    answer = makeSentence(audio_id)                    
                 if func == 'setParam':
                     _,param,value = thing
                     setParam(param,value)                    
@@ -121,13 +122,22 @@ def association(host):
                     evolve_sentence_parameters()
                 if func == 'getSimilarWords':
                     _,predicate, distance = thing
-                    getSimilarWords(predicate, distance)
+                    answer = getSimilarWords(predicate, distance)
                 if func == 'pushCurrentSettings':
                     pushCurrentSettings()
                 if func == 'popCurrentSettings':
                     popCurrentSettings()
+
+                association.send_multipart([ address,
+                                             b'',
+                                             pickle.dumps(answer) ])
+
             except Exception, e:
-                print e, 'association receive failed on receiving:', thing
+                print utils.print_exception('association receive failed on receiving {}'.format(thing))
+                association.send_multipart([ address,
+                                             b'',
+                                             pickle.dumps('Something went wrong in association.py, check the output log!') ])
+
 
         if eventQ in events:
             global wordTime, time_word, duration_word, similarWords, neighbors, neighborAfter, \
@@ -160,7 +170,12 @@ def association(host):
                 durationWeight2, posInSentenceWeight2 = utils.load('{}.{}'.format(pushbutton['load'], me.name))
 
 def analyze(wav_file,wav_segments,segment_ids,wavs,similar_ids,_wordFace,_faceWord):
-    print 'analyze', wav_file
+    print 'analyze', wav_file, segment_ids
+    global LastSentenceID_debug
+    if segment_ids[0]+1 < LastSentenceID_debug:
+        print '*********\n\n*********\n\n*********\n\n*********\n\n**Something DID go WRONG with the IDs !!!!!'
+        print '*********\n\n*********\n\n*********\n\n*********\n\n'
+    #print 'wordTime',wordTime
     #print 'similar_ids:'
     #for item in similar_ids:
     #    print '   ', item
@@ -211,7 +226,7 @@ def analyze(wav_file,wav_segments,segment_ids,wavs,similar_ids,_wordFace,_faceWo
     updatePositionMembership(segment_ids) 
     print '...analysis done'
         
-def makeSentence(assoc_out, predicate):
+def makeSentence(predicate):
 
     print 'makeSentence predicate', predicate, 'numWords', numWords, 'similarWordsWeight', similarWordsWeight
 
@@ -266,7 +281,7 @@ def makeSentence(assoc_out, predicate):
         secondaryStream.append(secondaryAssoc)
         
     #print 'processing time for %i words: %f secs'%(numWords, time.time() - timeThen)
-    assoc_out.send_pyobj([sentence, secondaryStream])
+    return [sentence, secondaryStream]
 
 def sentence_fitness(genome):
     debug = False
@@ -579,10 +594,16 @@ def getCandidatesFromContext(context, position, width):
 
 def getSimilarWords(predicate, distance):
     _similarWords = copy.copy(similarWords[predicate])
-    _similarWords = zeroMe(predicate, _similarWords)
-    for word in _similarWords:
-        if word[1] > distance: _similarWords.remove(word)
-    assoc_out.send_pyobj([_similarWords])
+    try:
+        _similarWords = formatAsMembership(_similarWords)
+        _similarWords = zeroMe(predicate, _similarWords)
+        simIds = []
+        for item in _similarWords:
+            if item[1] < distance: simIds.append(item[0])
+    except Exception, e:
+        print e, 'getSimilarWords failed'
+        simIds = [0]
+    return simIds
 
 
 def weightedSum(a_, weightA_, b_, weightB_):

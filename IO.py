@@ -24,16 +24,14 @@ MIC = 5563
 SPEAKER = 5564
 STATE = 5565
 EXTERNAL = 5566 # If you change this, you're out of luck.
-#5567 available
+SNAPSHOT= 5567
 EVENT = 5568
-#5569 available 
+SCHEDULER = 5569
 ROBO = 5570
 #ROBOBACK = 5571
 FACE = 5572
 BRAIN = 5573
-ASSOCIATION_IN = 5574 
-# 5575 not available(?)
-ASSOCIATION_OUT = 5576
+ASSOCIATION = 5574 
 
 def video():
     me = mp.current_process()
@@ -177,8 +175,10 @@ def audio():
                 cs.InputMessage('i 92 0 -1')
                 ambientActive = 1
             if (counter % 4000) == 0:
-                print 'update ambient sound ftables'
+                #print 'Old ambient files:', ambientFiles
+                #print 'update ambient sound ftables.'
                 newtable, ambientFiles = utils.updateAmbientMemoryWavs(ambientFiles)
+                #print 'newtable, ambientFiles', newtable, ambientFiles
                 cs.InputMessage('i 90 0 1 "%s"'%newtable)
         
         if state['ambientSound'] == 0:

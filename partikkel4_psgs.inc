@@ -1,8 +1,8 @@
 
 /*frequency in which the file is read*/
-iwavfreq                = 1 / ilen
+iwavfreq                = divz(1, ilen, 1)
 kwavfreq                = iwavfreq * iformant
-afilposphas             phasor  ispeed / ilen
+afilposphas             phasor  divz(ispeed, ilen,1)
 afilposphas             = afilposphas + (istart/ilen)
 
 /*read pitch analysis data from ftable*/
@@ -13,7 +13,7 @@ kcps                    limit   kcps, 50, 1500
 
 /*other parameters*/
 kgrainfreq              = kcps*itransp          ; grains per second
-kduration               = (1000/kgrainfreq)*1.5 ; grain duration ; smoother(?) if *3, but octave down needs duration to be max *2
+kduration               = divz(1000,kgrainfreq, 100)*1.5 ; grain duration ; smoother(?) if *3, but octave down needs duration to be max *2
 kdistribution           = 0.1                   ; periodic grain clock
 idisttab                ftgentmp 0, 0, 16, 16, 1, 16, -10, 0    ; probability distribution for random grain masking
 ienv2tab                ftgentmp 0, 0, 4096, 20, 9, 1   ; sync window for grains 
@@ -54,9 +54,9 @@ kchroma                 = 1                     ; balance of partials in trainle
 iopcode_id              = 1
 gatrig                  init 0
 asamplepos1             = afilposphas
-asamplepos2             = asamplepos1+((0.25/kcps) / ilen)
-asamplepos3             = asamplepos1+((0.50/kcps) / ilen)
-asamplepos4             = asamplepos1+((0.75/kcps) / ilen)
+asamplepos2             = asamplepos1+(divz((0.25/kcps), ilen, 1))
+asamplepos3             = asamplepos1+(divz((0.50/kcps), ilen, 1))
+asamplepos4             = asamplepos1+(divz((0.75/kcps), ilen, 1))
 
 /*original key of sample (default=1)*/
 kwavekey1               = 1                     ; original key

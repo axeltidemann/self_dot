@@ -40,21 +40,21 @@
         chnset -3, "ambientLevel"      ; set level of self's own background sound
 
 
-	chnset  5000, "Master1HiShelfFq"
+	chnset  9000, "Master1HiShelfFq"
 	chnset  3, "Master1HiShelfGain"
-	chnset  150, "Master1LoShelfFq"
-	chnset  -6, "Maste1LoShelfGain" 
-	chnset  1000, "Master1Band1Fq"
-	chnset  -5, "Master1Band1Gain"
-	chnset  0.3, "Master1Band1Q"
+	chnset  180, "Master1LoShelfFq"
+	chnset  -2, "Master1LoShelfGain" 
+	chnset  2000, "Master1Band1Fq"
+	chnset  -2, "Master1Band1Gain"
+	chnset  0.6, "Master1Band1Q"
 	
-	chnset  6000, "Master2HiShelfFq"
+	chnset  8000, "Master2HiShelfFq"
 	chnset  1, "Master2HiShelfGain"
 	chnset  250, "Master2LoShelfFq"
 	chnset  -9, "Master2LoShelfGain" 
-	chnset  3000, "Master2Band1Fq"
-	chnset  -5, "Master2Band1Gain"
-	chnset  0.3, "Master2Band1Q"
+	chnset  3500, "Master2Band1Fq"
+	chnset  -3, "Master2Band1Gain"
+	chnset  0.6, "Master2Band1Q"
 	
 
 	

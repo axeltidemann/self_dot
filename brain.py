@@ -22,6 +22,7 @@ import cv2
 from sklearn.decomposition import RandomizedPCA
 from scipy.signal.signaltools import correlate2d as c2d
 import sai as pysai
+from zmq.utils.jsonapi import dumps
 
 import utils
 import IO
@@ -36,8 +37,8 @@ except:
     
 FACE_HAAR_CASCADE_PATH = opencv_prefix + '/share/OpenCV/haarcascades/haarcascade_frontalface_default.xml'
 EYE_HAAR_CASCADE_PATH = opencv_prefix + '/share/OpenCV/haarcascades/haarcascade_eye_tree_eyeglasses.xml'
-AUDIO_HAMMERTIME = 8#45 #8 # Hamming distance match criterion
-RHYME_HAMMERTIME = 10
+AUDIO_HAMMERTIME = 8 # Hamming distance match criterion
+RHYME_HAMMERTIME = 11
 FACE_HAMMERTIME = 10
 FRAME_SIZE = (160,120) # Neural network image size, 1/4 of full frame size.
 
@@ -52,11 +53,11 @@ def cognition(host):
     eventQ.connect('tcp://{}:{}'.format(host, IO.EVENT))
     eventQ.setsockopt(zmq.SUBSCRIBE, b'') 
 
-    association_in = context.socket(zmq.PUSH)
-    association_in.connect('tcp://{}:{}'.format(host, IO.ASSOCIATION_IN))
+    association = context.socket(zmq.REQ)
+    association.connect('tcp://{}:{}'.format(host, IO.ASSOCIATION))
 
-    # association_out = context.socket(zmq.PULL)
-    # association_out.connect('tcp://*:{}'.format(IO.ASSOCIATION_OUT))
+    sender = context.socket(zmq.PUSH)
+    sender.connect('tcp://{}:{}'.format(host, IO.EXTERNAL))
 
     poller = zmq.Poller()
     poller.register(eventQ, zmq.POLLIN)
@@ -88,32 +89,42 @@ def cognition(host):
                 
             if 'saySomething' in pushbutton:
                 if rhyme:
-                    possibleRhymes = []
-                    for id in lastSentenceIds:
-                        association_in.send_pyobj(['getSimilarWords',id, RHYME_HAMMERTIME])
-                        possibleRhymes.append(association_out.recv_pyobj())
-                    # check which one generates a sentence with most similar words (most can be how many or how similar ...?)
-                    longest = 0
-                    longestIndex = 0
-                    lowestSimilar = 9999
-                    lowestIndex = 0
-                    for i in len(possibleRhymes):
-                        item = possibleRhymes[i]
-                        if len(item) > longest: 
-                            longest = len(item)
-                            longestIndex = i
-                        if np.mean(item) < lowestSimilar:
-                            lowestSimilar = np.mean(item)
-                            lowestIndex = i
-                    mostRhymes = possibleRhymes[longestIndex]
-                    bestRhymes = possibleRhymes[lowestIndex]
-                    # which one is best ??
-                    select = 'most'
-                    print 'saySomething RHYME using *{}* rhymes'.format(select)
-                    if select == 'most': rhymes = mostRhymes
-                    if select == 'best': rhymes = bestRhymes
-                    # pitch the best rhyming sentence and hit PLAY
-                    self.event.send_json({ 'play_sentence': True, 'sentence': rhymes })
+                    print '*\n*I will now try to do a rhyme'
+                    print lastSentenceIds
+                    if len(lastSentenceIds) > 0:
+                        try:
+                            possibleRhymes = []
+                            for id in lastSentenceIds:
+                                association.send_pyobj(['getSimilarWords',id, RHYME_HAMMERTIME])
+                                possibleRhymes.append(association.recv_pyobj())
+                            # check which one generates a sentence with most similar words (most can be how many or how similar ...?)
+                            longest = 0
+                            longestIndex = 0
+                            lowestSimilar = 9999
+                            lowestIndex = 0
+                            for i in range(len(possibleRhymes)):
+                                item = possibleRhymes[i]
+                                if len(item) > longest: 
+                                    longest = len(item)
+                                    longestIndex = i
+                                if np.mean(item) < lowestSimilar:
+                                    lowestSimilar = np.mean(item)
+                                    lowestIndex = i
+                            mostRhymes = possibleRhymes[longestIndex]
+                            bestRhymes = possibleRhymes[lowestIndex]
+                            # which one is best ??
+                            select = 'most'
+                            print 'saySomething RHYME using *{}* rhymes'.format(select)
+                            if select == 'most': rhymes = mostRhymes
+                            if select == 'best': rhymes = bestRhymes
+                            if len(rhymes) > 7 : rhymes= rhymes[:7] # temporary length limit
+                            print 'Rhyme sentence:', rhymes
+                            # pick the best rhyming sentence and hit PLAY
+                            sender.send_json('play_sentence {}'.format(rhymes))
+                            rhyme = False
+                        except Exception, e:
+                            print e, 'Rhyme failed.'
+                
                     
 # LOOK AT EYES? CAN YOU DETERMINE ANYTHING FROM THEM?
 # PRESENT VISUAL INFORMATION - MOVE UP OR DOWN
@@ -205,6 +216,7 @@ def train_network(x, y, output_dim=100, leak_rate=.9, bias_scaling=.2, reset_sta
                                               bias_scaling=bias_scaling, 
                                               reset_states=reset_states)
     readout = mdp.nodes.LinearRegressionNode(use_pinv=use_pinv)
+    #readout = Oger.nodes.RidgeRegressionNode(.001)
         
     net = mdp.hinet.FlowNode(reservoir + readout)
     net.train(x,y)
@@ -214,7 +226,6 @@ def train_network(x, y, output_dim=100, leak_rate=.9, bias_scaling=.2, reset_sta
 def dream(brain):
     return True # SELF-ORGANIZING OF ALL MEMORIES! EXTRACT CATEGORIES AND FEATURES!
 
-            
 def cochlear(filename, db=-40, stride=441, new_rate=22050, ears=1, apply_filter=1):
     rate, data = wavfile.read(filename)
     assert data.dtype == np.int16
@@ -230,10 +241,9 @@ def cochlear(filename, db=-40, stride=441, new_rate=22050, ears=1, apply_filter=
     return np.sqrt(np.maximum(0, naps)/np.max(naps))
 
 
-def _predict_audio_id(audio_recognizer, NAP_resampled):
-    x_test = audio_recognizer.rPCA.transform(np.ndarray.flatten(NAP_resampled))
-    return audio_recognizer.predict(x_test)[0]
-
+def _predict_audio_id(audio_classifier, NAP):
+    x_test = audio_classifier.rPCA.transform(np.ndarray.flatten(NAP))
+    return audio_classifier.predict(x_test)[0]
 
 def _NAP_resampled(wav_file, maxlen, maxlen_scaled):
     NAP = utils.trim_right(utils.load_cochlear(wav_file))
@@ -276,18 +286,27 @@ def calculate_sai_video_marginals(host, debug=False):
 
             print 'SAI video marginals for {} calculated in {} seconds'.format(filename, time.time() - t0)
 
-def _hamming_distance_predictor(audio_recognizer, NAP, maxlen, NAP_hashes):
+def _hamming_distance_predictor(audio_classifier, NAP, maxlen, NAP_hashes):
     NAP_hash = utils.d_hash(NAP, hash_size=8)
     NAP_scales = [ utils.exact(NAP, maxlen), 
                    utils.exact(resample(NAP, .5, 'sinc_best'), maxlen), 
                    utils.exact(resample(NAP, min(2, float(maxlen)/NAP.shape[0]), 'sinc_best'), maxlen) ]
 
-    audio_id_candidates = [ _predict_audio_id(audio_recognizer, NAP_s) for NAP_s in NAP_scales ]
+    audio_id_candidates = [ _predict_audio_id(audio_classifier, NAP_s) for NAP_s in NAP_scales ]
     hamming_warped = [ np.mean([ utils.hamming_distance(NAP_hash, h) for h in NAP_hashes[audio_id] ]) for audio_id in audio_id_candidates ]
     print 'HAMMING WARPED', zip(audio_id_candidates, hamming_warped)
     winner = np.argsort(hamming_warped)[0]
     return audio_id_candidates[winner], NAP_scales[winner]
 
+def _recognize_audio_id(audio_recognizer, NAP):
+    for audio_id, net in enumerate(audio_recognizer):
+        print 'AUDIO ID: {} OUTPUT MEAN: {}'.format(audio_id, np.mean(net(NAP)))
+
+def _project(audio_id, sound_to_face, dur, NAP, video_producer):
+    face_id = np.random.choice(sound_to_face[audio_id])
+    video_time = (1000*dur)/IO.VIDEO_SAMPLE_TIME
+    stride = min(1,int(np.ceil(NAP.shape[0]/video_time)))
+    return video_producer[(audio_id, face_id)](NAP[::stride])
 
 def respond(control_host, learn_host, debug=False):
     me = mp.current_process()
@@ -299,10 +318,6 @@ def respond(control_host, learn_host, debug=False):
     eventQ.connect('tcp://{}:{}'.format(control_host, IO.EVENT))
     eventQ.setsockopt(zmq.SUBSCRIBE, b'') 
 
-    stateQ = context.socket(zmq.SUB)
-    stateQ.connect('tcp://{}:{}'.format(control_host, IO.STATE))
-    stateQ.setsockopt(zmq.SUBSCRIBE, b'') 
-
     projector = context.socket(zmq.PUSH)
     projector.connect('tcp://{}:{}'.format(control_host, IO.PROJECTOR)) 
 
@@ -312,18 +327,21 @@ def respond(control_host, learn_host, debug=False):
     brainQ = context.socket(zmq.PULL)
     brainQ.bind('tcp://*:{}'.format(IO.BRAIN))
     
-    association_in = context.socket(zmq.PUSH)
-    association_in.connect('tcp://{}:{}'.format(learn_host, IO.ASSOCIATION_IN))
+    association = context.socket(zmq.REQ)
+    association.connect('tcp://{}:{}'.format(learn_host, IO.ASSOCIATION))
 
-    association_out = context.socket(zmq.PULL)
-    association_out.bind('tcp://*:{}'.format(IO.ASSOCIATION_OUT))
-    
+    snapshot = context.socket(zmq.REQ)
+    snapshot.connect('tcp://{}:{}'.format(control_host, IO.SNAPSHOT))
+
+    scheduler = context.socket(zmq.PUSH)
+    scheduler.connect('tcp://{}:{}'.format(control_host, IO.SCHEDULER))
+
+    snapshot.send_json('Give me state!')
+    state = snapshot.recv_json()
+
     poller = zmq.Poller()
     poller.register(eventQ, zmq.POLLIN)
-    poller.register(stateQ, zmq.POLLIN)
     poller.register(brainQ, zmq.POLLIN)
-
-    state = stateQ.recv_json()
 
     sound_to_face = []
     wordFace = {}
@@ -331,8 +349,8 @@ def respond(control_host, learn_host, debug=False):
     faceWord = {}
     register = {}
     video_producer = {}
-    voiceType1 = 0
-    voiceType2 = 1
+    voiceType1 = 1
+    voiceType2 = 6
     wordSpace1 = 0.2
     wordSpaceDev1 = 0.3
     wordSpace2 = 0.2
@@ -344,6 +362,7 @@ def respond(control_host, learn_host, debug=False):
     
     while True:
         events = dict(poller.poll())
+
         if brainQ in events:
             cells = brainQ.recv_pyobj()
 
@@ -363,9 +382,10 @@ def respond(control_host, learn_host, debug=False):
                 register[wav_file][2] = cells
 
             if all(register[wav_file]):
-                print 'Audio - video - face recognizers related to {} arrived at responder'.format(wav_file)
+                filetime = time.mktime(time.strptime(wav_file[wav_file.rfind('/')+1:wav_file.rfind('.wav')], '%Y_%m_%d_%H_%M_%S'))
+                print 'Audio - video - face recognizers related to {} arrived at responder, total processing time {} seconds'.format(wav_file, time.time() - filetime)
                 # segment_ids: list of audio_ids in sentence
-                _, _, segment_ids, wavs, wav_segments, audio_recognizer, maxlen, maxlen_scaled, NAP_hashes = register[wav_file][0]
+                _, _, segment_ids, wavs, wav_segments, audio_classifier, audio_recognizer, global_audio_recognizer, mixture_audio_recognizer, maxlen, NAP_hashes = register[wav_file][0]
                 _, _, tarantino = register[wav_file][1]
                 _, _, face_id, face_recognizer = register[wav_file][2]          
 
@@ -375,8 +395,9 @@ def respond(control_host, learn_host, debug=False):
                     if audio_id < len(sound_to_face) and not face_id in sound_to_face[audio_id]: # sound heard before, but not said by this face 
                         sound_to_face[audio_id].append(face_id)
                         #wordFace[audio_id].append([face_id,1])
-                    else:
+                    if audio_id == len(sound_to_face):
                         sound_to_face.append([face_id])
+
                     wordFace.setdefault(audio_id, [[face_id,0]])
                     found = 0
                     for item in wordFace[audio_id]:
@@ -384,6 +405,7 @@ def respond(control_host, learn_host, debug=False):
                             item[1] += 1
                             found = 1
                     if found == 0:
+                        print 'SHOULD NEVER HAPPEN! brain.py'
                         wordFace[audio_id].append([face_id,1])
 
                     # We can't go from a not known face to any of the sounds, that's just the way it is.
@@ -391,7 +413,7 @@ def respond(control_host, learn_host, debug=False):
                         if face_id < len(face_to_sound) and not audio_id in face_to_sound[face_id]: #face seen before, but the sound is new
                             face_to_sound[face_id].append(audio_id)
                             #faceWord[face_id].append([audio_id,1])
-                        else:
+                        if face_id == len(face_to_sound):
                             face_to_sound.append([audio_id])
                         faceWord.setdefault(face_id, [[audio_id,0]])
                         found = 0
@@ -400,6 +422,7 @@ def respond(control_host, learn_host, debug=False):
                                 item[1] += 1
                                 found = 1
                         if found == 0:
+                            print 'ALSO SHOULD NEVER HAPPEN IN brain.py'
                             faceWord[face_id].append([audio_id,1])
 
                 del register[wav_file]
@@ -410,9 +433,10 @@ def respond(control_host, learn_host, debug=False):
                     similar_ids_for_this_audio_id = [ utils.hamming_distance(new_audio_hash, np.random.choice(h)) for h in NAP_hashes ]
                     similar_ids.append(similar_ids_for_this_audio_id)
                 #print '**wordFace', wordFace
-                print '**faceWord', faceWord
-                association_in.send_pyobj(['analyze',wav_file,wav_segments,segment_ids,wavs,similar_ids,wordFace,faceWord])
-                
+                #print '**faceWord', faceWord
+                association.send_pyobj(['analyze',wav_file,wav_segments,segment_ids,wavs,similar_ids,wordFace,faceWord])
+                association.recv_pyobj()
+                sender.send_json('last_segment_ids {}'.format(dumps(segment_ids)))
                                 
         if eventQ in events:
             pushbutton = eventQ.recv_json()
@@ -430,16 +454,21 @@ def respond(control_host, learn_host, debug=False):
                     #print 'Single selected to respond to segment {}'.format(segment_id)
 
                     NAP = utils.trim_right(new_sentence[norm_segments[segment_id]:norm_segments[segment_id+1]])
-                    #NAP_resampled = utils.zero_pad(resample(NAP, float(maxlen)/NAP.shape[0], 'sinc_best'), maxlen_scaled)
-                    
+                    NAP_exact = utils.exact(NAP, maxlen)
+           
+                    # _recognize_audio_id(audio_recognizer, NAP)         
+                    # _recognize_global_audio_id(global_audio_recognizer, NAP)
+                    # _recognize_mixture_audio_id(mixture_audio_recognizer, NAP)
+
                     if debug:            
-                        plt.imshow(utils.exact(NAP, maxlen).T, aspect='auto')
+                        plt.imshow(NAP_exact.T, aspect='auto')
                         plt.title('respond NAP: {} to {}'.format(NAP.shape[0], maxlen))
                         plt.draw()
                     
                     try:
-                        #audio_id = _predict_audio_id(audio_recognizer, NAP_resampled)
-                        audio_id, _ = _hamming_distance_predictor(audio_recognizer, NAP, maxlen, NAP_hashes)
+           
+                        audio_id = _predict_audio_id(audio_classifier, NAP_exact)
+                        #audio_id, _ = _hamming_distance_predictor(audio_classifier, NAP, maxlen, NAP_hashes)
                     except:
                         audio_id = 0
                         print 'Responding having only heard 1 sound.'
@@ -460,10 +489,7 @@ def respond(control_host, learn_host, debug=False):
 
                     print 'Recognized as sound {}'.format(audio_id)
 
-                    face_id = np.random.choice(sound_to_face[audio_id])
-                    video_time = (1000*dur)/IO.VIDEO_SAMPLE_TIME
-                    stride = int(np.ceil(NAP.shape[0]/video_time))
-                    projection = video_producer[(audio_id, face_id)](NAP[::stride])
+                    projection = _project(audio_id, sound_to_face, dur, NAP, video_producer)
 
                     for row in projection:
                         utils.send_array(projector, np.resize(row, FRAME_SIZE[::-1]))
@@ -472,41 +498,45 @@ def respond(control_host, learn_host, debug=False):
                     utils.print_exception('Single response aborted.')
 
             if 'play_sentence' in pushbutton:
+                try:
                     sentence = pushbutton['sentence']
+                    sentence = eval(sentence)
                     print '*** (play) Play sentence', sentence
                     start = 0 
                     nextTime1 = 0
+                    play_events = []
                     for i in range(len(sentence)):
                         word_id = sentence[i]
                         soundfile = np.random.choice(wavs[word_id])
                         speed = 1
-                        
-                        # segment start and end within sound file, if zero, play whole file
+
                         segstart, segend = wav_segments[(soundfile, word_id)]
+                        new_sentence = utils.load_cochlear(soundfile)
+                        audio_segments = utils.get_segments(soundfile)
+                        segstart_norm = np.rint(new_sentence.shape[0]*segstart/audio_segments[-1])
+                        segend_norm = np.rint(new_sentence.shape[0]*segend/audio_segments[-1])
+                        NAP = utils.trim_right(new_sentence[segstart_norm:segend_norm])
+
                         amp = -3 # voice amplitude in dB
                         _,totaldur,maxamp,_ = utils.getSoundInfo(soundfile)
                         dur = segend-segstart
                         if dur <= 0: dur = totaldur
                         # play in both voices
-                        sender.send_json('playfile {} {} {} {} {} {} {} {} {}'.format(1, voiceType1, start, soundfile, speed, segstart, segend, amp, maxamp))
-                        sender.send_json('playfile {} {} {} {} {} {} {} {} {}'.format(2, voiceType1, start, soundfile, speed, segstart, segend, amp, maxamp))
+                        voice1 = 'playfile {} {} {} {} {} {} {} {} {}'.format(1, voiceType1, start, soundfile, speed, segstart, segend, amp, maxamp)
+                        voice2 = 'playfile {} {} {} {} {} {} {} {} {}'.format(2, voiceType1, start, soundfile, speed, segstart, segend, amp, maxamp)
                         wordSpacing1 = wordSpace1 + np.random.random()*wordSpaceDev1
                         nextTime1 += (dur/speed)+wordSpacing1
 
-                        face_id = np.random.choice(sound_to_face[word_id])
-                        video_time = (1000*dur)/IO.VIDEO_SAMPLE_TIME
-                        stride = int(np.ceil(NAP.shape[0]/video_time))
-                        projection = video_producer[(audio_id, face_id)](NAP[::stride])
+                        try:
+                            projection = _project(audio_id, sound_to_face, dur, NAP, video_producer)
+                        except:
+                            projection = []
+                            utils.print_exception('The video_producer accessed an illegal combination once more. GRRARARRGH!!!')
 
-                        for row in projection:
-                            utils.send_array(projector, np.resize(row, FRAME_SIZE[::-1]))
-
-                        # as the first crude method of assembling a sentence, just wait for the word duration here
-                        time.sleep(dur+wordSpacing1)
-                        # check if someone is talking to us, if so, abort sentence
-                        if state['_audioLearningStatus']:
-                            print 'Darn, my beautiful playrhyme sentence was interrupted by this crackface... oh well'
-                            break
+                        play_events.append([ dur+wordSpacing1, voice1, voice2, projection, FRAME_SIZE ])                        
+                    scheduler.send_pyobj(play_events)
+                except:
+                    utils.print_exception('Sentence play aborted.')
 
             if 'respond_sentence' in pushbutton:
                 print 'SENTENCE Respond to', pushbutton['filename'][-12:]
@@ -524,31 +554,35 @@ def respond(control_host, learn_host, debug=False):
                     print '**Sentence selected to respond to segment {}'.format(segment_id)
 
                     NAP = utils.trim_right(new_sentence[norm_segments[segment_id]:norm_segments[segment_id+1]])
-                    NAP_resampled = utils.zero_pad(resample(NAP, float(maxlen)/NAP.shape[0], 'sinc_best'), maxlen_scaled)
+                    NAP_exact = utils.exact(NAP, maxlen)
                     
                     if debug:            
-                        plt.imshow(NAP_resampled.T, aspect='auto')
+                        plt.imshow(NAP_exact.T, aspect='auto')
                         plt.draw()
                     
                     try:
-                        audio_id = _predict_audio_id(audio_recognizer, NAP_resampled)
+                        audio_id = _predict_audio_id(audio_classifier, NAP_exact)
                     except:
                         audio_id = 0
                         print 'Responding having only heard 1 sound.'
 
                     numWords = len(segmentData)
                     print numWords
-                    association_in.send_pyobj(['setParam', 'numWords', numWords ])
+                    association.send_pyobj(['setParam', 'numWords', numWords ])
+                    association.recv_pyobj()
                     
-                    association_in.send_pyobj(['makeSentence',audio_id])
-                    print 'respond_sentence waiting for association output...'
-                    sentence, secondaryStream = association_out.recv_pyobj()
+                    association.send_pyobj(['makeSentence',audio_id])
+                    print 'respond_sentence waiting for association output...', 
+                    sentence, secondaryStream = association.recv_pyobj()
 
                     print '*** (respond) Play sentence', sentence, secondaryStream
                     start = 0 
                     nextTime1 = 0
                     nextTime2 = 0
                     enableVoice2 = 1
+
+                    play_events = []
+
                     for i in range(len(sentence)):
                         word_id = sentence[i]
                         soundfile = np.random.choice(wavs[word_id])
@@ -557,12 +591,18 @@ def respond(control_host, learn_host, debug=False):
                         
                         # segment start and end within sound file, if zero, play whole file
                         segstart, segend = wav_segments[(soundfile, word_id)]
+                        new_sentence = utils.load_cochlear(soundfile)
+                        audio_segments = utils.get_segments(soundfile)
+                        segstart_norm = np.rint(new_sentence.shape[0]*segstart/audio_segments[-1])
+                        segend_norm = np.rint(new_sentence.shape[0]*segend/audio_segments[-1])
+                        NAP = utils.trim_right(new_sentence[segstart_norm:segend_norm])
+                        
                         amp = -3 # voice amplitude in dB
                         #totaldur, maxamp = utils.getSoundParmFromFile(soundfile)
                         _,totaldur,maxamp,_ = utils.getSoundInfo(soundfile)
                         dur = segend-segstart
                         if dur <= 0: dur = totaldur
-                        sender.send_json('playfile {} {} {} {} {} {} {} {} {}'.format(voiceChannel, voiceType1, start, soundfile, speed, segstart, segend, amp, maxamp))
+                        voice1 = 'playfile {} {} {} {} {} {} {} {} {}'.format(voiceChannel, voiceType1, start, soundfile, speed, segstart, segend, amp, maxamp)
                         #start += dur # if we want to create a 'score section' for Csound, update start time to make segments into a contiguous sentence
                         wordSpacing1 = wordSpace1 + np.random.random()*wordSpaceDev1
                         nextTime1 += (dur/speed)+wordSpacing1
@@ -580,41 +620,36 @@ def respond(control_host, learn_host, debug=False):
                             #totalDur2, maxamp2 = utils.getSoundParmFromFile(soundfile2)
                             _,totalDur2,maxamp2,_ = utils.getSoundInfo(soundfile)
                             if dur2 <= 0: dur2 = totalDur2
-                            sender.send_json('playfile {} {} {} {} {} {} {} {} {}'.format(voiceChannel2, voiceType2, start2, soundfile2, speed2, segstart2, segend2, amp2, maxamp2))
+                            voice2 = 'playfile {} {} {} {} {} {} {} {} {}'.format(voiceChannel2, voiceType2, start2, soundfile2, speed2, segstart2, segend2, amp2, maxamp2)
                             wordSpacing2 = wordSpace2 + np.random.random()*wordSpaceDev2
                             nextTime2 += (dur2/speed2)+wordSpacing2
                             #enableVoice2 = 0
                         # trig another word in voice 2 only if word 2 has finished playing (and sync to start of voice 1)
                         if nextTime1 > nextTime2: enableVoice2 = 1 
 
-                        face_id = np.random.choice(sound_to_face[word_id])
-                        video_time = (1000*dur)/IO.VIDEO_SAMPLE_TIME
-                        stride = int(np.ceil(NAP.shape[0]/video_time))
-                        projection = video_producer[(audio_id, face_id)](NAP[::stride])
+                        try:
+                            projection = _project(audio_id, sound_to_face, dur, NAP, video_producer)
+                        except:
+                            projection = []
+                            utils.print_exception('The video_producer accessed an illegal combination once more. GRRARARRGH!!!')
+                        
+                        play_events.append([ dur+wordSpacing1, voice1, voice2, projection, FRAME_SIZE ])
 
-                        for row in projection:
-                            utils.send_array(projector, np.resize(row, FRAME_SIZE[::-1]))
-
-                        # as the first crude method of assembling a sentence, just wait for the word duration here
-                        time.sleep(dur+wordSpacing1)
-                        # check if someone is talking to us, if so, abort sentence
-                        if state['_audioLearningStatus']:
-                            print 'Darn, my beautiful sentence was interrupted by this crackface... oh well'
-                            break
-
+                    scheduler.send_pyobj(play_events)
                 except:
                     utils.print_exception('Sentence response aborted.')
                     
             if 'testSentence' in pushbutton:
                 print 'testSentence', pushbutton
-                association_in.send_pyobj(['makeSentence',int(pushbutton['testSentence'])])
+                association.send_pyobj(['makeSentence',int(pushbutton['testSentence'])])
                 print 'testSentence waiting for association output...'
-                sentence, secondaryStream = association_out.recv_pyobj()
+                sentence, secondaryStream = association.recv_pyobj()
                 print '*** Test sentence', sentence, secondaryStream
             
             if 'assoc_setParam' in pushbutton:
                 parm, value = pushbutton['assoc_setParam'].split()
-                association_in.send_pyobj(['setParam', parm, value ])
+                association.send_pyobj(['setParam', parm, value ])
+                association.recv_pyobj()
 
             if 'respond_setParam' in pushbutton:
                 items = pushbutton['respond_setParam'].split()
@@ -668,11 +703,44 @@ def respond(control_host, learn_host, debug=False):
                     print e, 'showme print failed.'
 
             if 'save' in pushbutton:
-                utils.save('{}.{}'.format(pushbutton['save'], me.name), [ sound_to_face, wordFace, face_to_sound, faceWord, video_producer, segment_ids, wavs, wav_segments, audio_recognizer, maxlen, maxlen_scaled, NAP_hashes, face_id, face_recognizer ])
+                utils.save('{}.{}'.format(pushbutton['save'], me.name), [ sound_to_face, wordFace, face_to_sound, faceWord, video_producer, segment_ids, wavs, wav_segments, audio_classifier, maxlen, NAP_hashes, face_id, face_recognizer ])
 
             if 'load' in pushbutton:
-                sound_to_face, wordFace, face_to_sound, faceWord, video_producer, segment_ids, wavs, wav_segments, audio_recognizer, maxlen, maxlen_scaled, NAP_hashes, face_id, face_recognizer = utils.load('{}.{}'.format(pushbutton['load'], me.name))
+                sound_to_face, wordFace, face_to_sound, faceWord, video_producer, segment_ids, wavs, wav_segments, audio_classifier, maxlen, NAP_hashes, face_id, face_recognizer = utils.load('{}.{}'.format(pushbutton['load'], me.name))
                     
+def _train_audio_recognizer(signal):
+    noise = np.random.rand(signal.shape[0], signal.shape[1])
+    x_train = np.vstack((noise, signal))
+    targets = np.array([-1]*noise.shape[0] + [1]*signal.shape[0])
+    targets.shape = (len(targets), 1)
+    return train_network(x_train, targets, output_dim=100, leak_rate=.1)
+
+def _train_mixture_audio_recognizer(NAPs):
+    x_train = np.vstack([m for memory in NAPs for m in memory])
+    nets = []
+    for audio_id, _ in enumerate(NAPs):
+        targets = np.array([ 1 if i == audio_id else -1 for i,nappers in enumerate(NAPs) for nap in nappers for _ in range(nap.shape[0]) ])
+        targets.shape = (len(targets),1)
+        nets.append(train_network(x_train, targets, output_dim=10, leak_rate=.5))
+    return nets
+
+def _train_global_audio_recognizer(NAPs):
+    x_train = np.vstack([m for memory in NAPs for m in memory])
+    targets = np.zeros((x_train.shape[0], len(NAPs))) - 1
+    idxs = [ i for i,nappers in enumerate(NAPs) for nap in nappers for _ in range(nap.shape[0]) ]
+    for row, ix in zip(targets, idxs):
+        row[ix] = 1
+    return train_network(x_train, targets, output_dim=1000, leak_rate=.5)
+    
+def _recognize_audio_id(audio_recognizer, NAP):
+    for audio_id, net in enumerate(audio_recognizer):
+        print 'AUDIO ID: {} OUTPUT MEAN: {}'.format(audio_id, np.mean(net(NAP)))
+
+def _recognize_mixture_audio_id(audio_recognizer, NAP):
+    print 'MIXTURE AUDIO IDS:', np.mean(np.hstack([ net(NAP) for net in audio_recognizer ]), axis=0)
+
+def _recognize_global_audio_id(audio_recognizer, NAP):
+    print 'GLOBAL AUDIO IDS:', np.mean(audio_recognizer(NAP), axis=0)
 
 def learn_audio(host, debug=False):
     me = mp.current_process()
@@ -700,9 +768,10 @@ def learn_audio(host, debug=False):
     wav_segments = {}
     NAP_hashes = []
 
+    audio_classifier = []
     audio_recognizer = []
+    global_audio_recognizer = []
     maxlen = []
-    maxlen_scaled = []
 
     state = stateQ.recv_json()
     
@@ -734,64 +803,66 @@ def learn_audio(host, debug=False):
                     norm_segments = np.rint(new_sentence.shape[0]*audio_segments/audio_segments[-1]).astype('int')
 
                     segment_ids = []
-                    new_audio_hash = [] #utils.scale
+                    new_audio_hash = []
                     for segment, new_sound in enumerate([ utils.trim_right(new_sentence[norm_segments[i]:norm_segments[i+1]]) for i in range(len(norm_segments)-1) ]):
                         # Do we know this sound?
                         if debug:
                             plt.imshow(new_sound.T, aspect='auto')
-                            plt.title('learn_audio not resampled')
+                            plt.title('learn_audio raw signal')
                             plt.draw()
                         
                         hammings = [ np.inf ]
-                        new_audio_hash.append(utils.d_hash(new_sound, hash_size=8))
+                        try:
+                            new_hash = utils.d_hash(new_sound, hash_size=8)
+                            new_audio_hash.append(new_hash)
+                        except:
+                            utils.print_exception('Hash calculation failed, shape of NAP: {}'.format(new_sound.shape))
+                            continue
+
                         audio_id = 0
                         if len(NAPs) == 1:
                             hammings = [ utils.hamming_distance(new_audio_hash[-1], h) for h in NAP_hashes[0] ]
                         
-                        if audio_recognizer:
-                            audio_id, new_sound_scaled = _hamming_distance_predictor(audio_recognizer, new_sound, maxlen, NAP_hashes)
-                            #new_sound_exact = utils.exact(new_sound, maxlen)
-                            #audio_id = _predict_audio_id(audio_recognizer, new_sound_exact)
+                        if audio_classifier:
+                            #audio_id, new_sound_scaled = _hamming_distance_predictor(audio_classifier, new_sound, maxlen, NAP_hashes)
+                            new_sound_exact = utils.exact(new_sound, maxlen)
+                            audio_id = _predict_audio_id(audio_classifier, new_sound_exact)
 
-                            #resampled_new_sound = utils.zero_pad(resample(new_sound, float(maxlen)/new_sound.shape[0], 'sinc_best'), maxlen_scaled)
-                            #audio_id = _predict_audio_id(audio_recognizer, resampled_new_sound)
                             hammings = [ utils.hamming_distance(new_audio_hash[-1], h) for h in NAP_hashes[audio_id] ]
 
                         if np.mean(hammings) < AUDIO_HAMMERTIME:
-                            NAPs[audio_id].append(new_sound_scaled)
+                            #NAPs[audio_id].append(new_sound_scaled)
+                            NAPs[audio_id].append(new_sound)
                             NAP_hashes[audio_id].append(new_audio_hash[-1])
                             wavs[audio_id].append(filename)
                             print 'Sound is similar to sound {}, hamming mean {}'.format(audio_id, np.mean(hammings))
+                            # Training audio recognizer network
+                            #audio_recognizer[audio_id] = _train_audio_recognizer(np.vstack(NAPs[audio_id]))
+                            
                         else:
                             print 'New sound, hamming mean {} from sound {}'.format(np.mean(hammings), audio_id)
                             NAPs.append([new_sound])
                             NAP_hashes.append([new_audio_hash[-1]])
                             wavs.append([filename])
+                            #audio_recognizer.append(_train_audio_recognizer(new_sound))
                             audio_id = len(NAPs) - 1
 
                         # The mapping from wavfile and audio ID to the segment within the audio file
                         wav_segments[(filename, audio_id)] = [ audio_segments[segment], audio_segments[segment+1] ]
                         segment_ids.append(audio_id)
                         
-                        # Scale the sizes of the samples according to the biggest one. The idea is that this scale well. Otherwise, create overlapping bins.
                         maxlen = max([ m.shape[0] for memory in NAPs for m in memory ])
-                        # resampled_memories = [ [ resample(m, float(maxlen)/m.shape[0], 'sinc_best') for m in memory ] for memory in NAPs ]
-                        # maxlen_scaled = max([ m.shape[0] for memory in resampled_memories for m in memory ])
-                        maxlen_scaled = -np.inf
                         memories = [ np.ndarray.flatten(utils.zero_pad(m, maxlen)) for memory in NAPs for m in memory ]
 
                         if len(NAPs) > 1:
-                            # resampled_memories = [ [ utils.zero_pad(m, maxlen_scaled) for m in memory ] for memory in resampled_memories ]
-                            # resampled_flattened_memories = [ np.ndarray.flatten(m) for memory in resampled_memories for m in memory ]
                             targets = [ i for i,f in enumerate(NAPs) for _ in f ]
                             
                             rPCA = RandomizedPCA(n_components=100)
-                            #x_train = rPCA.fit_transform(resampled_flattened_memories)
                             x_train = rPCA.fit_transform(memories)
 
-                            audio_recognizer = svm.LinearSVC()
-                            audio_recognizer.fit(x_train, targets)
-                            audio_recognizer.rPCA = rPCA
+                            audio_classifier = svm.LinearSVC()
+                            audio_classifier.fit(x_train, targets)
+                            audio_classifier.rPCA = rPCA
 
                     all_hammings = [ utils.hamming_distance(new_audio_hash[i], new_audio_hash[j])
                                                             for i in range(len(new_audio_hash)) for j in range(len(new_audio_hash)) if i > j ]
@@ -799,10 +870,13 @@ def learn_audio(host, debug=False):
                     print 'RHYME VALUE', np.mean(sorted(all_hammings)[int(len(all_hammings)/2):])
                     rhyme = np.mean(sorted(all_hammings)[int(len(all_hammings)/2):]) < RHYME_HAMMERTIME
 
+                    # global_audio_recognizer = _train_global_audio_recognizer(NAPs)
+                    # mixture_audio_recognizer = _train_mixture_audio_recognizer(NAPs)
+
                     sender.send_json('rhyme {}'.format(rhyme))
-                    sender.send_json('last_segment_ids {}'.format(segment_ids))
+
                     t1 = time.time()
-                    brainQ.send_pyobj(['audio_learn', filename, segment_ids, wavs, wav_segments, audio_recognizer, maxlen, maxlen_scaled, NAP_hashes])
+                    brainQ.send_pyobj(['audio_learn', filename, segment_ids, wavs, wav_segments, audio_classifier, audio_recognizer, global_audio_recognizer, mixture_audio_recognizer,  maxlen, NAP_hashes])
                     print 'Audio learned in {} seconds, ZMQ time {} seconds'.format(t1 - t0, time.time() - t1)
                 except:
                     utils.print_exception('Audio learning aborted.')
@@ -810,10 +884,10 @@ def learn_audio(host, debug=False):
                 audio.clear()
 
             if 'save' in pushbutton:
-                utils.save('{}.{}'.format(pushbutton['save'], me.name), [ NAPs, wavs, wav_segments, NAP_hashes, audio_recognizer, maxlen, maxlen_scaled ])
+                utils.save('{}.{}'.format(pushbutton['save'], me.name), [ NAPs, wavs, wav_segments, NAP_hashes, audio_classifier, maxlen ])
 
             if 'load' in pushbutton:
-                NAPs, wavs, wav_segments, NAP_hashes, audio_recognizer, maxlen, maxlen_scaled = utils.load('{}.{}'.format(pushbutton['load'], me.name))
+                NAPs, wavs, wav_segments, NAP_hashes, audio_classifier, maxlen = utils.load('{}.{}'.format(pushbutton['load'], me.name))
 
                 
 def learn_video(host, debug=False):
