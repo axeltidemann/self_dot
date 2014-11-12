@@ -203,6 +203,7 @@ def train_network(x, y, output_dim=100, leak_rate=.9, bias_scaling=.2, reset_sta
                                               bias_scaling=bias_scaling, 
                                               reset_states=reset_states)
     readout = mdp.nodes.LinearRegressionNode(use_pinv=use_pinv)
+    #readout = Oger.nodes.RidgeRegressionNode(.001)
         
     net = mdp.hinet.FlowNode(reservoir + readout)
     net.train(x,y)
@@ -230,7 +231,6 @@ def cochlear(filename, db=-40, stride=441, new_rate=22050, ears=1, apply_filter=
 def _predict_audio_id(audio_classifier, NAP):
     x_test = audio_classifier.rPCA.transform(np.ndarray.flatten(NAP))
     return audio_classifier.predict(x_test)[0]
-
 
 def _NAP_resampled(wav_file, maxlen, maxlen_scaled):
     NAP = utils.trim_right(utils.load_cochlear(wav_file))
@@ -362,7 +362,7 @@ def respond(control_host, learn_host, debug=False):
             if all(register[wav_file]):
                 print 'Audio - video - face recognizers related to {} arrived at responder'.format(wav_file)
                 # segment_ids: list of audio_ids in sentence
-                _, _, segment_ids, wavs, wav_segments, audio_classifier, audio_recognizer, global_audio_recognizer, maxlen, NAP_hashes = register[wav_file][0]
+                _, _, segment_ids, wavs, wav_segments, audio_classifier, audio_recognizer, global_audio_recognizer, mixture_audio_recognizer, maxlen, NAP_hashes = register[wav_file][0]
                 _, _, tarantino = register[wav_file][1]
                 _, _, face_id, face_recognizer = register[wav_file][2]          
 
@@ -430,8 +430,9 @@ def respond(control_host, learn_host, debug=False):
                     NAP = utils.trim_right(new_sentence[norm_segments[segment_id]:norm_segments[segment_id+1]])
                     NAP_exact = utils.exact(NAP, maxlen)
            
-                    _recognize_audio_id(audio_recognizer, NAP_exact)         
-                    _recognize_global_audio_id(global_audio_recognizer, NAP_exact)
+                    _recognize_audio_id(audio_recognizer, NAP)         
+                    _recognize_global_audio_id(global_audio_recognizer, NAP)
+                    _recognize_mixture_audio_id(mixture_audio_recognizer, NAP)
 
                     if debug:            
                         plt.imshow(NAP_exact.T, aspect='auto')
@@ -677,13 +678,21 @@ def respond(control_host, learn_host, debug=False):
             if 'load' in pushbutton:
                 sound_to_face, wordFace, face_to_sound, faceWord, video_producer, segment_ids, wavs, wav_segments, audio_classifier, maxlen, NAP_hashes, face_id, face_recognizer = utils.load('{}.{}'.format(pushbutton['load'], me.name))
                     
-
 def _train_audio_recognizer(signal):
     noise = np.random.rand(signal.shape[0], signal.shape[1])
     x_train = np.vstack((noise, signal))
     targets = np.array([-1]*noise.shape[0] + [1]*signal.shape[0])
     targets.shape = (len(targets), 1)
-    return train_network(x_train, targets, output_dim=100, leak_rate=.9)
+    return train_network(x_train, targets, output_dim=100, leak_rate=.1)
+
+def _train_mixture_audio_recognizer(NAPs):
+    x_train = np.vstack([m for memory in NAPs for m in memory])
+    nets = []
+    for audio_id, _ in enumerate(NAPs):
+        targets = np.array([ 1 if i == audio_id else -1 for i,nappers in enumerate(NAPs) for nap in nappers for _ in range(nap.shape[0]) ])
+        targets.shape = (len(targets),1)
+        nets.append(train_network(x_train, targets, output_dim=10, leak_rate=.5))
+    return nets
 
 def _train_global_audio_recognizer(NAPs):
     x_train = np.vstack([m for memory in NAPs for m in memory])
@@ -691,16 +700,17 @@ def _train_global_audio_recognizer(NAPs):
     idxs = [ i for i,nappers in enumerate(NAPs) for nap in nappers for _ in range(nap.shape[0]) ]
     for row, ix in zip(targets, idxs):
         row[ix] = 1
-    return train_network(x_train, targets, output_dim=100, leak_rate=.5)
+    return train_network(x_train, targets, output_dim=1000, leak_rate=.5)
     
 def _recognize_audio_id(audio_recognizer, NAP):
     for audio_id, net in enumerate(audio_recognizer):
         print 'AUDIO ID: {} OUTPUT MEAN: {}'.format(audio_id, np.mean(net(NAP)))
 
-def _recognize_global_audio_id(audio_recognizer, new_sound):
-    output = audio_recognizer(new_sound)
-    print 'AUDIO IDS:', np.mean(output, axis=0)
-    
+def _recognize_mixture_audio_id(audio_recognizer, NAP):
+    print 'MIXTURE AUDIO IDS:', np.mean(np.hstack([ net(NAP) for net in audio_recognizer ]), axis=0)
+
+def _recognize_global_audio_id(audio_recognizer, NAP):
+    print 'GLOBAL AUDIO IDS:', np.mean(audio_recognizer(NAP), axis=0)
 
 def learn_audio(host, debug=False):
     me = mp.current_process()
@@ -825,10 +835,11 @@ def learn_audio(host, debug=False):
                     rhyme = np.mean(sorted(all_hammings)[int(len(all_hammings)/2):]) < RHYME_HAMMERTIME
 
                     global_audio_recognizer = _train_global_audio_recognizer(NAPs)
+                    mixture_audio_recognizer = _train_mixture_audio_recognizer(NAPs)
                     sender.send_json('rhyme {}'.format(rhyme))
                     sender.send_json('last_segment_ids {}'.format(dumps(segment_ids)))
                     t1 = time.time()
-                    brainQ.send_pyobj(['audio_learn', filename, segment_ids, wavs, wav_segments, audio_classifier, audio_recognizer, global_audio_recognizer, maxlen, NAP_hashes])
+                    brainQ.send_pyobj(['audio_learn', filename, segment_ids, wavs, wav_segments, audio_classifier, audio_recognizer, global_audio_recognizer, mixture_audio_recognizer,  maxlen, NAP_hashes])
                     print 'Audio learned in {} seconds, ZMQ time {} seconds'.format(t1 - t0, time.time() - t1)
                 except:
                     utils.print_exception('Audio learning aborted.')
