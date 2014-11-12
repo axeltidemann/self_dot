@@ -73,7 +73,7 @@ printk2 k1+9900, 30
 
 <CsScore>
 ; run for N sec
-#define SCORELEN # 86400 #
+#define SCORELEN # 604800 # ; 604800 secs is one week
 ;#define SCORELEN # 15 #
 
 f0 86400

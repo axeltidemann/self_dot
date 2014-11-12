@@ -8,6 +8,7 @@ import sys
 import cPickle as pickle
 import zlib
 import random
+import multiprocessing as mp
 
 import numpy as np
 import zmq
@@ -17,8 +18,8 @@ from sklearn.covariance import EmpiricalCovariance, MinCovDet
 import cv2
 
 from brain import cochlear
+import IO
 findfloat=re.compile(r"[0-9.]*")
-
 
 def save(filename, data):
     pickle.dump(data, file(filename, 'w'))
@@ -348,3 +349,58 @@ def print_exception(msg=''):
     linecache.checkcache(filename)
     line = linecache.getline(filename, lineno, f.f_globals)
     print '{} EXCEPTION IN ({}, LINE {} "{}"): {}'.format(msg, filename, lineno, line.strip(), exc_obj)
+
+def scheduler(host):
+    me = mp.current_process()
+    print me.name, 'PID', me.pid
+
+    context = zmq.Context()
+    
+    play_events = context.socket(zmq.PULL)
+    play_events.bind('tcp://*:{}'.format(IO.SCHEDULER))
+
+    sender = context.socket(zmq.PUSH)
+    sender.connect('tcp://{}:{}'.format(host, IO.EXTERNAL))
+
+    projector = context.socket(zmq.PUSH)
+    projector.connect('tcp://{}:{}'.format(host, IO.PROJECTOR)) 
+
+    stateQ = context.socket(zmq.SUB)
+    stateQ.connect('tcp://{}:{}'.format(host, IO.STATE))
+    stateQ.setsockopt(zmq.SUBSCRIBE, b'') 
+    state = stateQ.recv_json()
+
+    poller = zmq.Poller()
+    poller.register(play_events, zmq.POLLIN)
+    poller.register(stateQ, zmq.POLLIN)
+
+    to_be_played = []
+
+    t0 = 0
+    wait_time = 0
+
+    while True:
+        events = dict(poller.poll(timeout=.05))
+
+        if stateQ in events:
+            state = stateQ.recv_json()
+
+        if state['_audioLearningStatus']:
+            to_be_played = []
+            wait_time = 4
+            t0 = time.time()
+
+        if play_events in events:
+            sender.send_json('enable_say_something 0')
+            to_be_played = play_events.recv_pyobj()
+
+        if len(to_be_played) and time.time() - t0 > wait_time:
+            t0 = time.time()
+            wait_time, voice1, voice2, projection, frame_size = to_be_played.pop(0)
+            sender.send_json(voice1)
+            sender.send_json(voice2)
+            for row in projection:
+                send_array(projector, np.resize(row, frame_size[::-1]))
+                
+            if len(to_be_played) == 0:
+                sender.send_json('enable_say_something 1')

@@ -104,6 +104,8 @@ print p1,p2,p3,p5,p6,p7,p8,p9,p10,p11
         aout            = (aout1+aout2)
         aout            butterhp aout, 150
         aout            = aout * iamp * 2 * aenv * (1/imaxamp)
+	    aout	        pareq aout, 6800, ampdb(-5), 0.6,  0
+
 
 ; output
         if ivoice == 1 then
@@ -169,6 +171,7 @@ print p1,p2,p3,p5,p6,p7,p8,p9,p10,p11
         aout1           = aout1 * iamp * 4 
         aout2           = aout2 * iamp * 3 
         aout            = (aout1+aout2) * 0.8 * aenv * (1/imaxamp)
+	    aout	        pareq aout, 6800, ampdb(-5), 0.6,  0
 
 ; output
         if ivoice == 1 then
@@ -243,6 +246,7 @@ print p1,p2,p3,p5,p6,p7,p8,p9,p10,p11
         aout            pvsynth     fshift 
         aout            butterhp aout, 100
         aout            = aout * iamp * 4.5 * aenv * (1/imaxamp)
+	    aout	        pareq aout, 6800, ampdb(-5), 0.6,  0
 
 ; output
         if ivoice == 1 then
@@ -323,6 +327,7 @@ contin:
         aout            = (aout1*0.6)+(aout2*1)
         aout            butterhp aout, 150
         aout           = aout * iamp * 2 * aenv * (1/imaxamp)
+	    aout	        pareq aout, 6800, ampdb(-5), 0.6,  0
 
 ; output
         if ivoice == 1 then
@@ -415,6 +420,7 @@ contin:
                          (anois * 1)
         aout            butterhp aout, 150
         aout           = aout * iamp * aenv * (1/imaxamp)
+	    aout	        pareq aout, 6800, ampdb(-5), 0.6,  0
 
 ; output
         if ivoice == 1 then

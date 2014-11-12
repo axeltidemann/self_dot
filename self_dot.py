@@ -35,28 +35,51 @@ def idle(host):
     robocontrol = context.socket(zmq.PUSH)
     robocontrol.connect('tcp://{}:{}'.format(host, IO.ROBO))
 
+    stateQ = context.socket(zmq.SUB)
+    stateQ.connect('tcp://{}:{}'.format(host, IO.STATE))
+    stateQ.setsockopt(zmq.SUBSCRIBE, b'') 
+
+    state = stateQ.recv_json()
+
     poller = zmq.Poller()
     poller.register(face, zmq.POLLIN)
-    
+    poller.register(stateQ, zmq.POLLIN)
+
     sender = context.socket(zmq.PUSH)
     sender.connect('tcp://{}:{}'.format(host, IO.EXTERNAL))
 
-    counter = 0
+    saySomethingCounter = 0
+    saySomethingModulo = 8
+
+    face_timer = 0
+
     while True:
-        events = dict(poller.poll(timeout=np.random.randint(1000,2500)))
+        events = dict(poller.poll(timeout=100))
 
         if face in events:
             new_face = utils.recv_array(face)
-        else:
+            face_timer = time.time()
+                      
+        if time.time() - face_timer > np.random.rand()*1.5 + 1:
             print '[self.] searches for a face'
-            robocontrol.send_json([ 1, 'pan', (2*np.random.rand() -1)/10 ]) 
+            robocontrol.send_json([ 1, 'pan', (2*np.random.rand() -1)/10 ])
             robocontrol.send_json([ 1, 'tilt', (2*np.random.rand()-1)/10])
+            face_timer = time.time()
 
-        if counter%5 == 0:
+        if stateQ in events:
+            state = stateQ.recv_json()
+
+        if not state['enable_say_something']:
+            saySomethingCounter = 1
+            saySomethingModulo = 8
+
+        if state['enable_say_something'] and saySomethingCounter%(saySomethingModulo+np.random.randint(saySomethingModulo/2)) == 0:
             sender.send_json('saySomething')
-        counter += 1
-        
-        counter %= 100000
+            sender.send_json('enable_say_something 0')
+            #saySomethingModulo += 2
+            #if saySomethingModulo >= 20: saySomethingModulo = 20
+
+        saySomethingCounter += 1
 
 class Controller:
     def __init__(self, init_state, host):
@@ -73,19 +96,39 @@ class Controller:
         self.event = context.socket(zmq.PUB)
         self.event.bind('tcp://*:{}'.format(IO.EVENT))
 
+        snapshot = context.socket(zmq.ROUTER)
+        snapshot.bind('tcp://*:{}'.format(IO.SNAPSHOT))
+
         self.association = context.socket(zmq.REQ)
         self.association.connect('tcp://{}:{}'.format(host, IO.ASSOCIATION))
 
         incoming = context.socket(zmq.PULL)
         incoming.bind('tcp://*:{}'.format(IO.EXTERNAL))
 
+        poller = zmq.Poller()
+        poller.register(incoming, zmq.POLLIN)
+        poller.register(snapshot, zmq.POLLIN)
+
         while True:
-            self.parse(incoming.recv_json())
+            events = dict(poller.poll())
+            
+            if incoming in events:
+                self.parse(incoming.recv_json())
+                 
+            if snapshot in events:
+                address, _, message = snapshot.recv_multipart()
+                snapshot.send_multipart([ address, 
+                                          b'',
+                                          dumps(self.state) ])
 
     def parse(self, message):
         print '[self.] received:', message
 
         try:
+            if 'enable_say_something' in message:
+                _, value = message.split()
+                self.state['enable_say_something'] = value in ['True', '1']
+            
             if 'last_segment_ids' in message:
                 the_ids = message[17:]
                 self.event.send_json({'last_segment_ids': loads(the_ids) })
@@ -137,9 +180,11 @@ class Controller:
 
             if 'memoryRecording' in message:
                 self.state['memoryRecording'] = message[16:] in ['True', '1']
-
+               
             if '_audioLearningStatus' in message:
+                #self.event.send_json({ '_audioLearningStatus': message[21:] in ['True', '1'] })
                 self.state['_audioLearningStatus'] = message[21:] in ['True', '1']
+                #print '** audio learning status set to', self.state['_audioLearningStatus']
 
             if 'roboActive' in message:
                 self.state['roboActive'] = int(message[11:])
@@ -168,9 +213,17 @@ class Controller:
                 _, filename = message.split()
                 self.event.send_json({ 'respond_sentence': True, 'filename': filename })
 
+            if 'play_sentence' in message:
+                print 'playSentence', message
+                sentence = message[13:]
+                self.event.send_json({ 'play_sentence':True, 'sentence': sentence })
+
             if 'rhyme' in message:
                 _, value = message.split()
                 self.event.send_json({'rhyme': value == 'True'})
+
+            if 'saySomething' in message:
+                self.event.send_json({'saySomething': True})
 
             if 'autolearn' in message:
                 self.state['autolearn'] = message[10:] in ['True', '1']
@@ -221,8 +274,9 @@ if __name__ == '__main__':
                          'brains': {},
                          'record': False,
                          'memoryRecording': False,
-                         '_audioLearningStatus':False,
                          'roboActive': False,
+                         '_audioLearningStatus': False, 
+                         'enable_say_something': False,
                          'ambientSound': False,
                          'fullscreen': 0,
                          'display2': 0,
@@ -234,14 +288,15 @@ if __name__ == '__main__':
     mp.Process(target=IO.audio, name='AUDIO').start() 
     mp.Process(target=IO.video, name='VIDEO').start()
     mp.Process(target=brain.face_extraction, args=('localhost',False,True,), name='FACE EXTRACTION').start()
-    mp.Process(target=brain.respond, args=('localhost','localhost',True,), name='RESPONDER').start()
-    mp.Process(target=brain.learn_audio, args=('localhost',True,), name='AUDIO LEARN').start()
+    mp.Process(target=brain.respond, args=('localhost','localhost',), name='RESPONDER').start()
+    mp.Process(target=brain.learn_audio, args=('localhost',), name='AUDIO LEARN').start()
     mp.Process(target=brain.learn_video, args=('localhost',), name='VIDEO LEARN').start()
     mp.Process(target=brain.learn_faces, args=('localhost',), name='FACES LEARN').start()
     #mp.Process(target=brain.calculate_sai_video_marginals, args=('localhost',), name='SAI VIDEO CALCULATION').start()
     mp.Process(target=robocontrol.robocontrol, args=('localhost',), name='ROBOCONTROL').start()
     mp.Process(target=association.association, args=('localhost',), name='ASSOCIATION').start()
     mp.Process(target=brain.cognition, args=('localhost',), name='COGNITION').start()
+    mp.Process(target=utils.scheduler, args=('localhost',), name='SCHEDULER').start()
     mp.Process(target=Controller, args=(persistent_states,'localhost',), name='CONTROLLER').start()
     mp.Process(target=idle, args=('localhost',), name='IDLER').start()
     try:

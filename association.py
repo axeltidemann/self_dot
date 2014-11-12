@@ -76,7 +76,9 @@ timeLongBeforeWeight2 = 0.02
 timeLongAfterWeight2 = 0.05
 timeLongDistance2 = 120.0
 durationWeight2 = 0.0
-posInSentenceWeight2 = 0.2   
+posInSentenceWeight2 = 0.2  
+
+LastSentenceID_debug = 0
 
 currentSettings = [] # for temporal storage of globals (association weights)
 
@@ -120,7 +122,7 @@ def association(host):
                     evolve_sentence_parameters()
                 if func == 'getSimilarWords':
                     _,predicate, distance = thing
-                    getSimilarWords(predicate, distance)
+                    answer = getSimilarWords(predicate, distance)
                 if func == 'pushCurrentSettings':
                     pushCurrentSettings()
                 if func == 'popCurrentSettings':
@@ -131,7 +133,11 @@ def association(host):
                                              pickle.dumps(answer) ])
 
             except Exception, e:
-                print e, 'association receive failed on receiving:', thing
+                print utils.print_exception('association receive failed on receiving {}'.format(thing))
+                association.send_multipart([ address,
+                                             b'',
+                                             pickle.dumps('Something went wrong in association.py, check the output log!') ])
+
 
         if eventQ in events:
             global wordTime, time_word, duration_word, similarWords, neighbors, neighborAfter, \
@@ -164,7 +170,12 @@ def association(host):
                 durationWeight2, posInSentenceWeight2 = utils.load('{}.{}'.format(pushbutton['load'], me.name))
 
 def analyze(wav_file,wav_segments,segment_ids,wavs,similar_ids,_wordFace,_faceWord):
-    print 'analyze', wav_file
+    print 'analyze', wav_file, segment_ids
+    global LastSentenceID_debug
+    if segment_ids[0]+1 < LastSentenceID_debug:
+        print '*********\n\n*********\n\n*********\n\n*********\n\n**Something DID go WRONG with the IDs !!!!!'
+        print '*********\n\n*********\n\n*********\n\n*********\n\n'
+    #print 'wordTime',wordTime
     #print 'similar_ids:'
     #for item in similar_ids:
     #    print '   ', item
@@ -583,10 +594,16 @@ def getCandidatesFromContext(context, position, width):
 
 def getSimilarWords(predicate, distance):
     _similarWords = copy.copy(similarWords[predicate])
-    _similarWords = zeroMe(predicate, _similarWords)
-    for word in _similarWords:
-        if word[1] > distance: _similarWords.remove(word)
-    assoc_out.send_pyobj([_similarWords])
+    try:
+        _similarWords = formatAsMembership(_similarWords)
+        _similarWords = zeroMe(predicate, _similarWords)
+        simIds = []
+        for item in _similarWords:
+            if item[1] < distance: simIds.append(item[0])
+    except Exception, e:
+        print e, 'getSimilarWords failed'
+        simIds = [0]
+    return simIds
 
 
 def weightedSum(a_, weightA_, b_, weightB_):
