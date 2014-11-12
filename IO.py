@@ -174,7 +174,7 @@ def audio():
          
         if state['ambientSound'] > 0:
             if ambientActive == 0:
-                cs.InputMessage('i 91 0 -1')
+                cs.InputMessage('i 92 0 -1')
                 ambientActive = 1
             if (counter % 4000) == 0:
                 print 'update ambient sound ftables'
@@ -183,7 +183,7 @@ def audio():
         
         if state['ambientSound'] == 0:
             if ambientActive == 1:
-                cs.InputMessage('i -91 0 1')
+                cs.InputMessage('i -92 0 1')
                 ambientActive = 0
 
         if state['memoryRecording']:

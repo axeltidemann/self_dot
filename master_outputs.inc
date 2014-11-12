@@ -5,12 +5,9 @@
 ; As such, it provides feedback to the person speaking to self that it is listening,
 ; in addition to creating a suitable sonic atmosphere
 
-    instr 90
-; load ftables for instr 91
 #include "partikkel_ambient_ftables.inc"	
-    endin
 
-	instr 91
+	instr 92
 ; synthesize background sound	
 #include "partikkel_ambient.inc"	
 

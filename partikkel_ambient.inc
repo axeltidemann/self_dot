@@ -123,7 +123,15 @@
         ; wave mix masking. 
         ; Set gain per source waveform per grain, 
         ; in groups of 5 amp values, reflecting source1, source2, source3, source4, and the 5th slot is for trainlet amplitude.
+        kambAmp1        chnget "ambientWaveamp1"
+        kambAmp2        chnget "ambientWaveamp2"
+        kambAmp3        chnget "ambientWaveamp3"
+        kambAmp4        chnget "ambientWaveamp4"
         iwaveamptab     ftgenonce       0, 0, 32, -2, 0, 0,   1,1,1,1,0
+	                tablew	kambAmp1, 2, iwaveamptab		; write waveamp for source 1
+	                tablew	kambAmp2, 3, iwaveamptab		; write waveamp for source 2
+	                tablew	kambAmp3, 4, iwaveamptab		; write waveamp for source 3
+	                tablew	kambAmp4, 5, iwaveamptab		; write waveamp for source 4
 
 ; system parameter
         imax_grains     = 100                           ; max number of grains per k-period
