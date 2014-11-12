@@ -26,7 +26,7 @@ STATE = 5565
 EXTERNAL = 5566 # If you change this, you're out of luck.
 SNAPSHOT= 5567
 EVENT = 5568
-#5569 available 
+SCHEDULER = 5569
 ROBO = 5570
 #ROBOBACK = 5571
 FACE = 5572
@@ -172,7 +172,7 @@ def audio():
          
         if state['ambientSound'] > 0:
             if ambientActive == 0:
-                cs.InputMessage('i 91 0 -1')
+                #cs.InputMessage('i 91 0 -1')
                 ambientActive = 1
             if (counter % 4000) == 0:
                 #print 'Old ambient files:', ambientFiles
