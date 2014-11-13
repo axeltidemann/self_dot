@@ -308,6 +308,14 @@ def _project(audio_id, sound_to_face, dur, NAP, video_producer):
     stride = min(1,int(np.ceil(NAP.shape[0]/video_time)))
     return video_producer[(audio_id, face_id)](NAP[::stride])
 
+def _extract_NAP(segstart, segend, soundfile):
+    new_sentence = utils.load_cochlear(soundfile)
+    audio_segments = utils.get_segments(soundfile)
+    segstart_norm = np.rint(new_sentence.shape[0]*segstart/audio_segments[-1])
+    segend_norm = np.rint(new_sentence.shape[0]*segend/audio_segments[-1])
+    return utils.trim_right(new_sentence[segstart_norm:segend_norm])
+
+
 def respond(control_host, learn_host, debug=False):
     me = mp.current_process()
     print me.name, 'PID', me.pid
@@ -466,7 +474,6 @@ def respond(control_host, learn_host, debug=False):
                         plt.draw()
                     
                     try:
-           
                         audio_id = _predict_audio_id(audio_classifier, NAP_exact)
                         #audio_id, _ = _hamming_distance_predictor(audio_classifier, NAP, maxlen, NAP_hashes)
                     except:
@@ -474,26 +481,23 @@ def respond(control_host, learn_host, debug=False):
                         print 'Responding having only heard 1 sound.'
 
                     soundfile = np.random.choice(wavs[audio_id])
-
-                    # segment start and end within sound file, if zero, play whole file
                     segstart, segend = wav_segments[(soundfile, audio_id)]
 
                     voiceChannel = 1
                     speed = 1
                     amp = -3 # voice amplitude in dB
-                    #dur, maxamp = utils.getSoundParmFromFile(soundfile) # COORDINATION!
                     _,dur,maxamp,_ = utils.getSoundInfo(soundfile)
                     
                     start = 0
-                    sender.send_json('playfile {} {} {} {} {} {} {} {} {}'.format(voiceChannel, voiceType1, start, soundfile, speed, segstart, segend, amp, maxamp))
+                    voice1 = 'playfile {} {} {} {} {} {} {} {} {}'.format(1, voiceType1, start, soundfile, speed, segstart, segend, amp, maxamp)
+                    voice2 = ''
+                    #voice2 = 'playfile {} {} {} {} {} {} {} {} {}'.format(2, voiceType1, start, soundfile, speed, segstart, segend, amp, maxamp)
 
                     print 'Recognized as sound {}'.format(audio_id)
 
                     projection = _project(audio_id, sound_to_face, dur, NAP, video_producer)
 
-                    for row in projection:
-                        utils.send_array(projector, np.resize(row, FRAME_SIZE[::-1]))
-
+                    scheduler.send_pyobj([[ dur, voice1, voice2, projection, FRAME_SIZE ]])
                 except:
                     utils.print_exception('Single response aborted.')
 
@@ -511,11 +515,7 @@ def respond(control_host, learn_host, debug=False):
                         speed = 1
 
                         segstart, segend = wav_segments[(soundfile, word_id)]
-                        new_sentence = utils.load_cochlear(soundfile)
-                        audio_segments = utils.get_segments(soundfile)
-                        segstart_norm = np.rint(new_sentence.shape[0]*segstart/audio_segments[-1])
-                        segend_norm = np.rint(new_sentence.shape[0]*segend/audio_segments[-1])
-                        NAP = utils.trim_right(new_sentence[segstart_norm:segend_norm])
+                        NAP = _extract_NAP(segstart, segend, soundfile)
 
                         amp = -3 # voice amplitude in dB
                         _,totaldur,maxamp,_ = utils.getSoundInfo(soundfile)
@@ -527,11 +527,7 @@ def respond(control_host, learn_host, debug=False):
                         wordSpacing1 = wordSpace1 + np.random.random()*wordSpaceDev1
                         nextTime1 += (dur/speed)+wordSpacing1
 
-                        try:
-                            projection = _project(audio_id, sound_to_face, dur, NAP, video_producer)
-                        except:
-                            projection = []
-                            utils.print_exception('The video_producer accessed an illegal combination once more. GRRARARRGH!!!')
+                        projection = _project(audio_id, sound_to_face, dur, NAP, video_producer)
 
                         play_events.append([ dur+wordSpacing1, voice1, voice2, projection, FRAME_SIZE ])                        
                     scheduler.send_pyobj(play_events)
@@ -591,11 +587,7 @@ def respond(control_host, learn_host, debug=False):
                         
                         # segment start and end within sound file, if zero, play whole file
                         segstart, segend = wav_segments[(soundfile, word_id)]
-                        new_sentence = utils.load_cochlear(soundfile)
-                        audio_segments = utils.get_segments(soundfile)
-                        segstart_norm = np.rint(new_sentence.shape[0]*segstart/audio_segments[-1])
-                        segend_norm = np.rint(new_sentence.shape[0]*segend/audio_segments[-1])
-                        NAP = utils.trim_right(new_sentence[segstart_norm:segend_norm])
+                        NAP = _extract_NAP(segstart, segend, soundfile)
                         
                         amp = -3 # voice amplitude in dB
                         #totaldur, maxamp = utils.getSoundParmFromFile(soundfile)
@@ -627,11 +619,7 @@ def respond(control_host, learn_host, debug=False):
                         # trig another word in voice 2 only if word 2 has finished playing (and sync to start of voice 1)
                         if nextTime1 > nextTime2: enableVoice2 = 1 
 
-                        try:
-                            projection = _project(audio_id, sound_to_face, dur, NAP, video_producer)
-                        except:
-                            projection = []
-                            utils.print_exception('The video_producer accessed an illegal combination once more. GRRARARRGH!!!')
+                        projection = _project(audio_id, sound_to_face, dur, NAP, video_producer)
                         
                         play_events.append([ dur+wordSpacing1, voice1, voice2, projection, FRAME_SIZE ])
 
@@ -771,6 +759,7 @@ def learn_audio(host, debug=False):
     audio_classifier = []
     audio_recognizer = []
     global_audio_recognizer = []
+    mixture_audio_recognizer = []
     maxlen = []
 
     state = stateQ.recv_json()
@@ -872,7 +861,7 @@ def learn_audio(host, debug=False):
 
                     # global_audio_recognizer = _train_global_audio_recognizer(NAPs)
                     # mixture_audio_recognizer = _train_mixture_audio_recognizer(NAPs)
-
+                    
                     sender.send_json('rhyme {}'.format(rhyme))
 
                     t1 = time.time()

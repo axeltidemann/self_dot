@@ -380,7 +380,7 @@ def scheduler(host):
     wait_time = 0
 
     while True:
-        events = dict(poller.poll(timeout=.05))
+        events = dict(poller.poll(timeout=50))
 
         if stateQ in events:
             state = stateQ.recv_json()
@@ -393,6 +393,7 @@ def scheduler(host):
         if play_events in events:
             sender.send_json('enable_say_something 0')
             to_be_played = play_events.recv_pyobj()
+            wait_time = 0
 
         if len(to_be_played) and time.time() - t0 > wait_time:
             t0 = time.time()
