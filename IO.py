@@ -179,7 +179,7 @@ def audio():
                 #print 'update ambient sound ftables.'
                 newtable, ambientFiles = utils.updateAmbientMemoryWavs(ambientFiles)
                 #print 'newtable, ambientFiles', newtable, ambientFiles
-                cs.InputMessage('i 90 0 1 "%s"'%newtable)
+                cs.InputMessage('i 90 0 4 "%s"'%newtable)
         
         if state['ambientSound'] == 0:
             if ambientActive == 1:

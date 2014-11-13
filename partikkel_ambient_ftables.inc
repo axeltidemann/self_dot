@@ -4,7 +4,8 @@
         Sfile           strget p4
         giAmbientTabNum = (giAmbientTabNum+1)%4
         kamptemp        linseg 1, 0.1, 0, 3.8, 0, 0.1, 1, 1, 1  ; swoop down to mute the source wave while we change the table underneath
-        SchanName       sprintf "ambientWaveamp%i", giAmbientTabNum
+        SchanName       sprintf "ambientWaveamp%i", giAmbientTabNum+1
+        puts SchanName, 1
                         chnset kamptemp, SchanName
         Scoreline       sprintf {{i 91 2 1 %i "%s"}}, giAmbientTabNum, Sfile
                         puts Scoreline, 1
