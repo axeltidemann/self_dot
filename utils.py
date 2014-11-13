@@ -31,10 +31,26 @@ def load(filename):
     return data
 
 def write_cochlear(wav_file):
-    array_to_csv('{}-cochlear.txt'.format(wav_file), cochlear(wav_file))
+    array_to_csv('{}-cochlear.txt'.format(wav_file), cochlear(wav_file, stride=441))
 
 def load_cochlear(wav_file):
     return csv_to_array('{}-cochlear.txt'.format(wav_file))
+
+def plot_NAP_and_energy(NAP, plt):
+    plt.clf()
+    plt.subplot(211)
+    plt.plot(np.mean(NAP, axis=1))
+    plt.xlim(xmax=len(NAP))
+    plt.title('Average energy')
+    plt.subplot(212)
+
+    
+    plt.imshow(NAP.T, aspect='auto')
+    for x in np.where(NAP > .8)[0]:
+        plt.axvline(x, color='k')
+
+    plt.title('NAP')
+    plt.draw()
 
 # http://goo.gl/zeJZl
 def bytes2human(n, format="%(value)i%(symbol)s"):
