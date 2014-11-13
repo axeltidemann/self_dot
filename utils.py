@@ -380,7 +380,7 @@ def scheduler(host):
     wait_time = 0
 
     while True:
-        events = dict(poller.poll(timeout=50))
+        events = dict(poller.poll(timeout=100))
 
         if stateQ in events:
             state = stateQ.recv_json()

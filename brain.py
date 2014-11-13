@@ -64,6 +64,7 @@ def cognition(host):
 
     question = False
     rhyme = False
+    current_face = -1
     lastSentenceIds = []
 
     while True:
@@ -76,6 +77,9 @@ def cognition(host):
                 lastSentenceIds = pushbutton['last_segment_ids']
                 print 'LAST SENTENCE IDS', lastSentenceIds
 
+            if 'current_face' in pushbutton:
+                current_face = pushbutton[current_face]
+
             if 'learn' in pushbutton or 'respond_sentence' in pushbutton:
                 filename = pushbutton['filename']
                 _,_,_,segmentData = utils.getSoundInfo(filename)
@@ -87,7 +91,13 @@ def cognition(host):
                 rhyme = pushbutton['rhyme']
                 print 'RHYME ?', rhyme
                 
+            if 'rhyme' in pushbutton:
+                rhyme = pushbutton['rhyme']
+                print 'RHYME ?', rhyme
+
             if 'saySomething' in pushbutton:
+                print 'I feel the urge to say something...'
+                '''
                 if rhyme:
                     print '*\n*I will now try to do a rhyme'
                     print lastSentenceIds
@@ -124,7 +134,7 @@ def cognition(host):
                             rhyme = False
                         except Exception, e:
                             print e, 'Rhyme failed.'
-                
+                '''
                     
 # LOOK AT EYES? CAN YOU DETERMINE ANYTHING FROM THEM?
 # PRESENT VISUAL INFORMATION - MOVE UP OR DOWN
@@ -402,7 +412,6 @@ def respond(control_host, learn_host, debug=False):
                     # By eliminating the last logical sentence, you can effectively get a statistical storage of audio_id.
                     if audio_id < len(sound_to_face) and not face_id in sound_to_face[audio_id]: # sound heard before, but not said by this face 
                         sound_to_face[audio_id].append(face_id)
-                        #wordFace[audio_id].append([face_id,1])
                     if audio_id == len(sound_to_face):
                         sound_to_face.append([face_id])
 
@@ -413,14 +422,13 @@ def respond(control_host, learn_host, debug=False):
                             item[1] += 1
                             found = 1
                     if found == 0:
-                        print 'SHOULD NEVER HAPPEN! brain.py'
                         wordFace[audio_id].append([face_id,1])
+
 
                     # We can't go from a not known face to any of the sounds, that's just the way it is.
                     if face_id is not -1:
                         if face_id < len(face_to_sound) and not audio_id in face_to_sound[face_id]: #face seen before, but the sound is new
                             face_to_sound[face_id].append(audio_id)
-                            #faceWord[face_id].append([audio_id,1])
                         if face_id == len(face_to_sound):
                             face_to_sound.append([audio_id])
                         faceWord.setdefault(face_id, [[audio_id,0]])
@@ -430,9 +438,8 @@ def respond(control_host, learn_host, debug=False):
                                 item[1] += 1
                                 found = 1
                         if found == 0:
-                            print 'ALSO SHOULD NEVER HAPPEN IN brain.py'
                             faceWord[face_id].append([audio_id,1])
-
+                            
                 del register[wav_file]
                 
                 similar_ids = []
@@ -440,8 +447,6 @@ def respond(control_host, learn_host, debug=False):
                     new_audio_hash = NAP_hashes[audio_id][-1]
                     similar_ids_for_this_audio_id = [ utils.hamming_distance(new_audio_hash, np.random.choice(h)) for h in NAP_hashes ]
                     similar_ids.append(similar_ids_for_this_audio_id)
-                #print '**wordFace', wordFace
-                #print '**faceWord', faceWord
                 association.send_pyobj(['analyze',wav_file,wav_segments,segment_ids,wavs,similar_ids,wordFace,faceWord])
                 association.recv_pyobj()
                 sender.send_json('last_segment_ids {}'.format(dumps(segment_ids)))

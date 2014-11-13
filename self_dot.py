@@ -52,13 +52,20 @@ def idle(host):
     saySomethingModulo = 8
 
     face_timer = 0
+    saysomething_timer = 0
+    saysomething_interval = 8.0
 
     while True:
         events = dict(poller.poll(timeout=100))
 
         if face in events:
             new_face = utils.recv_array(face)
+            #print 'new_face', new_face
+            #sender.send_json({ 'current_face' : new_face })
             face_timer = time.time()
+        else:
+            pass
+            #sender.send_json({ 'current_face' : -1 })
                       
         if time.time() - face_timer > np.random.rand()*1.5 + 1:
             print '[self.] searches for a face'
@@ -70,17 +77,15 @@ def idle(host):
             state = stateQ.recv_json()
 
         if not state['enable_say_something']:
-            saySomethingCounter = 1
-            saySomethingModulo = 8
+            saysomething_timer = time.time()
+            #saySomethingCounter = 1
+            #saySomethingModulo = 8
 
-        if state['enable_say_something'] and saySomethingCounter%(saySomethingModulo+np.random.randint(saySomethingModulo/2)) == 0:
+        if state['enable_say_something'] and time.time() - saysomething_timer > saysomething_interval:
             sender.send_json('saySomething')
             sender.send_json('enable_say_something 0')
-            #saySomethingModulo += 2
-            #if saySomethingModulo >= 20: saySomethingModulo = 20
-
-        saySomethingCounter += 1
-
+        
+        
 class Controller:
     def __init__(self, init_state, host):
         me = mp.current_process()
@@ -288,8 +293,8 @@ if __name__ == '__main__':
     mp.Process(target=IO.audio, name='AUDIO').start() 
     mp.Process(target=IO.video, name='VIDEO').start()
     mp.Process(target=brain.face_extraction, args=('localhost',False,True,), name='FACE EXTRACTION').start()
-    mp.Process(target=brain.respond, args=('localhost','localhost',True,), name='RESPONDER').start()
-    mp.Process(target=brain.learn_audio, args=('localhost',True,), name='AUDIO LEARN').start()
+    mp.Process(target=brain.respond, args=('localhost','localhost',), name='RESPONDER').start()
+    mp.Process(target=brain.learn_audio, args=('localhost',), name='AUDIO LEARN').start()
     mp.Process(target=brain.learn_video, args=('localhost',), name='VIDEO LEARN').start()
     mp.Process(target=brain.learn_faces, args=('localhost',), name='FACES LEARN').start()
     #mp.Process(target=brain.calculate_sai_video_marginals, args=('localhost',), name='SAI VIDEO CALCULATION').start()
