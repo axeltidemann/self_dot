@@ -76,7 +76,6 @@ printk2 k1+9900, 30
 #define SCORELEN # 604800 # ; 604800 secs is one week
 ;#define SCORELEN # 15 #
 
-f0 86400
 
 ;i1   0 $SCORELEN              ; debug
 i2 	 0 .1			        ; init chn values
@@ -91,6 +90,17 @@ i79  0 $SCORELEN			; mixer for secondary associations playback
 i93  0 $SCORELEN			; ambient sound reverb
 i99  0 $SCORELEN			; master out
 ;i100 0 $SCORELEN              ; debug
+
+;instr, start, soundfile,                               segstart, segend, amp, maxamp, voiceChannel, delaySend, reverbSend, speed)
+;i 61 0  1 "./memory_recordings/2014_08_07_15_15_54.wav"   0         0       -3   0.9       1            -96        -96         1
+
+/*
+i 90 3  1 "./memory_recordings/2014_08_07_15_15_54.wav"   
+i 90 6  1 "./memory_recordings/2014_08_07_15_15_54.wav"   
+i 90 9  1 "./memory_recordings/2014_08_07_15_15_54.wav"   
+i 90 12  1 "./memory_recordings/2014_08_07_15_15_54.wav"   
+i 90 15  1 "./memory_recordings/2014_08_07_15_15_54.wav"   
+*/
 
 </CsScore>
 

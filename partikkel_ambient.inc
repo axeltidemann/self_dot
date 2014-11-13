@@ -3,10 +3,10 @@
 ;******************************************************
 
 ; select source waveforms 
-        kwaveform1      table 0, giAmbientTabs  ; source audio waveform 1
-        kwaveform2      table 1, giAmbientTabs  ; ...
-        kwaveform3      table 2, giAmbientTabs
-        kwaveform4      table 3, giAmbientTabs
+        kwaveform1      = giAmbient1;table 0, giAmbientTabs  ; source audio waveform 1
+        kwaveform2      = giAmbient2;table 1, giAmbientTabs  ; ...
+        kwaveform3      = giAmbient3;table 2, giAmbientTabs
+        kwaveform4      = giAmbient4;table 3, giAmbientTabs
 
 ; get source waveform length (used when calculating transposition and time pointer)
         kfilen1         tableng  kwaveform1             ; get length of the first source waveform
@@ -123,12 +123,20 @@
         ; wave mix masking. 
         ; Set gain per source waveform per grain, 
         ; in groups of 5 amp values, reflecting source1, source2, source3, source4, and the 5th slot is for trainlet amplitude.
+        kambAmp1        chnget "ambientWaveamp1"
+        kambAmp2        chnget "ambientWaveamp2"
+        kambAmp3        chnget "ambientWaveamp3"
+        kambAmp4        chnget "ambientWaveamp4"
         iwaveamptab     ftgenonce       0, 0, 32, -2, 0, 0,   1,1,1,1,0
+	                tablew	kambAmp1, 2, iwaveamptab		; write waveamp for source 1
+	                tablew	kambAmp2, 3, iwaveamptab		; write waveamp for source 2
+	                tablew	kambAmp3, 4, iwaveamptab		; write waveamp for source 3
+	                tablew	kambAmp4, 5, iwaveamptab		; write waveamp for source 4
 
 ; system parameter
         imax_grains     = 100                           ; max number of grains per k-period
 
-      
+     
 a1,a2                   partikkel \                                             ;                                       
                         kgrainrate, \                                           ; grains per second                     
                         kdistribution, idisttab, async, \                       ; synchronous/asynchronous              
@@ -202,6 +210,7 @@ a21,a22                 partikkel \                                             
                         kwavekey1, kwavekey2, kwavekey3, kwavekey4, \           ; individual transpose for each source
                         imax_grains, ivoice                                     ; system parameter (advanced)
 
+;a1 oscil 1, 440, giSine
 a1 = a1+a21
 a2 = a2+a22
 
