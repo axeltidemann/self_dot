@@ -53,22 +53,43 @@ def cognition(host):
     eventQ.connect('tcp://{}:{}'.format(host, IO.EVENT))
     eventQ.setsockopt(zmq.SUBSCRIBE, b'') 
 
+    face = context.socket(zmq.SUB)
+    face.connect('tcp://{}:{}'.format(host, IO.FACE))
+    face.setsockopt(zmq.SUBSCRIBE, b'')
+
     association = context.socket(zmq.REQ)
     association.connect('tcp://{}:{}'.format(host, IO.ASSOCIATION))
+
+    cognitionQ = context.socket(zmq.PULL)
+    cognitionQ.bind('tcp://*:{}'.format(IO.COGNITION))
 
     sender = context.socket(zmq.PUSH)
     sender.connect('tcp://{}:{}'.format(host, IO.EXTERNAL))
 
     poller = zmq.Poller()
     poller.register(eventQ, zmq.POLLIN)
+    poller.register(face, zmq.POLLIN)
+    poller.register(cognitionQ, zmq.POLLIN)
 
     question = False
     rhyme = False
     lastSentenceIds = []
+    face_recognizer = []
+    last_face_id = []
 
     while True:
         events = dict(poller.poll())
         
+        if cognitionQ in events:
+            face_recognizer = cognitionQ.recv_pyobj()
+
+        if face in events and face_recognizer:
+            new_face = utils.recv_array(face)
+            gray = cv2.cvtColor(new_face, cv2.COLOR_BGR2GRAY) / 255.
+            x_test = face_recognizer.rPCA.transform(np.ndarray.flatten(gray))
+            last_face_id = face_recognizer.predict(x_test)
+            print 'FACE ID', last_face_id
+
         if eventQ in events:
             pushbutton = eventQ.recv_json()
             
@@ -335,6 +356,9 @@ def respond(control_host, learn_host, debug=False):
     brainQ = context.socket(zmq.PULL)
     brainQ.bind('tcp://*:{}'.format(IO.BRAIN))
     
+    cognitionQ = context.socket(zmq.PUSH)
+    cognitionQ.connect('tcp://{}:{}'.format(control_host, IO.COGNITION))
+
     association = context.socket(zmq.REQ)
     association.connect('tcp://{}:{}'.format(learn_host, IO.ASSOCIATION))
 
@@ -445,6 +469,7 @@ def respond(control_host, learn_host, debug=False):
                 association.send_pyobj(['analyze',wav_file,wav_segments,segment_ids,wavs,similar_ids,wordFace,faceWord])
                 association.recv_pyobj()
                 sender.send_json('last_segment_ids {}'.format(dumps(segment_ids)))
+                cognitionQ.send_pyobj(face_recognizer)
                                 
         if eventQ in events:
             pushbutton = eventQ.recv_json()
@@ -796,9 +821,10 @@ def learn_audio(host, debug=False):
                     for segment, new_sound in enumerate([ utils.trim_right(new_sentence[norm_segments[i]:norm_segments[i+1]]) for i in range(len(norm_segments)-1) ]):
                         # Do we know this sound?
                         if debug:
-                            plt.imshow(new_sound.T, aspect='auto')
-                            plt.title('learn_audio raw signal')
-                            plt.draw()
+                            utils.plot_NAP_and_energy(new_sound, plt)
+                            # plt.imshow(new_sound.T, aspect='auto')
+                            # plt.title('learn_audio raw signal')
+                            # plt.draw()
                         
                         hammings = [ np.inf ]
                         try:
@@ -984,15 +1010,6 @@ def learn_faces(host, debug=False):
 
             if state['record']:
                 faces.append(gray)
-
-            # TODO: move to respond
-            # if state['facerecognition']:
-            #     try: 
-            #         face_id = face_recognizer.predict(np.ndarray.flatten(gray))[0]
-            #         print 'Face {} has previously said {}'.format(face_id, face_to_sound[face_id])
-                                        
-            #     except Exception, e:
-            #         print e, 'Face recognition aborted.'
 
         if eventQ in events:
             pushbutton = eventQ.recv_json()
