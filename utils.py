@@ -42,14 +42,13 @@ def plot_NAP_and_energy(NAP, plt):
     plt.plot(np.mean(NAP, axis=1))
     plt.xlim(xmax=len(NAP))
     plt.title('Average energy')
+
     plt.subplot(212)
-
-    
     plt.imshow(NAP.T, aspect='auto')
-    for x in np.where(NAP > .8)[0]:
-        plt.axvline(x, color='k')
-
+    for x in np.where(NAP > .9)[0]:
+        plt.axvline(x, color='w')
     plt.title('NAP')
+
     plt.draw()
 
 # http://goo.gl/zeJZl

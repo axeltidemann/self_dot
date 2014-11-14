@@ -492,13 +492,13 @@ def respond(control_host, learn_host, debug=False):
                     NAP_exact = utils.exact(NAP, maxlen)
            
                     # _recognize_audio_id(audio_recognizer, NAP)         
-                    # _recognize_global_audio_id(global_audio_recognizer, NAP)
+                    _recognize_global_audio_id(global_audio_recognizer, NAP, plt)
                     # _recognize_mixture_audio_id(mixture_audio_recognizer, NAP)
 
-                    if debug:            
-                        plt.imshow(NAP_exact.T, aspect='auto')
-                        plt.title('respond NAP: {} to {}'.format(NAP.shape[0], maxlen))
-                        plt.draw()
+                    # if debug:            
+                    #     plt.imshow(NAP_exact.T, aspect='auto')
+                    #     plt.title('respond NAP: {} to {}'.format(NAP.shape[0], maxlen))
+                    #     plt.draw()
                     
                     try:
                         audio_id = _predict_audio_id(audio_classifier, NAP_exact)
@@ -743,7 +743,7 @@ def _train_global_audio_recognizer(NAPs):
     idxs = [ i for i,nappers in enumerate(NAPs) for nap in nappers for _ in range(nap.shape[0]) ]
     for row, ix in zip(targets, idxs):
         row[ix] = 1
-    return train_network(x_train, targets, output_dim=1000, leak_rate=.5)
+    return train_network(x_train, targets, output_dim=1000, leak_rate=.9)
     
 def _recognize_audio_id(audio_recognizer, NAP):
     for audio_id, net in enumerate(audio_recognizer):
@@ -752,8 +752,22 @@ def _recognize_audio_id(audio_recognizer, NAP):
 def _recognize_mixture_audio_id(audio_recognizer, NAP):
     print 'MIXTURE AUDIO IDS:', np.mean(np.hstack([ net(NAP) for net in audio_recognizer ]), axis=0)
 
-def _recognize_global_audio_id(audio_recognizer, NAP):
-    print 'GLOBAL AUDIO IDS:', np.mean(audio_recognizer(NAP), axis=0)
+def _recognize_global_audio_id(audio_recognizer, NAP, plt):
+    output = audio_recognizer(NAP)
+    plt.clf()
+    plt.subplot(211)
+    plt.plot(output)
+    plt.xlim(xmax=len(NAP))
+    plt.legend([ str(i) for i,_ in enumerate(output) ])
+    plt.title('Recognizers')
+
+    plt.subplot(212)
+    plt.imshow(NAP.T, aspect='auto')
+    plt.title('NAP')
+    
+    plt.draw()
+
+    print 'GLOBAL AUDIO IDS:', np.mean(output, axis=0)
 
 def learn_audio(host, debug=False):
     me = mp.current_process()
@@ -885,7 +899,7 @@ def learn_audio(host, debug=False):
                     print 'RHYME VALUE', np.mean(sorted(all_hammings)[int(len(all_hammings)/2):])
                     rhyme = np.mean(sorted(all_hammings)[int(len(all_hammings)/2):]) < RHYME_HAMMERTIME
 
-                    # global_audio_recognizer = _train_global_audio_recognizer(NAPs)
+                    # global_audio_recognizer = _train_global_audio_recognizer(NAPs) # Enabled in single_response
                     # mixture_audio_recognizer = _train_mixture_audio_recognizer(NAPs)
                     
                     sender.send_json('rhyme {}'.format(rhyme))
