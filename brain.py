@@ -37,9 +37,10 @@ except:
     
 FACE_HAAR_CASCADE_PATH = opencv_prefix + '/share/OpenCV/haarcascades/haarcascade_frontalface_default.xml'
 EYE_HAAR_CASCADE_PATH = opencv_prefix + '/share/OpenCV/haarcascades/haarcascade_eye_tree_eyeglasses.xml'
-AUDIO_HAMMERTIME = 8 # Hamming distance match criterion
+# Hamming distance match criterions
+AUDIO_HAMMERTIME = 8 
 RHYME_HAMMERTIME = 11
-FACE_HAMMERTIME = 10
+FACE_HAMMERTIME = 12
 FRAME_SIZE = (160,120) # Neural network image size, 1/4 of full frame size.
 
 
@@ -1051,13 +1052,13 @@ def learn_faces(host, debug=False):
                             hammings = [ utils.hamming_distance(f, m) for f in new_faces_hashes for m in face_hashes[face_id] ]
 
                         if np.mean(hammings) < FACE_HAMMERTIME:
-                            face_history[face_id].extend(new_faces)
-                            face_hashes[face_id].extend(new_faces_hashes)
+                            face_history[face_id].extend([new_faces[-1]]) # An attempt to limit the memory usage of faces
+                            face_hashes[face_id].extend([new_faces_hashes[-1]])
                             print 'Face is similar to face {}, hamming mean {}'.format(face_id, np.mean(hammings))
                         else:
                             print 'New face, hamming mean {} from face {}'.format(np.mean(hammings), face_id)
-                            face_history.append(new_faces)
-                            face_hashes.append(new_faces_hashes)
+                            face_history.append([new_faces[-1]])
+                            face_hashes.append([new_faces_hashes[-1]])
                             face_id = len(face_history) - 1
 
                         if len(face_history) > 1:
