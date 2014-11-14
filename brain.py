@@ -54,6 +54,11 @@ def cognition(host):
     eventQ.connect('tcp://{}:{}'.format(host, IO.EVENT))
     eventQ.setsockopt(zmq.SUBSCRIBE, b'') 
 
+    stateQ = context.socket(zmq.SUB)
+    stateQ.connect('tcp://{}:{}'.format(host, IO.STATE))
+    stateQ.setsockopt(zmq.SUBSCRIBE, b'') 
+    state = stateQ.recv_json()
+
     face = context.socket(zmq.SUB)
     face.connect('tcp://{}:{}'.format(host, IO.FACE))
     face.setsockopt(zmq.SUBSCRIBE, b'')
@@ -69,6 +74,7 @@ def cognition(host):
 
     poller = zmq.Poller()
     poller.register(eventQ, zmq.POLLIN)
+    poller.register(stateQ, zmq.POLLIN)
     poller.register(face, zmq.POLLIN)
     poller.register(cognitionQ, zmq.POLLIN)
 
@@ -97,7 +103,11 @@ def cognition(host):
                 print 'FACE ID', last_face_id
                 face_enable_once = True
                 print 'face_enable_once', face_enable_once
+                sender.send_json('enable_say_something 1')
             last_face_id = this_face_id
+
+        if stateQ in events:
+            state = stateQ.recv_json()
 
         if eventQ in events:
             pushbutton = eventQ.recv_json()
@@ -122,7 +132,7 @@ def cognition(host):
                 print 'RHYME ?', rhyme
                 rhyme_enable_once = True
                 
-            if 'saySomething' in pushbutton:
+            if 'saySomething' in pushbutton and state['enable_say_something']:
                 print 'I feel the urge to say something...'
                 print 'I can use, rhyme {} or face {} ..face_enable_once {}'.format(rhyme, last_face_id,face_enable_once)
                 if rhyme and rhyme_enable_once:

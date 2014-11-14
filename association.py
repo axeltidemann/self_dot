@@ -612,8 +612,15 @@ def getSimilarWords(predicate, distance):
 
 def getFaceResponse(face):
     print 'getFaceResponse', face, faceWord
-    words = faceWord[face]
-    return random.choice(words)[0]
+    words = [item[0] for item in copy.copy(faceWord[face])]
+    other_faces = faceWord.keys()
+    other_faces.remove(face)
+    for f in other_faces:
+        for item in faceWord[f]:
+            if len(words)>1:
+                if item[0] in words: words.remove(item[0])
+    print 'words', words
+    return random.choice(words)
 
 def weightedSum(a_, weightA_, b_, weightB_):
     '''

@@ -73,7 +73,7 @@ def idle(host):
 
         if state['enable_say_something'] and time.time() - saysomething_timer > saysomething_interval:
             sender.send_json('saySomething')
-            print 'self idler disabling say something'
+            print 'self idler trig and then disable say something'
             sender.send_json('enable_say_something 0')
         
         
