@@ -48,9 +48,6 @@ def idle(host):
     sender = context.socket(zmq.PUSH)
     sender.connect('tcp://{}:{}'.format(host, IO.EXTERNAL))
 
-    saySomethingCounter = 0
-    saySomethingModulo = 8
-
     face_timer = 0
     saysomething_timer = 0
     saysomething_interval = 8.0
@@ -60,12 +57,7 @@ def idle(host):
 
         if face in events:
             new_face = utils.recv_array(face)
-            #print 'new_face', new_face
-            #sender.send_json({ 'current_face' : new_face })
             face_timer = time.time()
-        else:
-            pass
-            #sender.send_json({ 'current_face' : -1 })
                       
         if time.time() - face_timer > np.random.rand()*1.5 + 1:
             print '[self.] searches for a face'
@@ -78,11 +70,10 @@ def idle(host):
 
         if not state['enable_say_something']:
             saysomething_timer = time.time()
-            #saySomethingCounter = 1
-            #saySomethingModulo = 8
 
         if state['enable_say_something'] and time.time() - saysomething_timer > saysomething_interval:
             sender.send_json('saySomething')
+            print 'self idler disabling say something'
             sender.send_json('enable_say_something 0')
         
         
@@ -137,6 +128,10 @@ class Controller:
             if 'last_segment_ids' in message:
                 the_ids = message[17:]
                 self.event.send_json({'last_segment_ids': loads(the_ids) })
+                
+            if 'last_most_significant_audio_id' in message:
+                audio_id = message[31:]
+                self.event.send_json({'last_most_significant_audio_id': audio_id })
             
             if 'calculate_cochlear' in message:
                 _, wav_file = message.split()

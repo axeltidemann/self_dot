@@ -73,8 +73,11 @@ def cognition(host):
 
     question = False
     rhyme = False
-    current_face = -1
+    rhyme_enable_once = True
+    face_enable_once = True
+
     lastSentenceIds = []
+    last_most_significant_audio_id = 0
     face_recognizer = []
     last_face_id = []
 
@@ -88,8 +91,12 @@ def cognition(host):
             new_face = utils.recv_array(face)
             gray = cv2.cvtColor(new_face, cv2.COLOR_BGR2GRAY) / 255.
             x_test = face_recognizer.rPCA.transform(np.ndarray.flatten(gray))
-            last_face_id = face_recognizer.predict(x_test)
-            print 'FACE ID', last_face_id
+            this_face_id = face_recognizer.predict(x_test)
+            if this_face_id != last_face_id:
+                print 'FACE ID', last_face_id
+                face_enable_once = True
+                print 'face_enable_once', face_enable_once
+            last_face_id = this_face_id
 
         if eventQ in events:
             pushbutton = eventQ.recv_json()
@@ -97,9 +104,10 @@ def cognition(host):
             if 'last_segment_ids' in pushbutton:
                 lastSentenceIds = pushbutton['last_segment_ids']
                 print 'LAST SENTENCE IDS', lastSentenceIds
-
-            if 'current_face' in pushbutton:
-                current_face = pushbutton[current_face]
+            
+            if 'last_most_significant_audio_id' in pushbutton:
+                last_most_significant_audio_id = int(pushbutton['last_most_significant_audio_id'])
+                print 'last_most_significant_audio_id learned', last_most_significant_audio_id
 
             if 'learn' in pushbutton or 'respond_sentence' in pushbutton:
                 filename = pushbutton['filename']
@@ -111,52 +119,36 @@ def cognition(host):
             if 'rhyme' in pushbutton:
                 rhyme = pushbutton['rhyme']
                 print 'RHYME ?', rhyme
+                rhyme_enable_once = True
                 
-            if 'rhyme' in pushbutton:
-                rhyme = pushbutton['rhyme']
-                print 'RHYME ?', rhyme
-
             if 'saySomething' in pushbutton:
                 print 'I feel the urge to say something...'
-                '''
-                if rhyme:
+                print 'I can use, rhyme {} or face {} ..face_enable_once {}'.format(rhyme, last_face_id,face_enable_once)
+                if rhyme and rhyme_enable_once:
+                    rhyme_enable_once = False
                     print '*\n*I will now try to do a rhyme'
-                    print lastSentenceIds
-                    if len(lastSentenceIds) > 0:
-                        try:
-                            possibleRhymes = []
-                            for id in lastSentenceIds:
-                                association.send_pyobj(['getSimilarWords',id, RHYME_HAMMERTIME])
-                                possibleRhymes.append(association.recv_pyobj())
-                            # check which one generates a sentence with most similar words (most can be how many or how similar ...?)
-                            longest = 0
-                            longestIndex = 0
-                            lowestSimilar = 9999
-                            lowestIndex = 0
-                            for i in range(len(possibleRhymes)):
-                                item = possibleRhymes[i]
-                                if len(item) > longest: 
-                                    longest = len(item)
-                                    longestIndex = i
-                                if np.mean(item) < lowestSimilar:
-                                    lowestSimilar = np.mean(item)
-                                    lowestIndex = i
-                            mostRhymes = possibleRhymes[longestIndex]
-                            bestRhymes = possibleRhymes[lowestIndex]
-                            # which one is best ??
-                            select = 'most'
-                            print 'saySomething RHYME using *{}* rhymes'.format(select)
-                            if select == 'most': rhymes = mostRhymes
-                            if select == 'best': rhymes = bestRhymes
-                            if len(rhymes) > 7 : rhymes= rhymes[:7] # temporary length limit
-                            print 'Rhyme sentence:', rhymes
-                            # pick the best rhyming sentence and hit PLAY
-                            sender.send_json('play_sentence {}'.format(rhymes))
-                            rhyme = False
-                        except Exception, e:
-                            print e, 'Rhyme failed.'
-                '''
-                    
+                    try:
+                        rhyme_seed = last_most_significant_audio_id
+                        association.send_pyobj(['getSimilarWords',rhyme_seed, RHYME_HAMMERTIME])
+                        rhymes = association.recv_pyobj()
+                        if len(rhymes) > 7 : rhymes= rhymes[:7] # temporary length limit
+                        print 'Rhyme sentence:', rhymes
+                        sender.send_json('play_sentence {}'.format(rhymes))
+                        rhyme = False
+                    except:
+                        utils.print_exception('Rhyme failed.')
+                
+                if len(last_face_id)>0  and face_enable_once and not rhyme: 
+                    face_enable_once = False
+                    print '*\n* I will do a face response on face {}'.format(last_face_id[0])
+                    try:
+                        association.send_pyobj(['getFaceResponse',last_face_id[0]])
+                        face_response = association.recv_pyobj()
+                        sender.send_json('play_sentence {}'.format([face_response]))
+                    except:
+                        utils.print_exception('Face response failed.')
+                
+                 
 # LOOK AT EYES? CAN YOU DETERMINE ANYTHING FROM THEM?
 # PRESENT VISUAL INFORMATION - MOVE UP OR DOWN
 def face_extraction(host, extended_search=False, show=False):
@@ -450,6 +442,7 @@ def respond(control_host, learn_host, debug=False):
 
 
                     # We can't go from a not known face to any of the sounds, that's just the way it is.
+                    print 'face_id for audio segment learned', face_id
                     if face_id is not -1:
                         if face_id < len(face_to_sound) and not audio_id in face_to_sound[face_id]: #face seen before, but the sound is new
                             face_to_sound[face_id].append(audio_id)
@@ -473,7 +466,11 @@ def respond(control_host, learn_host, debug=False):
                     similar_ids.append(similar_ids_for_this_audio_id)
                 association.send_pyobj(['analyze',wav_file,wav_segments,segment_ids,wavs,similar_ids,wordFace,faceWord])
                 association.recv_pyobj()
+                
                 sender.send_json('last_segment_ids {}'.format(dumps(segment_ids)))
+                most_significant_segment_id = utils.get_most_significant_word(wav_file)
+                most_significant_audio_id = segment_ids[most_significant_segment_id]
+                sender.send_json('last_most_significant_audio_id {}'.format(most_significant_audio_id))
                 cognitionQ.send_pyobj(face_recognizer)
                                 
         if eventQ in events:
@@ -574,9 +571,7 @@ def respond(control_host, learn_host, debug=False):
                     new_sentence = utils.load_cochlear(filename)
                     norm_segments = np.rint(new_sentence.shape[0]*audio_segments/audio_segments[-1]).astype('int')
 
-                    _,_,_,segmentData = utils.getSoundInfo(filename)
-                    amps = [ item[0] for item in segmentData ]
-                    segment_id = amps.index(max(amps))
+                    segment_id = utils.get_most_significant_word(filename)
                     print '**Sentence selected to respond to segment {}'.format(segment_id)
 
                     NAP = utils.trim_right(new_sentence[norm_segments[segment_id]:norm_segments[segment_id+1]])
@@ -592,7 +587,7 @@ def respond(control_host, learn_host, debug=False):
                         audio_id = 0
                         print 'Responding having only heard 1 sound.'
 
-                    numWords = len(segmentData)
+                    numWords = len(audio_segments)-1
                     print numWords
                     association.send_pyobj(['setParam', 'numWords', numWords ])
                     association.recv_pyobj()

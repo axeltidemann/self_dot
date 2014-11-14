@@ -305,32 +305,11 @@ def get_segments(wavfile, threshold=.25):
     segmentTimes.append(totalDur)    
     return np.array(segmentTimes)
     
-#    audio_info = open(wavfile[:-4]+'.txt')
-#    segments = []
-#    for line in audio_info:
-#        if 'Total duration:' in line:
-#            segments.append(float(line[16:]))
-#        try:
-#            segments.append(float(line))
-#        except:
-#            continue
-#
-#    remove = [ i for i,d in enumerate(np.diff(segments)) if d < threshold ]
-#    for i in remove[::-1]:
-#        segments.pop(i+1)
-#        
-#    return np.array(segments)
-
-#def getSoundParmFromFile(responsefile):
-#    audioinfo = open(responsefile[:-4]+'.txt')
-#    maxamp = 1
-#    dur = 1
-#    for line in audioinfo:
-#        if 'Total duration:' in line: 
-#            dur = float(line[16:])
-#        if 'Max amp for file:' in line:
-#            maxamp = float(line[18:])
-#    return dur, maxamp
+def get_most_significant_word(wavfile):
+    _,_,_,segmentData = getSoundInfo(wavfile)
+    amps = [ item[0] for item in segmentData ]
+    return amps.index(max(amps))
+     
 
 def getLatestMemoryWavs(howmany):
     '''
@@ -391,6 +370,7 @@ def scheduler(host):
     poller.register(stateQ, zmq.POLLIN)
 
     to_be_played = []
+    enable_say_something = 0
 
     t0 = 0
     wait_time = 0
@@ -405,9 +385,14 @@ def scheduler(host):
             to_be_played = []
             wait_time = 4
             t0 = time.time()
-
+            if enable_say_something:
+                sender.send_json('enable_say_something 0')
+                enable_say_something = 0
+                
         if play_events in events:
+            print 'utils scheduler disabling say something'
             sender.send_json('enable_say_something 0')
+            enable_say_something = 0
             to_be_played = play_events.recv_pyobj()
             wait_time = 0
 
@@ -420,4 +405,6 @@ def scheduler(host):
                 send_array(projector, np.resize(row, frame_size[::-1]))
                 
             if len(to_be_played) == 0:
+                print 'utils scheduler enabling say something'
                 sender.send_json('enable_say_something 1')
+                enable_say_something = 1
