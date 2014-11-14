@@ -405,3 +405,13 @@ def scheduler(host):
                 
             if len(to_be_played) == 0:
                 sender.send_json('enable_say_something 1')
+
+
+def sentinel(host):
+    me = mp.current_process()
+    print me.name, 'PID', me.pid
+
+    context = zmq.Context()
+    
+    life_signal_Q = context.socket(zmq.PULL)
+    life_signal_Q.bind('tcp://*:{}'.format(IO.SCHEDULER))
