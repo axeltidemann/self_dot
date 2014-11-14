@@ -88,7 +88,7 @@ def cognition(host):
             gray = cv2.cvtColor(new_face, cv2.COLOR_BGR2GRAY) / 255.
             x_test = face_recognizer.rPCA.transform(np.ndarray.flatten(gray))
             last_face_id = face_recognizer.predict(x_test)
-            print 'FACE ID', last_face_id
+            #print 'FACE ID', last_face_id
 
         if eventQ in events:
             pushbutton = eventQ.recv_json()
