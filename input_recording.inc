@@ -10,8 +10,9 @@
 	    ;print p1, p2, p3	
 	    ;puts Swavname, 1
         a1              chnget "rec_in1"
-        ;idel            chnget "statusRel"
-        ;a1del           delay a1, idel
+        idel            chnget "statusRel"
+        print idel
+        a1del           delay a1, idel
         
 ; compress before recording
 	kthresh         = -20
@@ -20,9 +21,9 @@
 	krelease	= 20				; release time 
 #include "compressor.inc"
 
-;timout skiprec, idel
-                	    fout Swavname, 14, a1
-;skiprec:
+timout 0, idel, skiprec
+                	    fout Swavname, 14, a1del
+skiprec:
                         
         ; for writing transient marker txt file
         ktime           timeinsts
