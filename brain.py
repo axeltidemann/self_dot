@@ -82,6 +82,9 @@ def cognition(host):
     rhyme = False
     rhyme_enable_once = True
     face_enable_once = True
+    face_timer = 0
+    minimum_face_interval = 40 # minimum time between face responses
+    minimum_urge_to_say_something = 4
 
     lastSentenceIds = []
     last_most_significant_audio_id = 0
@@ -101,9 +104,10 @@ def cognition(host):
             this_face_id = face_recognizer.predict(x_test)
             if this_face_id != last_face_id:
                 print 'FACE ID', last_face_id
-                face_enable_once = True
-                print 'face_enable_once', face_enable_once
-                sender.send_json('enable_say_something 1')
+                if time.time() - face_timer > minimum_face_interval:
+                    face_timer = time.time()
+                    face_enable_once = True
+                    print 'face_enable_once', face_enable_once
             last_face_id = this_face_id
 
         if stateQ in events:
@@ -132,7 +136,7 @@ def cognition(host):
                 print 'RHYME ?', rhyme
                 rhyme_enable_once = True
                 
-            if 'saySomething' in pushbutton and state['enable_say_something']:
+            if 'urge_to_say_something' in pushbutton and (float(pushbutton['urge_to_say_something']) > minimum_urge_to_say_something) and state['enable_say_something']:
                 print 'I feel the urge to say something...'
                 print 'I can use, rhyme {} or face {} ..face_enable_once {}'.format(rhyme, last_face_id,face_enable_once)
                 if rhyme and rhyme_enable_once:
@@ -145,7 +149,6 @@ def cognition(host):
                         if len(rhymes) > 7 : rhymes= rhymes[:7] # temporary length limit
                         print 'Rhyme sentence:', rhymes
                         sender.send_json('play_sentence {}'.format(rhymes))
-                        rhyme = False
                     except:
                         utils.print_exception('Rhyme failed.')
                 
@@ -480,7 +483,10 @@ def respond(control_host, learn_host, debug=False):
                 
                 sender.send_json('last_segment_ids {}'.format(dumps(segment_ids)))
                 most_significant_segment_id = utils.get_most_significant_word(wav_file)
+                print 'most_significant_segment_id', most_significant_segment_id
+                print 'segment_ids', segment_ids
                 most_significant_audio_id = segment_ids[most_significant_segment_id]
+                print 'most_significant_audio_id', most_significant_audio_id
                 sender.send_json('last_most_significant_audio_id {}'.format(most_significant_audio_id))
                 cognitionQ.send_pyobj(face_recognizer)
                                 
@@ -840,10 +846,12 @@ def learn_audio(host, debug=False):
                     print 'Learning {} duration {} seconds with {} segments'.format(filename, audio_segments[-1], len(audio_segments)-1)
                     new_sentence = utils.load_cochlear(filename)
                     norm_segments = np.rint(new_sentence.shape[0]*audio_segments/audio_segments[-1]).astype('int')
+                    #print 'norm_segments', len(norm_segments), norm_segments
 
                     segment_ids = []
                     new_audio_hash = []
                     for segment, new_sound in enumerate([ utils.trim_right(new_sentence[norm_segments[i]:norm_segments[i+1]]) for i in range(len(norm_segments)-1) ]):
+                        #print segment, new_sound
                         # Do we know this sound?
                         if debug:
                             utils.plot_NAP_and_energy(new_sound, plt)

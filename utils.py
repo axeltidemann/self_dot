@@ -124,9 +124,11 @@ def trim(A, threshold=100):
 
 def trim_right(A, threshold=.2):
     ''' Trims right side of the thresholded part of the signal.'''
+    #print 'A', A
     maxes = np.max(A, axis=1)
+    #print 'maxes', maxes
     apex = np.argmax(maxes)
-
+    #print 'apex', apex
     for i,m in enumerate(maxes[apex:]):
         if m < threshold:
             return A[:i+apex]
@@ -301,7 +303,8 @@ def get_segments(wavfile, threshold=.25):
     segmentTimes = []
     for item in segments:
         segmentTimes.append(item[0])    
-    segmentTimes.append(totalDur)    
+    segmentTimes.append(totalDur) 
+    #print 'utils.get_segments', segmentTimes
     return np.array(segmentTimes)
     
 def get_most_significant_word(wavfile):
@@ -382,9 +385,9 @@ def scheduler(host):
 
         if state['_audioLearningStatus']:
             to_be_played = []
-            wait_time = 4
+            wait_time = 4 ## THIS VALUE DOES NOT DO ANYTHING USEFUL, but it is ok as is that the scheduler simply sends enable_say_something when the last segment is triggered
             t0 = time.time()
-            if enable_say_something:
+            if enable_say_something: # need the local variable to avoid sending same signal several (2) times. Due to ZMQ latency?
                 sender.send_json('enable_say_something 0')
                 enable_say_something = 0
                 

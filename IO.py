@@ -138,6 +138,7 @@ def audio():
     
     ambientFiles = [] # used by the ambient sound generator (instr 90 pp)
     ambientActive = 0
+    prev_i_am_speaking = 0
 
     state = stateQ.recv_json()
     
@@ -159,6 +160,13 @@ def audio():
         memRecActive = cGet("memRecActive")             # flag to check if memoryRecording is currently recording to file in Csound
         memRecMaxAmp = cGet("memRecMaxAmp")             # max amplitude for each recorded file
         statusRelease = cGet("statusRel")               # audio status release time, hold status=1 for this long after signal has dropped below thresh, we subtract this from the total time recorded in each memoryRecording file
+        statusRelease = 0 # TEMPORARY... to disable right-trimming of last segment
+        
+        i_am_speaking = cGet("i_am_speaking")           # signals cognition that I'm currently speaking
+        cSet("i_am_speaking", 0)                        # reset channel, any playing voice instr will overwrite
+        if i_am_speaking != prev_i_am_speaking:         # send if changed
+            sender.send_json('i_am_speaking {}'.format(int(i_am_speaking)))
+        prev_i_am_speaking = i_am_speaking
         
         panposition = cs.GetChannel("panalyzer_pan")
         in_amp = cs.GetChannel("in_amp")
@@ -177,10 +185,7 @@ def audio():
                 cs.InputMessage('i 92 0 -1')
                 ambientActive = 1
             if (counter % 4000) == 0:
-                #print 'Old ambient files:', ambientFiles
-                #print 'update ambient sound ftables.'
                 newtable, ambientFiles = utils.updateAmbientMemoryWavs(ambientFiles)
-                #print 'newtable, ambientFiles', newtable, ambientFiles
                 cs.InputMessage('i 90 0 4 "%s"'%newtable)
         
         if state['ambientSound'] == 0:
@@ -211,7 +216,7 @@ def audio():
                     print '... ...get medians and update segments'
                     ampPitchCentroid[0].sort()
                     l = ampPitchCentroid[0]
-                    ampMean = max(l)#np.mean(l[int(len(l)*0.5):int(len(l)*1)])
+                    ampMean = max(l)
                     ampPitchCentroid[1].sort()
                     l = ampPitchCentroid[1]
                     pitchMean = np.mean(l[int(len(l)*0.25):int(len(l)*0.75)])
@@ -225,7 +230,7 @@ def audio():
                 print '... ...get final medians and update segments'
                 ampPitchCentroid[0].sort()
                 l = ampPitchCentroid[0]
-                ampMean = max(l)#np.mean(l[int(len(l)*0.5):int(len(l)*1)])
+                ampMean = max(l)
                 ampPitchCentroid[1].sort()
                 l = ampPitchCentroid[1]
                 pitchMean = np.mean(l[int(len(l)*0.25):int(len(l)*0.75)])
@@ -236,17 +241,16 @@ def audio():
                 segmentstring += '%.3f %.3f %.3f %.3f\n'%(segStart,ampMean,pitchMean,centroidMean)
                 cs.InputMessage('i -34 0 1')
                 markerfile.write(segmentstring)
-                markerfile.write('Total duration: %f\n'%memRecTimeMarker-statusRelease)
+                markerfile.write('Total duration: %f\n'%(memRecTimeMarker-statusRelease))
                 markerfile.write('\nMax amp for file: %f'%memRecMaxAmp)
                 markerfile.close()
                 print 'stopping memoryRec'
-                #assoc.send_json(markerfileName)
 
         if not state['memoryRecording'] and memRecActive:
             print '... ...turnoff rec, get final medians and update segments'
             ampPitchCentroid[0].sort()
             l = ampPitchCentroid[0]
-            ampMean = max(l)#np.mean(l[int(len(l)*0.5):int(len(l)*1)])
+            ampMean = max(l)
             ampPitchCentroid[1].sort()
             l = ampPitchCentroid[1]
             pitchMean = np.mean(l[int(len(l)*0.25):int(len(l)*0.75)])
@@ -257,10 +261,9 @@ def audio():
             segmentstring += '%.3f %.3f %.3f %.3f\n'%(segStart,ampMean,pitchMean,centroidMean)
             cs.InputMessage('i -34 0 1')
             markerfile.write(segmentstring)
-            markerfile.write('Total duration: %f'%memRecTimeMarker-statusRelease)
+            markerfile.write('Total duration: %f'%(memRecTimeMarker-statusRelease))
             markerfile.close()
             print 'stopping memoryRec'
-            #assoc.send_json(markerfileName)
 
         interaction = []
                                                     

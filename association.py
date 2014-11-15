@@ -604,7 +604,10 @@ def getSimilarWords(predicate, distance):
         _similarWords = zeroMe(predicate, _similarWords)
         simIds = []
         for item in _similarWords:
-            if item[1] < distance: simIds.append(item[0])
+            if item[1] < distance: simIds.append(item)
+        for item in simIds: item.reverse()
+        simIds.sort() # get the best rhymes
+        simIds = [ item[1] for item in simIds ]
     except Exception, e:
         print e, 'getSimilarWords failed'
         simIds = [0]
