@@ -159,8 +159,8 @@ def audio():
         memRecTimeMarker = cGet("memRecTimeMarker")     # (in memRec) get the time since start of statement
         memRecActive = cGet("memRecActive")             # flag to check if memoryRecording is currently recording to file in Csound
         memRecMaxAmp = cGet("memRecMaxAmp")             # max amplitude for each recorded file
-        statusRelease = cGet("statusRel")               # audio status release time, hold status=1 for this long after signal has dropped below thresh, we subtract this from the total time recorded in each memoryRecording file
-        statusRelease = 0 # TEMPORARY... to disable right-trimming of last segment
+        #statusRelease = cGet("statusRel")               # audio status release time, hold status=1 for this long after signal has dropped below thresh, we subtract this from the total time recorded in each memoryRecording file
+        #statusRelease = 0 # TEMPORARY... to disable right-trimming of last segment
         
         i_am_speaking = cGet("i_am_speaking")           # signals cognition that I'm currently speaking
         cSet("i_am_speaking", 0)                        # reset channel, any playing voice instr will overwrite
@@ -241,7 +241,7 @@ def audio():
                 segmentstring += '%.3f %.3f %.3f %.3f\n'%(segStart,ampMean,pitchMean,centroidMean)
                 cs.InputMessage('i -34 0 1')
                 markerfile.write(segmentstring)
-                markerfile.write('Total duration: %f\n'%(memRecTimeMarker-statusRelease))
+                markerfile.write('Total duration: %f\n'%memRecTimeMarker)
                 markerfile.write('\nMax amp for file: %f'%memRecMaxAmp)
                 markerfile.close()
                 print 'stopping memoryRec'
@@ -261,7 +261,7 @@ def audio():
             segmentstring += '%.3f %.3f %.3f %.3f\n'%(segStart,ampMean,pitchMean,centroidMean)
             cs.InputMessage('i -34 0 1')
             markerfile.write(segmentstring)
-            markerfile.write('Total duration: %f'%(memRecTimeMarker-statusRelease))
+            markerfile.write('Total duration: %f'%memRecTimeMarker)
             markerfile.close()
             print 'stopping memoryRec'
 
