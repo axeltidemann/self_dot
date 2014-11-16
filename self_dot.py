@@ -51,7 +51,14 @@ def idle(host):
 
     face_timer = 0
     saysomething_timer = 0
-    saysomething_interval = 8.0
+    saysomething_interval = 0.5
+    urge_to_say_something = 0
+    
+    def update_urge_to_say_something(urge_to_say_something, saysomething_interval):
+        # linear increase over time for now
+        # this could be more sophisticated
+        # also including random impulses, emotions, etc
+        return urge_to_say_something + saysomething_interval
 
     while True:
         events = dict(poller.poll(timeout=100))
@@ -70,12 +77,14 @@ def idle(host):
             state = stateQ.recv_json()
 
         if not state['enable_say_something']:
-            saysomething_timer = time.time()
+            urge_to_say_something = 0
 
-        if state['enable_say_something'] and time.time() - saysomething_timer > saysomething_interval:
-            sender.send_json('saySomething')
-            print 'self idler disabling say something'
-            sender.send_json('enable_say_something 0')
+        if state['enable_say_something'] and not state['i_am_speaking'] and time.time() - saysomething_timer > saysomething_interval:
+            urge_to_say_something = update_urge_to_say_something(urge_to_say_something, saysomething_interval)
+            sender.send_json('urge_to_say_something {}'.format(urge_to_say_something))
+            saysomething_timer = time.time()
+            #print 'self idler trig and then disable say something'
+            #sender.send_json('enable_say_something 0')
         
         
 class Controller:
@@ -126,6 +135,10 @@ class Controller:
             if message == 'dream':
                 self.event.send_json({'dream': True})
             
+            if 'i_am_speaking' in message:
+                _, value = message.split()
+                self.state['i_am_speaking'] = value in ['True', '1']
+
             if 'enable_say_something' in message:
                 _, value = message.split()
                 self.state['enable_say_something'] = value in ['True', '1']
@@ -138,6 +151,9 @@ class Controller:
                 audio_id = message[31:]
                 self.event.send_json({'last_most_significant_audio_id': audio_id })
             
+            if message == 'clear play_events':
+                self.event.send_json({'clear play_events' : 'True'})
+
             if 'calculate_cochlear' in message:
                 _, wav_file = message.split()
                 t0 = time.time()
@@ -227,8 +243,9 @@ class Controller:
                 _, value = message.split()
                 self.event.send_json({'rhyme': value == 'True'})
 
-            if 'saySomething' in message:
-                self.event.send_json({'saySomething': True})
+            if 'urge_to_say_something' in message:
+                _, value = message.split()
+                self.event.send_json({'urge_to_say_something': value})
 
             if 'autolearn' in message:
                 self.state['autolearn'] = message[10:] in ['True', '1']
@@ -282,6 +299,7 @@ if __name__ == '__main__':
                          'roboActive': False,
                          '_audioLearningStatus': False, 
                          'enable_say_something': False,
+                         'i_am_speaking': False,
                          'ambientSound': False,
                          'fullscreen': 0,
                          'display2': 0,

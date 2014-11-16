@@ -11,7 +11,7 @@
         chnset 1.5, "in_envelopeRelease"    ; envelope follower release
         chnset 5, "transientThresh"         ; transient trig threshold 
         chnset 8, "transientDecThresh"       ; retrig threshold, how much must the level decay from its local max before allowing new transient trig
-        chnset 0.6, "doubleLimit"       ; minimum duration between transients, (double trig limit)
+        chnset 0.7, "doubleLimit"       ; minimum duration between transients, (double trig limit)
         chnset 9, "statusThresh"            ; release thresh for audio status
         chnset 0.8, "statusRel"               ; status release time, hold status=1 for this long after signal has dropped below
 
@@ -30,12 +30,12 @@
 
         chnset 300, "SecondaryMasterLoCut"       ; cut LF on master out for secondary associations synth
         chnset -2, "SecondaryMasterLevel"       ; in dB
-        chnset -18, "SecondaryCompThresh"
-        chnset 5, "SecondaryCompRatio"
+        chnset -12, "SecondaryCompThresh"
+        chnset 3, "SecondaryCompRatio"
 
         chnset -2, "PrimaryMasterLevel"       ; in dB
-        chnset -12, "PrimaryCompThresh"
-        chnset 4, "PrimaryCompRatio"
+        chnset -9, "PrimaryCompThresh"
+        chnset 3, "PrimaryCompRatio"
         
         chnset -3, "ambientLevel"      ; set level of self's own background sound
 

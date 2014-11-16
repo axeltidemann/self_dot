@@ -58,6 +58,11 @@ def cognition(host):
     eventQ.connect('tcp://{}:{}'.format(host, IO.EVENT))
     eventQ.setsockopt(zmq.SUBSCRIBE, b'') 
 
+    stateQ = context.socket(zmq.SUB)
+    stateQ.connect('tcp://{}:{}'.format(host, IO.STATE))
+    stateQ.setsockopt(zmq.SUBSCRIBE, b'') 
+    state = stateQ.recv_json()
+
     face = context.socket(zmq.SUB)
     face.connect('tcp://{}:{}'.format(host, IO.FACE))
     face.setsockopt(zmq.SUBSCRIBE, b'')
@@ -73,6 +78,7 @@ def cognition(host):
 
     poller = zmq.Poller()
     poller.register(eventQ, zmq.POLLIN)
+    poller.register(stateQ, zmq.POLLIN)
     poller.register(face, zmq.POLLIN)
     poller.register(cognitionQ, zmq.POLLIN)
 
@@ -80,6 +86,18 @@ def cognition(host):
     rhyme = False
     rhyme_enable_once = True
     face_enable_once = True
+    face_timer = 0
+    minimum_face_interval = 40 # minimum time between face responses
+    minimum_urge_to_say_something = 4
+    default_minimum_urge_to_say_something = 4
+
+    # (default) play events params
+    default_voiceType1 = 1
+    default_voiceType2 = 6
+    default_wordSpace1 = 0.3
+    default_wordSpaceDev1 = 0.3
+    default_wordSpace2 = 0.1
+    default_wordSpaceDev2 = 0.3
 
     lastSentenceIds = []
     last_most_significant_audio_id = 0
@@ -98,10 +116,16 @@ def cognition(host):
             x_test = face_recognizer.rPCA.transform(np.ndarray.flatten(gray))
             this_face_id = face_recognizer.predict(x_test)
             if this_face_id != last_face_id:
-                #print 'FACE ID', last_face_id
-                face_enable_once = True
-                #print 'face_enable_once', face_enable_once
+                print 'FACE ID', last_face_id
+                if time.time() - face_timer > minimum_face_interval:
+                    face_timer = time.time()
+                    face_enable_once = True
+                    print 'face_enable_once', face_enable_once
+
             last_face_id = this_face_id
+
+        if stateQ in events:
+            state = stateQ.recv_json()
 
         if eventQ in events:
             pushbutton = eventQ.recv_json()
@@ -117,16 +141,19 @@ def cognition(host):
             if 'learn' in pushbutton or 'respond_sentence' in pushbutton:
                 filename = pushbutton['filename']
                 _,_,_,segmentData = utils.getSoundInfo(filename)
-                pitches = [ item[2] for item in segmentData ]
+                pitches = [ item[3] for item in segmentData ]
                 question = pitches[-1] > np.mean(pitches[:-1]) if len(pitches) > 1 else False
                 print 'QUESTION ?', question
     
             if 'rhyme' in pushbutton:
                 rhyme = pushbutton['rhyme']
                 print 'RHYME ?', rhyme
-                rhyme_enable_once = True
+                if rhyme:
+                    rhyme_enable_once = True
+                    minimum_urge_to_say_something = 0
+                    sender.send_json('clear play_events')
                 
-            if 'saySomething' in pushbutton:
+            if 'urge_to_say_something' in pushbutton and (float(pushbutton['urge_to_say_something']) > minimum_urge_to_say_something) and state['enable_say_something']:
                 print 'I feel the urge to say something...'
                 print 'I can use, rhyme {} or face {} ..face_enable_once {}'.format(rhyme, last_face_id,face_enable_once)
                 if rhyme and rhyme_enable_once:
@@ -138,8 +165,12 @@ def cognition(host):
                         rhymes = association.recv_pyobj()
                         if len(rhymes) > 7 : rhymes= rhymes[:7] # temporary length limit
                         print 'Rhyme sentence:', rhymes
+                        sender.send_json('respond_setParam wordSpace 1 0')
+                        sender.send_json('respond_setParam wordSpaceDev 1 0')
                         sender.send_json('play_sentence {}'.format(rhymes))
-                        rhyme = False
+                        sender.send_json('respond_setParam wordSpace 1 {}'.format(default_wordSpace1))
+                        sender.send_json('respond_setParam wordSpaceDev 1 {}'.format(default_wordSpaceDev1))
+                        minimum_urge_to_say_something = default_minimum_urge_to_say_something
                     except:
                         utils.print_exception('Rhyme failed.')
                 
@@ -454,9 +485,9 @@ def respond(control_host, learn_host, debug=False):
     video_producer = {}
     voiceType1 = 1
     voiceType2 = 6
-    wordSpace1 = 0.2
+    wordSpace1 = 0.3
     wordSpaceDev1 = 0.3
-    wordSpace2 = 0.2
+    wordSpace2 = 0.1
     wordSpaceDev2 = 0.3
     
     if debug:
@@ -538,7 +569,10 @@ def respond(control_host, learn_host, debug=False):
                 
                 sender.send_json('last_segment_ids {}'.format(dumps(segment_ids)))
                 most_significant_segment_id = utils.get_most_significant_word(wav_file)
+                print 'most_significant_segment_id', most_significant_segment_id
+                print 'segment_ids', segment_ids
                 most_significant_audio_id = segment_ids[most_significant_segment_id]
+                print 'most_significant_audio_id', most_significant_audio_id
                 sender.send_json('last_most_significant_audio_id {}'.format(most_significant_audio_id))
                 cognitionQ.send_pyobj(face_recognizer)
                                 
@@ -552,9 +586,7 @@ def respond(control_host, learn_host, debug=False):
                     new_sentence = utils.load_cochlear(filename)
                     norm_segments = np.rint(new_sentence.shape[0]*audio_segments/audio_segments[-1]).astype('int')
 
-                    _,_,_,segmentData = utils.getSoundInfo(filename)
-                    amps = [ item[0] for item in segmentData ]
-                    segment_id = amps.index(max(amps))
+                    segment_id = get_most_significant_word(filename)
                     #print 'Single selected to respond to segment {}'.format(segment_id)
 
                     NAP = utils.trim_right(new_sentence[norm_segments[segment_id]:norm_segments[segment_id+1]])
@@ -621,6 +653,7 @@ def respond(control_host, learn_host, debug=False):
                         voice1 = 'playfile {} {} {} {} {} {} {} {} {}'.format(1, voiceType1, start, soundfile, speed, segstart, segend, amp, maxamp)
                         voice2 = 'playfile {} {} {} {} {} {} {} {} {}'.format(2, voiceType1, start, soundfile, speed, segstart, segend, amp, maxamp)
                         wordSpacing1 = wordSpace1 + np.random.random()*wordSpaceDev1
+                        print 'PLAY RESPOND SPACING', wordSpacing1
                         nextTime1 += (dur/speed)+wordSpacing1
 
                         projection = _project(audio_id, sound_to_face, dur, NAP, video_producer)
@@ -632,7 +665,7 @@ def respond(control_host, learn_host, debug=False):
 
             if 'respond_sentence' in pushbutton:
                 print 'SENTENCE Respond to', pushbutton['filename'][-12:]
-                
+                    
                 try:
                     filename = pushbutton['filename']
                     audio_segments = utils.get_segments(filename)
@@ -714,7 +747,7 @@ def respond(control_host, learn_host, debug=False):
                         if nextTime1 > nextTime2: enableVoice2 = 1 
 
                         projection = _project(audio_id, sound_to_face, dur, NAP, video_producer)
-                        
+                        print 'SENTENCE RESPOND SPACING', wordSpacing1
                         play_events.append([ dur+wordSpacing1, voice1, voice2, projection, FRAME_SIZE ])
 
                     scheduler.send_pyobj(play_events)
@@ -899,10 +932,12 @@ def learn_audio(host, debug=False):
                     print 'Learning {} duration {} seconds with {} segments'.format(filename, audio_segments[-1], len(audio_segments)-1)
                     new_sentence = utils.load_cochlear(filename)
                     norm_segments = np.rint(new_sentence.shape[0]*audio_segments/audio_segments[-1]).astype('int')
+                    #print 'norm_segments', len(norm_segments), norm_segments
 
                     segment_ids = []
                     new_audio_hash = []
                     for segment, new_sound in enumerate([ utils.trim_right(new_sentence[norm_segments[i]:norm_segments[i+1]]) for i in range(len(norm_segments)-1) ]):
+                        #print segment, new_sound
                         # Do we know this sound?
                         if debug:
                             utils.plot_NAP_and_energy(new_sound, plt)

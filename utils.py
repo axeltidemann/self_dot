@@ -124,10 +124,13 @@ def trim(A, threshold=100):
 
 
 def trim_right(A, threshold=.2):
+    return A
     ''' Trims right side of the thresholded part of the signal.'''
+    #print 'A', A
     maxes = np.max(A, axis=1)
+    #print 'maxes', maxes
     apex = np.argmax(maxes)
-
+    #print 'apex', apex
     for i,m in enumerate(maxes[apex:]):
         if m < threshold:
             return A[:i+apex]
@@ -299,24 +302,25 @@ def getSoundInfo(wavfile):
         if 'Max amp for file:' in line:
             maxAmp = float(line[18:])
         if enable:
-            start,amp,pitch,centroid = line.split(' ')
-            segments.append([float(start),float(amp),float(pitch),float(centroid)]) 
-        if 'Sub segments (start, amp, ' in line: enable = 1
+            start,skiptime,amp,pitch,centroid = line.split(' ')
+            segments.append([float(start),float(skiptime),float(amp),float(pitch),float(centroid)]) 
+        if 'Sub segments (start, skiptime, amp, ' in line: enable = 1
     return startTime, totalDur, maxAmp, segments
 
 
 def get_segments(wavfile):
-    ''' Find segments in audio descriptor file. Transients closer together than the threshold will be excluded.'''
+    ''' Find segments in audio descriptor file'''
     _, totalDur, _, segments = getSoundInfo(wavfile)
     segmentTimes = []
     for item in segments:
         segmentTimes.append(item[0])    
-    segmentTimes.append(totalDur)    
+    segmentTimes.append(totalDur) 
+    #print 'utils.get_segments', segmentTimes
     return np.array(segmentTimes)
     
 def get_most_significant_word(wavfile):
     _,_,_,segmentData = getSoundInfo(wavfile)
-    amps = [ item[0] for item in segmentData ]
+    amps = [ item[2] for item in segmentData ]
     return amps.index(max(amps))
      
 
@@ -363,6 +367,10 @@ def scheduler(host):
     
     play_events = context.socket(zmq.PULL)
     play_events.bind('tcp://*:{}'.format(IO.SCHEDULER))
+    
+    eventQ = context.socket(zmq.SUB)
+    eventQ.connect('tcp://{}:{}'.format(host, IO.EVENT))
+    eventQ.setsockopt(zmq.SUBSCRIBE, b'') 
 
     sender = context.socket(zmq.PUSH)
     sender.connect('tcp://{}:{}'.format(host, IO.EXTERNAL))
@@ -378,6 +386,7 @@ def scheduler(host):
     poller = zmq.Poller()
     poller.register(play_events, zmq.POLLIN)
     poller.register(stateQ, zmq.POLLIN)
+    poller.register(eventQ, zmq.POLLIN)
 
     to_be_played = []
     enable_say_something = 0
@@ -393,9 +402,9 @@ def scheduler(host):
 
         if state['_audioLearningStatus']:
             to_be_played = []
-            wait_time = 4
+            wait_time = 4 ## THIS VALUE DOES NOT DO ANYTHING USEFUL, but it is ok as is that the scheduler simply sends enable_say_something when the last segment is triggered
             t0 = time.time()
-            if enable_say_something:
+            if enable_say_something: # need the local variable to avoid sending same signal several (2) times. Due to ZMQ latency?
                 sender.send_json('enable_say_something 0')
                 enable_say_something = 0
                 
@@ -405,6 +414,15 @@ def scheduler(host):
             enable_say_something = 0
             to_be_played = play_events.recv_pyobj()
             wait_time = 0
+
+        if eventQ in events:
+            pushbutton = eventQ.recv_json()
+            
+            if 'clear play_events' in pushbutton and pushbutton['clear play_events']:
+                print 'SCHEDULER CLEAR EVENTS'
+                to_be_played = []
+                sender.send_json('enable_say_something 1')
+                enable_say_something = 1
 
         if len(to_be_played) and time.time() - t0 > wait_time:
             t0 = time.time()
