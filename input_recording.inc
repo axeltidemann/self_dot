@@ -9,9 +9,9 @@
         Swavname        strget p4
         a1              chnget "rec_in1"
 
-	    krec_floor	= -65                   ; safe to set statically, as the input should be gated before here anyway
+	    krec_floor	= -60                   ; safe to set statically, as the input should be gated before here anyway
 	    kAttack		= 0.001			        ; envelope follower attack
-	    kRelease	= 0.25                   ;chnget "in_envelopeRelease" ; 0.3 ; envelope follower release
+	    kRelease	= 0.15                   ;chnget "in_envelopeRelease" ; 0.3 ; envelope follower release
 	    aFollow1	follow2	a1, kAttack, kRelease	; envelope follower
 	    kFollow1	downsamp aFollow1	
 	    kFollowdb1	= dbfsamp(kFollow1)		    ; convert to dB
@@ -27,11 +27,22 @@
         ktimer          init 0
         kskiptimer      init 0
 
-ktest =  (kFollowdb1 > krec_floor ? 1:0)
-ktest2 = (ktimer == 0 ? 1 : ktest)
-printk2 ktest2
+        ktransient      chnget "transient"
+        ktest           =  (kFollowdb1 > krec_floor ? 1:0)
+if ktransient > 0 then
+reinit startgate        
+endif
+        irecdelay       chnget "recdelay"
+startgate:
+        kinit           linseg 1, irecdelay+(2/kr), 1, 0, 0, 1, 0
+rireturn
+        ktest2          = (kinit == 1 ? 1 : ktest)
+        kgate           init 1
+        kgate           = (kinit == 1 ? 1 : kgate)
+        kgate           = (ktransient == 1 ? 1 : kgate)
+        kgate           = (ktest2 < 1 ? 0 : kgate)
 
-if (ktest2 > 0) kgoto record
+if (kgate > 0) kgoto record
         kskiptimer      += 1
         kskiptime       = kskiptimer/kr     ; time in seconds (only counting when we are not recording
 kgoto record_done
