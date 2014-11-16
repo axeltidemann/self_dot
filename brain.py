@@ -11,6 +11,7 @@ from subprocess import call
 import time
 import ctypes
 import os
+import itertools
 
 import numpy as np
 import zmq
@@ -23,6 +24,8 @@ from sklearn.decomposition import RandomizedPCA
 from scipy.signal.signaltools import correlate2d as c2d
 import sai as pysai
 from zmq.utils.jsonapi import dumps
+from scipy.stats import itemfreq
+from scipy.cluster.vq import kmeans, vq
 
 import utils
 import IO
@@ -49,12 +52,18 @@ FACE_MEMORY_SIZE = 100
 def cognition(host):
     me = mp.current_process()
     print me.name, 'PID', me.pid
-    
+    utils.AliveNotifier(me)
+
     context = zmq.Context()
 
     eventQ = context.socket(zmq.SUB)
     eventQ.connect('tcp://{}:{}'.format(host, IO.EVENT))
     eventQ.setsockopt(zmq.SUBSCRIBE, b'') 
+
+    stateQ = context.socket(zmq.SUB)
+    stateQ.connect('tcp://{}:{}'.format(host, IO.STATE))
+    stateQ.setsockopt(zmq.SUBSCRIBE, b'') 
+    state = stateQ.recv_json()
 
     face = context.socket(zmq.SUB)
     face.connect('tcp://{}:{}'.format(host, IO.FACE))
@@ -71,6 +80,7 @@ def cognition(host):
 
     poller = zmq.Poller()
     poller.register(eventQ, zmq.POLLIN)
+    poller.register(stateQ, zmq.POLLIN)
     poller.register(face, zmq.POLLIN)
     poller.register(cognitionQ, zmq.POLLIN)
 
@@ -78,6 +88,18 @@ def cognition(host):
     rhyme = False
     rhyme_enable_once = True
     face_enable_once = True
+    face_timer = 0
+    minimum_face_interval = 40 # minimum time between face responses
+    minimum_urge_to_say_something = 4
+    default_minimum_urge_to_say_something = 4
+
+    # (default) play events params
+    default_voiceType1 = 1
+    default_voiceType2 = 6
+    default_wordSpace1 = 0.3
+    default_wordSpaceDev1 = 0.3
+    default_wordSpace2 = 0.1
+    default_wordSpaceDev2 = 0.3
 
     lastSentenceIds = []
     last_most_significant_audio_id = 0
@@ -96,9 +118,15 @@ def cognition(host):
             this_face_id = face_recognizer.predict(x_test)
             if this_face_id != last_face_id:
                 print 'FACE ID', last_face_id
-                face_enable_once = True
-                print 'face_enable_once', face_enable_once
+                if time.time() - face_timer > minimum_face_interval:
+                    face_timer = time.time()
+                    face_enable_once = True
+                    print 'face_enable_once', face_enable_once
+
             last_face_id = this_face_id
+
+        if stateQ in events:
+            state = stateQ.recv_json()
 
         if eventQ in events:
             pushbutton = eventQ.recv_json()
@@ -114,16 +142,19 @@ def cognition(host):
             if 'learn' in pushbutton or 'respond_sentence' in pushbutton:
                 filename = pushbutton['filename']
                 _,_,_,segmentData = utils.getSoundInfo(filename)
-                pitches = [ item[2] for item in segmentData ]
+                pitches = [ item[3] for item in segmentData ]
                 question = pitches[-1] > np.mean(pitches[:-1]) if len(pitches) > 1 else False
                 print 'QUESTION ?', question
     
             if 'rhyme' in pushbutton:
                 rhyme = pushbutton['rhyme']
                 print 'RHYME ?', rhyme
-                rhyme_enable_once = True
+                if rhyme:
+                    rhyme_enable_once = True
+                    minimum_urge_to_say_something = 0
+                    sender.send_json('clear play_events')
                 
-            if 'saySomething' in pushbutton:
+            if 'urge_to_say_something' in pushbutton and (float(pushbutton['urge_to_say_something']) > minimum_urge_to_say_something) and state['enable_say_something']:
                 print 'I feel the urge to say something...'
                 print 'I can use, rhyme {} or face {} ..face_enable_once {}'.format(rhyme, last_face_id,face_enable_once)
                 if rhyme and rhyme_enable_once:
@@ -135,8 +166,12 @@ def cognition(host):
                         rhymes = association.recv_pyobj()
                         if len(rhymes) > 7 : rhymes= rhymes[:7] # temporary length limit
                         print 'Rhyme sentence:', rhymes
+                        sender.send_json('respond_setParam wordSpace 1 0')
+                        sender.send_json('respond_setParam wordSpaceDev 1 0')
                         sender.send_json('play_sentence {}'.format(rhymes))
-                        rhyme = False
+                        sender.send_json('respond_setParam wordSpace 1 {}'.format(default_wordSpace1))
+                        sender.send_json('respond_setParam wordSpaceDev 1 {}'.format(default_wordSpaceDev1))
+                        minimum_urge_to_say_something = default_minimum_urge_to_say_something
                     except:
                         utils.print_exception('Rhyme failed.')
                 
@@ -156,6 +191,7 @@ def cognition(host):
 def face_extraction(host, extended_search=False, show=False):
     me = mp.current_process()
     print me.name, 'PID', me.pid
+    utils.AliveNotifier(me)
 
     eye_cascade = cv2.cv.Load(EYE_HAAR_CASCADE_PATH)
     face_cascade = cv2.cv.Load(FACE_HAAR_CASCADE_PATH)
@@ -252,10 +288,72 @@ def train_network(x, y, output_dim=100, leak_rate=.9, bias_scaling=.2, reset_sta
 
     return net
 
-def dream(brain):
-    return True # SELF-ORGANIZING OF ALL MEMORIES! EXTRACT CATEGORIES AND FEATURES!
+def dream(wavs, wav_segments):
+    import matplotlib.pyplot as plt
+    plt.ion()
+    print 'Removing wrongly binned filenames'
+    mega_filenames_and_indexes = []
+    for audio_id, wav_files in enumerate(wavs):
+        NAP_detail = 'low'
+        print 'Examining audio_id', audio_id
 
-def cochlear(filename, db=-40, stride=441, new_rate=22050, ears=1, apply_filter=1):
+        if len(wav_files) == 1:
+            print 'Just one member in this audio_id, skipping analysis'
+            continue
+        k = 2
+
+        filenames_and_indexes = []
+        for soundfile in wav_files:
+            segstart, segend = wav_segments[(soundfile, audio_id)]
+            audio_segments = utils.get_segments(soundfile)
+            segstart /= audio_segments[-1]
+            segend /= audio_segments[-1]
+            filenames_and_indexes.append([ soundfile, segstart, segend, audio_id, NAP_detail ])
+
+        mega_filenames_and_indexes.extend(filenames_and_indexes)
+            
+        sparse_codes = mysai.experiment(filenames_and_indexes, k)
+        plt.matshow(sparse_codes, aspect='auto')
+        plt.colorbar()
+        plt.draw()
+
+        coarse = np.mean(sparse_codes, axis=1)
+        coarse.shape = (len(coarse), 1)
+
+        codebook,_ = kmeans(coarse, k)
+        instances = [ vq(np.atleast_2d(s), codebook)[0] for s in coarse ]
+
+        freqs = itemfreq(instances)
+        sorted_freqs = sorted(freqs, key=lambda x: x[1])
+        print 'Average sparse codes: {} Class count: {}'.format(list(itertools.chain.from_iterable(coarse)), sorted_freqs)
+
+        if len(sorted_freqs) == 1:
+            print 'Considered to be all the same.'
+            continue
+        
+        fewest_class = sorted_freqs[0][0]
+        print 'Class {} has fewest members, deleting {}'.format(fewest_class, [ filename for filename, i in zip(wav_files, instances) if i == fewest_class ])
+
+    print 'Creating mega super self-organized class'
+
+    for row in mega_filenames_and_indexes:
+        row[-1] = 'high'
+
+    high_resolution_k = 256
+    clusters = 24
+    sparse_codes = mysai.experiment(filenames_and_indexes, high_resolution_k)
+    plt.matshow(sparse_codes, aspect='auto')
+    plt.colorbar()
+    plt.draw()
+
+    codebook,_ = kmeans(sparse_codes, clusters)
+    instances = [ vq(np.atleast_2d(s), codebook)[0] for s in sparse_codes ]
+
+    cluster_list = zip(mega_filenames_and_indexes, instances)
+    
+    
+        
+def cochlear(filename, db=-40, stride=441, new_rate=22050, ears=1, a_1=-0.995, apply_filter=1):
     rate, data = wavfile.read(filename)
     assert data.dtype == np.int16
     data = data / float(2**15)
@@ -263,7 +361,7 @@ def cochlear(filename, db=-40, stride=441, new_rate=22050, ears=1, apply_filter=
         data = resample(data, float(new_rate)/rate, 'sinc_best')
     data = data*10**(db/20)
     utils.array_to_csv('{}-audio.txt'.format(filename), data)
-    call(['./carfac-cmd', filename, str(len(data)), str(ears), str(new_rate), str(stride), str(apply_filter)])
+    call(['./carfac-cmd', filename, str(len(data)), str(ears), str(new_rate), str(stride), str(a_1), str(apply_filter)])
     naps = utils.csv_to_array('{}-output.txt'.format(filename))
     os.remove('{}-audio.txt'.format(filename))
     os.remove('{}-output.txt'.format(filename))
@@ -348,6 +446,7 @@ def _extract_NAP(segstart, segend, soundfile):
 def respond(control_host, learn_host, debug=False):
     me = mp.current_process()
     print me.name, 'PID', me.pid
+    utils.AliveNotifier(me)
 
     context = zmq.Context()
     
@@ -391,9 +490,9 @@ def respond(control_host, learn_host, debug=False):
     video_producer = {}
     voiceType1 = 1
     voiceType2 = 6
-    wordSpace1 = 0.2
+    wordSpace1 = 0.3
     wordSpaceDev1 = 0.3
-    wordSpace2 = 0.2
+    wordSpace2 = 0.1
     wordSpaceDev2 = 0.3
     
     if debug:
@@ -475,7 +574,10 @@ def respond(control_host, learn_host, debug=False):
                 
                 sender.send_json('last_segment_ids {}'.format(dumps(segment_ids)))
                 most_significant_segment_id = utils.get_most_significant_word(wav_file)
+                print 'most_significant_segment_id', most_significant_segment_id
+                print 'segment_ids', segment_ids
                 most_significant_audio_id = segment_ids[most_significant_segment_id]
+                print 'most_significant_audio_id', most_significant_audio_id
                 sender.send_json('last_most_significant_audio_id {}'.format(most_significant_audio_id))
                 cognitionQ.send_pyobj(face_recognizer)
                                 
@@ -489,16 +591,14 @@ def respond(control_host, learn_host, debug=False):
                     new_sentence = utils.load_cochlear(filename)
                     norm_segments = np.rint(new_sentence.shape[0]*audio_segments/audio_segments[-1]).astype('int')
 
-                    _,_,_,segmentData = utils.getSoundInfo(filename)
-                    amps = [ item[0] for item in segmentData ]
-                    segment_id = amps.index(max(amps))
+                    segment_id = get_most_significant_word(filename)
                     #print 'Single selected to respond to segment {}'.format(segment_id)
 
                     NAP = utils.trim_right(new_sentence[norm_segments[segment_id]:norm_segments[segment_id+1]])
                     NAP_exact = utils.exact(NAP, maxlen)
            
                     # _recognize_audio_id(audio_recognizer, NAP)         
-                    _recognize_global_audio_id(global_audio_recognizer, NAP, plt)
+                    #_recognize_global_audio_id(global_audio_recognizer, NAP, plt)
                     # _recognize_mixture_audio_id(mixture_audio_recognizer, NAP)
 
                     # if debug:            
@@ -558,6 +658,7 @@ def respond(control_host, learn_host, debug=False):
                         voice1 = 'playfile {} {} {} {} {} {} {} {} {}'.format(1, voiceType1, start, soundfile, speed, segstart, segend, amp, maxamp)
                         voice2 = 'playfile {} {} {} {} {} {} {} {} {}'.format(2, voiceType1, start, soundfile, speed, segstart, segend, amp, maxamp)
                         wordSpacing1 = wordSpace1 + np.random.random()*wordSpaceDev1
+                        print 'PLAY RESPOND SPACING', wordSpacing1
                         nextTime1 += (dur/speed)+wordSpacing1
 
                         projection = _project(audio_id, sound_to_face, dur, NAP, video_producer)
@@ -569,7 +670,7 @@ def respond(control_host, learn_host, debug=False):
 
             if 'respond_sentence' in pushbutton:
                 print 'SENTENCE Respond to', pushbutton['filename'][-12:]
-                
+                    
                 try:
                     filename = pushbutton['filename']
                     audio_segments = utils.get_segments(filename)
@@ -651,7 +752,7 @@ def respond(control_host, learn_host, debug=False):
                         if nextTime1 > nextTime2: enableVoice2 = 1 
 
                         projection = _project(audio_id, sound_to_face, dur, NAP, video_producer)
-                        
+                        print 'SENTENCE RESPOND SPACING', wordSpacing1
                         play_events.append([ dur+wordSpacing1, voice1, voice2, projection, FRAME_SIZE ])
 
                     scheduler.send_pyobj(play_events)
@@ -778,6 +879,7 @@ def _recognize_global_audio_id(audio_recognizer, NAP, plt):
 def learn_audio(host, debug=False):
     me = mp.current_process()
     print '{} PID {}'.format(me.name, me.pid)
+    utils.AliveNotifier(me)
 
     context = zmq.Context()
 
@@ -835,10 +937,12 @@ def learn_audio(host, debug=False):
                     print 'Learning {} duration {} seconds with {} segments'.format(filename, audio_segments[-1], len(audio_segments)-1)
                     new_sentence = utils.load_cochlear(filename)
                     norm_segments = np.rint(new_sentence.shape[0]*audio_segments/audio_segments[-1]).astype('int')
+                    #print 'norm_segments', len(norm_segments), norm_segments
 
                     segment_ids = []
                     new_audio_hash = []
                     for segment, new_sound in enumerate([ utils.trim_right(new_sentence[norm_segments[i]:norm_segments[i+1]]) for i in range(len(norm_segments)-1) ]):
+                        #print segment, new_sound
                         # Do we know this sound?
                         if debug:
                             utils.plot_NAP_and_energy(new_sound, plt)
@@ -905,7 +1009,7 @@ def learn_audio(host, debug=False):
                     print 'RHYME VALUE', np.mean(sorted(all_hammings)[int(len(all_hammings)/2):])
                     rhyme = np.mean(sorted(all_hammings)[int(len(all_hammings)/2):]) < RHYME_HAMMERTIME
 
-                    # global_audio_recognizer = _train_global_audio_recognizer(NAPs) # Enabled in single_response
+                    #global_audio_recognizer = _train_global_audio_recognizer(NAPs)
                     # mixture_audio_recognizer = _train_mixture_audio_recognizer(NAPs)
                     
                     sender.send_json('rhyme {}'.format(rhyme))
@@ -918,6 +1022,9 @@ def learn_audio(host, debug=False):
 
                 audio.clear()
 
+            if 'dream' in pushbutton:
+                dream(wavs, wav_segments)
+                
             if 'save' in pushbutton:
                 utils.save('{}.{}'.format(pushbutton['save'], me.name), [ NAPs, wavs, wav_segments, NAP_hashes, audio_classifier, maxlen ])
 
@@ -928,6 +1035,7 @@ def learn_audio(host, debug=False):
 def learn_video(host, debug=False):
     me = mp.current_process()
     print '{} PID {}'.format(me.name, me.pid)
+    utils.AliveNotifier(me)
 
     context = zmq.Context()
 
@@ -997,7 +1105,8 @@ def learn_video(host, debug=False):
 def learn_faces(host, debug=False):
     me = mp.current_process()
     print '{} PID {}'.format(me.name, me.pid)
-
+    utils.AliveNotifier(me)
+    
     context = zmq.Context()
 
     face = context.socket(zmq.SUB)

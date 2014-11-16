@@ -86,6 +86,7 @@ currentSettings = [] # for temporal storage of globals (association weights)
 def association(host):
     me = mp.current_process()
     print me.name, 'PID', me.pid
+    utils.AliveNotifier(me)
 
     context = zmq.Context()
 
@@ -604,7 +605,10 @@ def getSimilarWords(predicate, distance):
         _similarWords = zeroMe(predicate, _similarWords)
         simIds = []
         for item in _similarWords:
-            if item[1] < distance: simIds.append(item[0])
+            if item[1] < distance: simIds.append(item)
+        for item in simIds: item.reverse()
+        simIds.sort() # get the best rhymes
+        simIds = [ item[1] for item in simIds ]
     except Exception, e:
         print e, 'getSimilarWords failed'
         simIds = [0]
@@ -612,8 +616,15 @@ def getSimilarWords(predicate, distance):
 
 def getFaceResponse(face):
     print 'getFaceResponse', face, faceWord
-    words = faceWord[face]
-    return random.choice(words)[0]
+    words = [item[0] for item in copy.copy(faceWord[face])]
+    other_faces = faceWord.keys()
+    other_faces.remove(face)
+    for f in other_faces:
+        for item in faceWord[f]:
+            if len(words)>1:
+                if item[0] in words: words.remove(item[0])
+    print 'words', words
+    return random.choice(words)
 
 def weightedSum(a_, weightA_, b_, weightB_):
     '''

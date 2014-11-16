@@ -12,6 +12,9 @@ print p1,p2,p3,p5,p6,p7,p8,p9,p10,p11
 ; audio file playback 
             instr 60
 ;print p1,p2,p3,p5,p6,p7,p8,p9,p10,p11
+
+        kplay           = 1
+                        chnset kplay, "i_am_speaking"           ; signals cognition that I'm currently speaking
         Ssound          strget p4
         ilen            filelen Ssound
                 
@@ -56,6 +59,8 @@ print p1,p2,p3,p5,p6,p7,p8,p9,p10,p11
 ; Spectral voice 1
         instr 61
 
+        kplay           = 1
+                        chnset kplay, "i_am_speaking"           ; signals cognition that I'm currently speaking
         Ssound          strget p4
         ilen            filelen Ssound
         
@@ -126,6 +131,8 @@ print p1,p2,p3,p5,p6,p7,p8,p9,p10,p11
 ; Spectral voice 2
         instr 62
 
+        kplay           = 1
+                        chnset kplay, "i_am_speaking"           ; signals cognition that I'm currently speaking
         Ssound          strget p4
         ilen            filelen Ssound
         
@@ -192,6 +199,8 @@ print p1,p2,p3,p5,p6,p7,p8,p9,p10,p11
 ; Spectral voice 3
         instr 63
 
+        kplay           = 1
+                        chnset kplay, "i_am_speaking"           ; signals cognition that I'm currently speaking
         Ssound          strget p4
         ilen            filelen Ssound
         
@@ -267,6 +276,8 @@ print p1,p2,p3,p5,p6,p7,p8,p9,p10,p11
 ; Spectral voice 4
         instr 64
 
+        kplay           = 1
+                        chnset kplay, "i_am_speaking"           ; signals cognition that I'm currently speaking
         Ssound          strget p4
         ilen            filelen Ssound
         
@@ -348,6 +359,8 @@ contin:
 ; Spectral voice 5
         instr 65
 
+        kplay           = 1
+                        chnset kplay, "i_am_speaking"           ; signals cognition that I'm currently speaking
         Ssound          strget p4
         ilen            filelen Ssound
         
@@ -442,6 +455,8 @@ contin:
 ; Partikkel voice 1, "slowdown but at original speed"
         instr 66
 
+        kplay           = 1
+                        chnset kplay, "i_am_speaking"           ; signals cognition that I'm currently speaking
         Ssound          strget p4
         ilen            filelen Ssound
         
@@ -502,6 +517,8 @@ contin:
 ; Partikkel voice 1, "PSGS", Pitch Synchronous Granular Synthesis
         instr 67
 
+        kplay           = 1
+                        chnset kplay, "i_am_speaking"           ; signals cognition that I'm currently speaking
         Ssound          strget p4
         ilen            filelen Ssound
         

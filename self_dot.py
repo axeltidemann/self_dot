@@ -25,7 +25,8 @@ import association
 def idle(host):
     me = mp.current_process()
     print me.name, 'PID', me.pid
-
+    utils.AliveNotifier(me)
+    
     context = zmq.Context()
 
     face = context.socket(zmq.SUB)
@@ -50,7 +51,14 @@ def idle(host):
 
     face_timer = 0
     saysomething_timer = 0
-    saysomething_interval = 8.0
+    saysomething_interval = 0.5
+    urge_to_say_something = 0
+    
+    def update_urge_to_say_something(urge_to_say_something, saysomething_interval):
+        # linear increase over time for now
+        # this could be more sophisticated
+        # also including random impulses, emotions, etc
+        return urge_to_say_something + saysomething_interval
 
     while True:
         events = dict(poller.poll(timeout=100))
@@ -69,18 +77,21 @@ def idle(host):
             state = stateQ.recv_json()
 
         if not state['enable_say_something']:
-            saysomething_timer = time.time()
+            urge_to_say_something = 0
 
-        if state['enable_say_something'] and time.time() - saysomething_timer > saysomething_interval:
-            sender.send_json('saySomething')
-            print 'self idler disabling say something'
-            sender.send_json('enable_say_something 0')
+        if state['enable_say_something'] and not state['i_am_speaking'] and time.time() - saysomething_timer > saysomething_interval:
+            urge_to_say_something = update_urge_to_say_something(urge_to_say_something, saysomething_interval)
+            sender.send_json('urge_to_say_something {}'.format(urge_to_say_something))
+            saysomething_timer = time.time()
+            #print 'self idler trig and then disable say something'
+            #sender.send_json('enable_say_something 0')
         
         
 class Controller:
     def __init__(self, init_state, host):
         me = mp.current_process()
         print me.name, 'PID', me.pid
+        utils.AliveNotifier(me)
 
         self.state = init_state
         
@@ -121,6 +132,13 @@ class Controller:
         print '[self.] received:', message
 
         try:
+            if message == 'dream':
+                self.event.send_json({'dream': True})
+            
+            if 'i_am_speaking' in message:
+                _, value = message.split()
+                self.state['i_am_speaking'] = value in ['True', '1']
+
             if 'enable_say_something' in message:
                 _, value = message.split()
                 self.state['enable_say_something'] = value in ['True', '1']
@@ -133,6 +151,9 @@ class Controller:
                 audio_id = message[31:]
                 self.event.send_json({'last_most_significant_audio_id': audio_id })
             
+            if message == 'clear play_events':
+                self.event.send_json({'clear play_events' : 'True'})
+
             if 'calculate_cochlear' in message:
                 _, wav_file = message.split()
                 t0 = time.time()
@@ -222,8 +243,9 @@ class Controller:
                 _, value = message.split()
                 self.event.send_json({'rhyme': value == 'True'})
 
-            if 'saySomething' in message:
-                self.event.send_json({'saySomething': True})
+            if 'urge_to_say_something' in message:
+                _, value = message.split()
+                self.event.send_json({'urge_to_say_something': value})
 
             if 'autolearn' in message:
                 self.state['autolearn'] = message[10:] in ['True', '1']
@@ -277,6 +299,7 @@ if __name__ == '__main__':
                          'roboActive': False,
                          '_audioLearningStatus': False, 
                          'enable_say_something': False,
+                         'i_am_speaking': False,
                          'ambientSound': False,
                          'fullscreen': 0,
                          'display2': 0,
@@ -288,8 +311,8 @@ if __name__ == '__main__':
     mp.Process(target=IO.audio, name='AUDIO').start() 
     mp.Process(target=IO.video, name='VIDEO').start()
     mp.Process(target=brain.face_extraction, args=('localhost',False,True,), name='FACE EXTRACTION').start()
-    mp.Process(target=brain.respond, args=('localhost','localhost',), name='RESPONDER').start()
-    mp.Process(target=brain.learn_audio, args=('localhost',), name='AUDIO LEARN').start()
+    mp.Process(target=brain.respond, args=('localhost','localhost',True), name='RESPONDER').start()
+    mp.Process(target=brain.learn_audio, args=('localhost',True), name='AUDIO LEARN').start()
     mp.Process(target=brain.learn_video, args=('localhost',), name='VIDEO LEARN').start()
     mp.Process(target=brain.learn_faces, args=('localhost',), name='FACES LEARN').start()
     #mp.Process(target=brain.calculate_sai_video_marginals, args=('localhost',), name='SAI VIDEO CALCULATION').start()
@@ -299,6 +322,7 @@ if __name__ == '__main__':
     mp.Process(target=utils.scheduler, args=('localhost',), name='SCHEDULER').start()
     mp.Process(target=Controller, args=(persistent_states,'localhost',), name='CONTROLLER').start()
     mp.Process(target=idle, args=('localhost',), name='IDLER').start()
+    mp.Process(target=utils.sentinel, args=('localhost',), name='SENTINEL').start()
     try:
         raw_input('')
     except KeyboardInterrupt:

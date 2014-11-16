@@ -9,6 +9,7 @@ import cPickle as pickle
 import zlib
 import random
 import multiprocessing as mp
+import threading
 
 import numpy as np
 import zmq
@@ -31,7 +32,7 @@ def load(filename):
     return data
 
 def write_cochlear(wav_file):
-    array_to_csv('{}-cochlear.txt'.format(wav_file), cochlear(wav_file, stride=441))
+    array_to_csv('{}-cochlear.txt'.format(wav_file), cochlear(wav_file, stride=441, a_1 = -0.995)) #a_1 = -0.95
 
 def load_cochlear(wav_file):
     return csv_to_array('{}-cochlear.txt'.format(wav_file))
@@ -123,15 +124,27 @@ def trim(A, threshold=100):
 
 
 def trim_right(A, threshold=.2):
+    return A
     ''' Trims right side of the thresholded part of the signal.'''
+    #print 'A', A
     maxes = np.max(A, axis=1)
+    #print 'maxes', maxes
     apex = np.argmax(maxes)
-
+    #print 'apex', apex
     for i,m in enumerate(maxes[apex:]):
         if m < threshold:
             return A[:i+apex]
     return A
 
+def trim_wav(sound, threshold=100):
+    ''' Removes tresholded region at beginning and end '''
+    right = len(sound)-1
+    while sound[right] < threshold:
+        right -= 1
+    left = 0 
+    while sound[left] < threshold:
+        left += 1
+    return sound[left:right]
         
 def split_signal(data, threshold=100, length=5000, elbow_grease=100, plot=False, markers=[]):
     ''' Splits the signal after [length] silence '''
@@ -289,24 +302,25 @@ def getSoundInfo(wavfile):
         if 'Max amp for file:' in line:
             maxAmp = float(line[18:])
         if enable:
-            start,amp,pitch,centroid = line.split(' ')
-            segments.append([float(start),float(amp),float(pitch),float(centroid)]) 
-        if 'Sub segments (start, amp, ' in line: enable = 1
+            start,skiptime,amp,pitch,centroid = line.split(' ')
+            segments.append([float(start),float(skiptime),float(amp),float(pitch),float(centroid)]) 
+        if 'Sub segments (start, skiptime, amp, ' in line: enable = 1
     return startTime, totalDur, maxAmp, segments
 
 
-def get_segments(wavfile, threshold=.25):
-    ''' Find segments in audio descriptor file. Transients closer together than the threshold will be excluded.'''
+def get_segments(wavfile):
+    ''' Find segments in audio descriptor file'''
     _, totalDur, _, segments = getSoundInfo(wavfile)
     segmentTimes = []
     for item in segments:
         segmentTimes.append(item[0])    
-    segmentTimes.append(totalDur)    
+    segmentTimes.append(totalDur) 
+    #print 'utils.get_segments', segmentTimes
     return np.array(segmentTimes)
     
 def get_most_significant_word(wavfile):
     _,_,_,segmentData = getSoundInfo(wavfile)
-    amps = [ item[0] for item in segmentData ]
+    amps = [ item[2] for item in segmentData ]
     return amps.index(max(amps))
      
 
@@ -347,11 +361,16 @@ def print_exception(msg=''):
 def scheduler(host):
     me = mp.current_process()
     print me.name, 'PID', me.pid
-
+    AliveNotifier(me)
+    
     context = zmq.Context()
     
     play_events = context.socket(zmq.PULL)
     play_events.bind('tcp://*:{}'.format(IO.SCHEDULER))
+    
+    eventQ = context.socket(zmq.SUB)
+    eventQ.connect('tcp://{}:{}'.format(host, IO.EVENT))
+    eventQ.setsockopt(zmq.SUBSCRIBE, b'') 
 
     sender = context.socket(zmq.PUSH)
     sender.connect('tcp://{}:{}'.format(host, IO.EXTERNAL))
@@ -367,6 +386,7 @@ def scheduler(host):
     poller = zmq.Poller()
     poller.register(play_events, zmq.POLLIN)
     poller.register(stateQ, zmq.POLLIN)
+    poller.register(eventQ, zmq.POLLIN)
 
     to_be_played = []
     enable_say_something = 0
@@ -382,9 +402,9 @@ def scheduler(host):
 
         if state['_audioLearningStatus']:
             to_be_played = []
-            wait_time = 4
+            wait_time = 4 ## THIS VALUE DOES NOT DO ANYTHING USEFUL, but it is ok as is that the scheduler simply sends enable_say_something when the last segment is triggered
             t0 = time.time()
-            if enable_say_something:
+            if enable_say_something: # need the local variable to avoid sending same signal several (2) times. Due to ZMQ latency?
                 sender.send_json('enable_say_something 0')
                 enable_say_something = 0
                 
@@ -394,6 +414,15 @@ def scheduler(host):
             enable_say_something = 0
             to_be_played = play_events.recv_pyobj()
             wait_time = 0
+
+        if eventQ in events:
+            pushbutton = eventQ.recv_json()
+            
+            if 'clear play_events' in pushbutton and pushbutton['clear play_events']:
+                print 'SCHEDULER CLEAR EVENTS'
+                to_be_played = []
+                sender.send_json('enable_say_something 1')
+                enable_say_something = 1
 
         if len(to_be_played) and time.time() - t0 > wait_time:
             t0 = time.time()
@@ -407,3 +436,53 @@ def scheduler(host):
                 print 'utils scheduler enabling say something'
                 sender.send_json('enable_say_something 1')
                 enable_say_something = 1
+
+
+def true_wait(seconds):
+    time.sleep(seconds)
+    return True
+                
+def sentinel(host):
+    me = mp.current_process()
+    print me.name, 'PID', me.pid
+
+    context = zmq.Context()
+    
+    life_signal_Q = context.socket(zmq.PULL)
+    life_signal_Q.bind('tcp://*:{}'.format(IO.SENTINEL))
+
+    sender = context.socket(zmq.PUSH)
+    sender.connect('tcp://{}:{}'.format(host, IO.EXTERNAL))
+
+    poller = zmq.Poller()
+    poller.register(life_signal_Q, zmq.POLLIN)
+
+    book = {}
+
+    while True:
+        events = dict(poller.poll(timeout=IO.TIME_OUT*2))
+
+        if life_signal_Q in events:
+            process = life_signal_Q.recv_pyobj()
+            book[process] = time.time()
+
+        for process in book.keys():
+            if time.time() - book[process] > IO.TIME_OUT*2:
+                print '{} HAS DIED, SAVING AND REBOOTING'.format(process)
+
+                
+class AliveNotifier(threading.Thread):
+    def __init__(self, me, host='localhost'):
+        threading.Thread.__init__(self)
+        self.name = '{} PID {}'.format(me.name, me.pid)
+        context = zmq.Context()
+        self.life_signal_Q = context.socket(zmq.PUSH)
+        self.life_signal_Q.connect('tcp://{}:{}'.format(host, IO.SENTINEL))
+
+        self.start()
+
+    def run(self):
+        while true_wait(IO.TIME_OUT):
+            self.life_signal_Q.send_pyobj(self.name)
+    
+    

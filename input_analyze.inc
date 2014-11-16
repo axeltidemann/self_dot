@@ -18,8 +18,9 @@
 			chnset kstatus, "audioStatus"
 			chnset kstatusTrig, "audioStatusTrig"
 			chnset ktrig1, "transient"
-                        chnset kcpsA, "pitch1_amdf"
+            chnset kcpsA, "pitch1_amdf"
 			chnset krms0, "in_amp"
+			chnset kFollowdb1, "followdb"
 			chnset kcps1, "in_pitch"
 			chnset kcentroid, "in_centroid"
 			
@@ -45,7 +46,7 @@
 			chnset krms1gated, "level1gated"
 */
         ; send audio to memory recording
-	arec            delay a1, 0.02  ; delay to sync with transient detection (and then add some to capture a bit of potential soft starts like 'h')
+	arec            delay a1, 0.3;0.02  ; delay to sync with transient detection (and then add some to capture a bit of potential soft starts like 'h')
                         chnset arec, "rec_in1"
                         
         ; enable by setting kinputMonitor if we want to monitor the input signal

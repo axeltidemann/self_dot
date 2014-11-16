@@ -7,21 +7,49 @@
         instr 34
         ; We write the sound file in Csound, and the text file in Python
         Swavname        strget p4
-	    ;print p1, p2, p3	
-	    ;puts Swavname, 1
         a1              chnget "rec_in1"
+
+	    krec_floor	= -65                   ; safe to set statically, as the input should be gated before here anyway
+	    kAttack		= 0.001			        ; envelope follower attack
+	    kRelease	= 0.25                   ;chnget "in_envelopeRelease" ; 0.3 ; envelope follower release
+	    aFollow1	follow2	a1, kAttack, kRelease	; envelope follower
+	    kFollow1	downsamp aFollow1	
+	    kFollowdb1	= dbfsamp(kFollow1)		    ; convert to dB
+
+
 ; compress before recording
-	kthresh         = -20
-	kratio          = 4
-	kattack		= 15				; attack time 
-	krelease	= 20				; release time 
+	    kthresh         = -15
+	    kratio          = 2.5
+	    kattack		    = 15				; attack time 
+	    krelease	    = 20				; release time 
 #include "compressor.inc"
 
+        ktimer          init 0
+        kskiptimer      init 0
+
+ktest =  ((kFollowdb1 > krec_floor) || (ktimer>0) ? 1:0)
+printk2 ktest
+
+if (kFollowdb1 > krec_floor) || (ktimer>0) kgoto record
+        kskiptimer      += 1
+        kskiptime       = kskiptimer/kr     ; time in seconds (only counting when we are not recording
+kgoto record_done
+record:
+        ktimer          += 1
+        krectime        = ktimer/kr         ; time in seconds (only counting when we are recording
                 	    fout Swavname, 14, a1
+record_done:
+
+        ;printk2 krectime, 5
                         
         ; for writing transient marker txt file
-        ktime           timeinsts
-                        chnset ktime, "memRecTimeMarker"     ; send time since start of file to Python
+                        chnset krectime, "memRecTimeMarker"     ; time of recorded sound
+                        chnset kskiptime, "memRecSkiptime"     ; skip time (amount of silence stripped from segment)
+
+        ktransient      chnget "transient"
+if ktransient > 0 then  ; reset skiptimer on each transient
+        kskiptimer      = 0
+endif
 
                         xtratim 1/kr
         krelease        release

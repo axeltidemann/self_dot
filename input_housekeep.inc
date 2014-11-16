@@ -148,8 +148,10 @@ print p1, p2, p3
         krms        rms a1
         krms        = krms * 1.7
         kgate       tablei krms, giNoiseFloor, 1
-        kgate       tonek kgate, 5
-        a1          = a1 * kgate
+        agate       interp kgate
+        agatef      follow2 agate, 0.04, 0.2
+        ;kgate       tonek kgate, 5
+        a1          = a1 * agatef
                     chnset a1, "in1"
         endin
 
