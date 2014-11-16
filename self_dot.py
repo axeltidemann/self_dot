@@ -25,7 +25,8 @@ import association
 def idle(host):
     me = mp.current_process()
     print me.name, 'PID', me.pid
-
+    utils.AliveNotifier(me)
+    
     context = zmq.Context()
 
     face = context.socket(zmq.SUB)
@@ -90,6 +91,7 @@ class Controller:
     def __init__(self, init_state, host):
         me = mp.current_process()
         print me.name, 'PID', me.pid
+        utils.AliveNotifier(me)
 
         self.state = init_state
         
@@ -130,10 +132,13 @@ class Controller:
         print '[self.] received:', message
 
         try:
+            if message == 'dream':
+                self.event.send_json({'dream': True})
+            
             if 'i_am_speaking' in message:
                 _, value = message.split()
                 self.state['i_am_speaking'] = value in ['True', '1']
-                
+
             if 'enable_say_something' in message:
                 _, value = message.split()
                 self.state['enable_say_something'] = value in ['True', '1']
@@ -306,8 +311,8 @@ if __name__ == '__main__':
     mp.Process(target=IO.audio, name='AUDIO').start() 
     mp.Process(target=IO.video, name='VIDEO').start()
     mp.Process(target=brain.face_extraction, args=('localhost',False,True,), name='FACE EXTRACTION').start()
-    mp.Process(target=brain.respond, args=('localhost','localhost',), name='RESPONDER').start()
-    mp.Process(target=brain.learn_audio, args=('localhost',), name='AUDIO LEARN').start()
+    mp.Process(target=brain.respond, args=('localhost','localhost',True), name='RESPONDER').start()
+    mp.Process(target=brain.learn_audio, args=('localhost',True), name='AUDIO LEARN').start()
     mp.Process(target=brain.learn_video, args=('localhost',), name='VIDEO LEARN').start()
     mp.Process(target=brain.learn_faces, args=('localhost',), name='FACES LEARN').start()
     #mp.Process(target=brain.calculate_sai_video_marginals, args=('localhost',), name='SAI VIDEO CALCULATION').start()
@@ -317,6 +322,7 @@ if __name__ == '__main__':
     mp.Process(target=utils.scheduler, args=('localhost',), name='SCHEDULER').start()
     mp.Process(target=Controller, args=(persistent_states,'localhost',), name='CONTROLLER').start()
     mp.Process(target=idle, args=('localhost',), name='IDLER').start()
+    mp.Process(target=utils.sentinel, args=('localhost',), name='SENTINEL').start()
     try:
         raw_input('')
     except KeyboardInterrupt:

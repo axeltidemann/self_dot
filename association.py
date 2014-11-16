@@ -86,6 +86,7 @@ currentSettings = [] # for temporal storage of globals (association weights)
 def association(host):
     me = mp.current_process()
     print me.name, 'PID', me.pid
+    utils.AliveNotifier(me)
 
     context = zmq.Context()
 

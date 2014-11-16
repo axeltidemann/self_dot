@@ -79,11 +79,11 @@ void filter(const ArrayX &beta, const ArrayX &alpha, const ArrayXX& input, Array
 
 // Seriously, I MUST LEARN how to return a pointer so I won't have to repeat code. Jesus Christ, 
 // how embarrassing.
-void WriteFilterMatrix(const std::string& filename, const ArrayXX& matrix, int stride) {
+void WriteFilterMatrix(const std::string& filename, const ArrayXX& matrix, int stride, FPType a_1) {
   ArrayX b(1);
   b << 1.;
   ArrayX a(2);
-  a <<  1., -0.995; //If you extend this vector, pad the matrix with N-2 zeros.
+  a <<  1., a_1;// -0.995; //If you extend this vector, pad the matrix with N-2 zeros.
 
   ArrayXX filtered = ArrayXX::Zero(matrix.rows() + b.rows(), matrix.cols());
   filter(b, a, matrix, filtered);
@@ -123,9 +123,9 @@ ArrayXX LoadAudio(const std::string& filename, int num_samples, int num_ears) {
 
 // Writes the CARFAC NAP output to a text file.
 void WriteNAPOutput(const CARFACOutput& output, const std::string& filename,
-                    int ear, int stride, int apply_filter) {
+                    int ear, int stride, FPType a_1, int apply_filter) {
   if(apply_filter)
-    WriteFilterMatrix(filename, output.nap()[ear].transpose(), stride);
+    WriteFilterMatrix(filename, output.nap()[ear].transpose(), stride, a_1);
   else
     WriteMatrix(filename, output.nap()[ear].transpose());
 }
@@ -141,11 +141,12 @@ int main(int argc, char *argv[])
   int num_ears = atoi(argv[3]); 
   FPType sample_rate = atoi(argv[4]); 
   int stride = atoi(argv[5]); 
-  int apply_filter = atoi(argv[6]);
+  FPType a_1 = atof(argv[6]);
+  int apply_filter = atoi(argv[7]);
   ArrayXX sound_data = LoadAudio(fname + "-audio.txt", num_samples, num_ears);
   CARFAC carfac(num_ears, sample_rate, car_params_, ihc_params_, agc_params_);
   CARFACOutput output(true, true, false, false);
   carfac.RunSegment(sound_data, open_loop_, &output);
   //If you need more ears, this is where to loop it. Change the output filename accordingly.
-  WriteNAPOutput(output, fname + "-output.txt", 0, stride, apply_filter); 
+  WriteNAPOutput(output, fname + "-output.txt", 0, stride, a_1, apply_filter);
 }

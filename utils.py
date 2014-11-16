@@ -9,6 +9,7 @@ import cPickle as pickle
 import zlib
 import random
 import multiprocessing as mp
+import threading
 
 import numpy as np
 import zmq
@@ -31,7 +32,7 @@ def load(filename):
     return data
 
 def write_cochlear(wav_file):
-    array_to_csv('{}-cochlear.txt'.format(wav_file), cochlear(wav_file, stride=441))
+    array_to_csv('{}-cochlear.txt'.format(wav_file), cochlear(wav_file, stride=441, a_1 = -0.995)) #a_1 = -0.95
 
 def load_cochlear(wav_file):
     return csv_to_array('{}-cochlear.txt'.format(wav_file))
@@ -123,6 +124,7 @@ def trim(A, threshold=100):
 
 
 def trim_right(A, threshold=.2):
+    return A
     ''' Trims right side of the thresholded part of the signal.'''
     #print 'A', A
     maxes = np.max(A, axis=1)
@@ -134,6 +136,15 @@ def trim_right(A, threshold=.2):
             return A[:i+apex]
     return A
 
+def trim_wav(sound, threshold=100):
+    ''' Removes tresholded region at beginning and end '''
+    right = len(sound)-1
+    while sound[right] < threshold:
+        right -= 1
+    left = 0 
+    while sound[left] < threshold:
+        left += 1
+    return sound[left:right]
         
 def split_signal(data, threshold=100, length=5000, elbow_grease=100, plot=False, markers=[]):
     ''' Splits the signal after [length] silence '''
@@ -350,7 +361,8 @@ def print_exception(msg=''):
 def scheduler(host):
     me = mp.current_process()
     print me.name, 'PID', me.pid
-
+    AliveNotifier(me)
+    
     context = zmq.Context()
     
     play_events = context.socket(zmq.PULL)
@@ -424,3 +436,53 @@ def scheduler(host):
                 print 'utils scheduler enabling say something'
                 sender.send_json('enable_say_something 1')
                 enable_say_something = 1
+
+
+def true_wait(seconds):
+    time.sleep(seconds)
+    return True
+                
+def sentinel(host):
+    me = mp.current_process()
+    print me.name, 'PID', me.pid
+
+    context = zmq.Context()
+    
+    life_signal_Q = context.socket(zmq.PULL)
+    life_signal_Q.bind('tcp://*:{}'.format(IO.SENTINEL))
+
+    sender = context.socket(zmq.PUSH)
+    sender.connect('tcp://{}:{}'.format(host, IO.EXTERNAL))
+
+    poller = zmq.Poller()
+    poller.register(life_signal_Q, zmq.POLLIN)
+
+    book = {}
+
+    while True:
+        events = dict(poller.poll(timeout=IO.TIME_OUT*2))
+
+        if life_signal_Q in events:
+            process = life_signal_Q.recv_pyobj()
+            book[process] = time.time()
+
+        for process in book.keys():
+            if time.time() - book[process] > IO.TIME_OUT*2:
+                print '{} HAS DIED, SAVING AND REBOOTING'.format(process)
+
+                
+class AliveNotifier(threading.Thread):
+    def __init__(self, me, host='localhost'):
+        threading.Thread.__init__(self)
+        self.name = '{} PID {}'.format(me.name, me.pid)
+        context = zmq.Context()
+        self.life_signal_Q = context.socket(zmq.PUSH)
+        self.life_signal_Q.connect('tcp://{}:{}'.format(host, IO.SENTINEL))
+
+        self.start()
+
+    def run(self):
+        while true_wait(IO.TIME_OUT):
+            self.life_signal_Q.send_pyobj(self.name)
+    
+    

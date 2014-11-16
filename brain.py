@@ -11,6 +11,7 @@ from subprocess import call
 import time
 import ctypes
 import os
+import itertools
 
 import numpy as np
 import zmq
@@ -23,6 +24,8 @@ from sklearn.decomposition import RandomizedPCA
 from scipy.signal.signaltools import correlate2d as c2d
 import sai as pysai
 from zmq.utils.jsonapi import dumps
+from scipy.stats import itemfreq
+from scipy.cluster.vq import kmeans, vq
 
 import utils
 import IO
@@ -47,7 +50,8 @@ FRAME_SIZE = (160,120) # Neural network image size, 1/4 of full frame size.
 def cognition(host):
     me = mp.current_process()
     print me.name, 'PID', me.pid
-    
+    utils.AliveNotifier(me)
+
     context = zmq.Context()
 
     eventQ = context.socket(zmq.SUB)
@@ -117,6 +121,7 @@ def cognition(host):
                     face_timer = time.time()
                     face_enable_once = True
                     print 'face_enable_once', face_enable_once
+
             last_face_id = this_face_id
 
         if stateQ in events:
@@ -185,6 +190,7 @@ def cognition(host):
 def face_extraction(host, extended_search=False, show=False):
     me = mp.current_process()
     print me.name, 'PID', me.pid
+    utils.AliveNotifier(me)
 
     eye_cascade = cv2.cv.Load(EYE_HAAR_CASCADE_PATH)
     face_cascade = cv2.cv.Load(FACE_HAAR_CASCADE_PATH)
@@ -277,10 +283,72 @@ def train_network(x, y, output_dim=100, leak_rate=.9, bias_scaling=.2, reset_sta
 
     return net
 
-def dream(brain):
-    return True # SELF-ORGANIZING OF ALL MEMORIES! EXTRACT CATEGORIES AND FEATURES!
+def dream(wavs, wav_segments):
+    import matplotlib.pyplot as plt
+    plt.ion()
+    print 'Removing wrongly binned filenames'
+    mega_filenames_and_indexes = []
+    for audio_id, wav_files in enumerate(wavs):
+        NAP_detail = 'low'
+        print 'Examining audio_id', audio_id
 
-def cochlear(filename, db=-40, stride=441, new_rate=22050, ears=1, apply_filter=1):
+        if len(wav_files) == 1:
+            print 'Just one member in this audio_id, skipping analysis'
+            continue
+        k = 2
+
+        filenames_and_indexes = []
+        for soundfile in wav_files:
+            segstart, segend = wav_segments[(soundfile, audio_id)]
+            audio_segments = utils.get_segments(soundfile)
+            segstart /= audio_segments[-1]
+            segend /= audio_segments[-1]
+            filenames_and_indexes.append([ soundfile, segstart, segend, audio_id, NAP_detail ])
+
+        mega_filenames_and_indexes.extend(filenames_and_indexes)
+            
+        sparse_codes = mysai.experiment(filenames_and_indexes, k)
+        plt.matshow(sparse_codes, aspect='auto')
+        plt.colorbar()
+        plt.draw()
+
+        coarse = np.mean(sparse_codes, axis=1)
+        coarse.shape = (len(coarse), 1)
+
+        codebook,_ = kmeans(coarse, k)
+        instances = [ vq(np.atleast_2d(s), codebook)[0] for s in coarse ]
+
+        freqs = itemfreq(instances)
+        sorted_freqs = sorted(freqs, key=lambda x: x[1])
+        print 'Average sparse codes: {} Class count: {}'.format(list(itertools.chain.from_iterable(coarse)), sorted_freqs)
+
+        if len(sorted_freqs) == 1:
+            print 'Considered to be all the same.'
+            continue
+        
+        fewest_class = sorted_freqs[0][0]
+        print 'Class {} has fewest members, deleting {}'.format(fewest_class, [ filename for filename, i in zip(wav_files, instances) if i == fewest_class ])
+
+    print 'Creating mega super self-organized class'
+
+    for row in mega_filenames_and_indexes:
+        row[-1] = 'high'
+
+    high_resolution_k = 256
+    clusters = 24
+    sparse_codes = mysai.experiment(filenames_and_indexes, high_resolution_k)
+    plt.matshow(sparse_codes, aspect='auto')
+    plt.colorbar()
+    plt.draw()
+
+    codebook,_ = kmeans(sparse_codes, clusters)
+    instances = [ vq(np.atleast_2d(s), codebook)[0] for s in sparse_codes ]
+
+    cluster_list = zip(mega_filenames_and_indexes, instances)
+    
+    
+        
+def cochlear(filename, db=-40, stride=441, new_rate=22050, ears=1, a_1=-0.995, apply_filter=1):
     rate, data = wavfile.read(filename)
     assert data.dtype == np.int16
     data = data / float(2**15)
@@ -288,7 +356,7 @@ def cochlear(filename, db=-40, stride=441, new_rate=22050, ears=1, apply_filter=
         data = resample(data, float(new_rate)/rate, 'sinc_best')
     data = data*10**(db/20)
     utils.array_to_csv('{}-audio.txt'.format(filename), data)
-    call(['./carfac-cmd', filename, str(len(data)), str(ears), str(new_rate), str(stride), str(apply_filter)])
+    call(['./carfac-cmd', filename, str(len(data)), str(ears), str(new_rate), str(stride), str(a_1), str(apply_filter)])
     naps = utils.csv_to_array('{}-output.txt'.format(filename))
     os.remove('{}-audio.txt'.format(filename))
     os.remove('{}-output.txt'.format(filename))
@@ -373,6 +441,7 @@ def _extract_NAP(segstart, segend, soundfile):
 def respond(control_host, learn_host, debug=False):
     me = mp.current_process()
     print me.name, 'PID', me.pid
+    utils.AliveNotifier(me)
 
     context = zmq.Context()
     
@@ -524,7 +593,7 @@ def respond(control_host, learn_host, debug=False):
                     NAP_exact = utils.exact(NAP, maxlen)
            
                     # _recognize_audio_id(audio_recognizer, NAP)         
-                    _recognize_global_audio_id(global_audio_recognizer, NAP, plt)
+                    #_recognize_global_audio_id(global_audio_recognizer, NAP, plt)
                     # _recognize_mixture_audio_id(mixture_audio_recognizer, NAP)
 
                     # if debug:            
@@ -805,6 +874,7 @@ def _recognize_global_audio_id(audio_recognizer, NAP, plt):
 def learn_audio(host, debug=False):
     me = mp.current_process()
     print '{} PID {}'.format(me.name, me.pid)
+    utils.AliveNotifier(me)
 
     context = zmq.Context()
 
@@ -934,7 +1004,7 @@ def learn_audio(host, debug=False):
                     print 'RHYME VALUE', np.mean(sorted(all_hammings)[int(len(all_hammings)/2):])
                     rhyme = np.mean(sorted(all_hammings)[int(len(all_hammings)/2):]) < RHYME_HAMMERTIME
 
-                    # global_audio_recognizer = _train_global_audio_recognizer(NAPs) # Enabled in single_response
+                    #global_audio_recognizer = _train_global_audio_recognizer(NAPs)
                     # mixture_audio_recognizer = _train_mixture_audio_recognizer(NAPs)
                     
                     sender.send_json('rhyme {}'.format(rhyme))
@@ -947,6 +1017,9 @@ def learn_audio(host, debug=False):
 
                 audio.clear()
 
+            if 'dream' in pushbutton:
+                dream(wavs, wav_segments)
+                
             if 'save' in pushbutton:
                 utils.save('{}.{}'.format(pushbutton['save'], me.name), [ NAPs, wavs, wav_segments, NAP_hashes, audio_classifier, maxlen ])
 
@@ -957,6 +1030,7 @@ def learn_audio(host, debug=False):
 def learn_video(host, debug=False):
     me = mp.current_process()
     print '{} PID {}'.format(me.name, me.pid)
+    utils.AliveNotifier(me)
 
     context = zmq.Context()
 
@@ -1026,7 +1100,8 @@ def learn_video(host, debug=False):
 def learn_faces(host, debug=False):
     me = mp.current_process()
     print '{} PID {}'.format(me.name, me.pid)
-
+    utils.AliveNotifier(me)
+    
     context = zmq.Context()
 
     face = context.socket(zmq.SUB)
