@@ -16,7 +16,6 @@
 	    kFollow1	downsamp aFollow1	
 	    kFollowdb1	= dbfsamp(kFollow1)		    ; convert to dB
 
-
 ; compress before recording
 	    kthresh         = -15
 	    kratio          = 2.5
