@@ -37,11 +37,13 @@ except:
     
 FACE_HAAR_CASCADE_PATH = opencv_prefix + '/share/OpenCV/haarcascades/haarcascade_frontalface_default.xml'
 EYE_HAAR_CASCADE_PATH = opencv_prefix + '/share/OpenCV/haarcascades/haarcascade_eye_tree_eyeglasses.xml'
+
 # Hamming distance match criterions
 AUDIO_HAMMERTIME = 8 
 RHYME_HAMMERTIME = 11
 FACE_HAMMERTIME = 12
 FRAME_SIZE = (160,120) # Neural network image size, 1/4 of full frame size.
+FACE_MEMORY_SIZE = 100
 
 
 def cognition(host):
@@ -90,8 +92,7 @@ def cognition(host):
 
         if face in events and face_recognizer:
             new_face = utils.recv_array(face)
-            gray = cv2.cvtColor(new_face, cv2.COLOR_BGR2GRAY) / 255.
-            x_test = face_recognizer.rPCA.transform(np.ndarray.flatten(gray))
+            x_test = face_recognizer.rPCA.transform(np.ndarray.flatten(new_face))
             this_face_id = face_recognizer.predict(x_test)
             if this_face_id != last_face_id:
                 print 'FACE ID', last_face_id
@@ -213,7 +214,10 @@ def face_extraction(host, extended_search=False, show=False):
             x,y,w,h = faces_sorted[0]
             x_diff = (rows/2. - (x + w/2.))/rows
             y_diff = (y + h/2. - cols/2.)/cols
-            utils.send_array(publisher, cv2.resize(frame[y:y+h, x:x+w], (100,100)))
+            resized_face = cv2.resize(frame[y:y+h, x:x+w], (100,100))
+            gray_face = cv2.cvtColor(resized_face, cv2.COLOR_BGR2GRAY) / 255.
+            
+            utils.send_array(publisher, gray_face)
             i += 1
             if i%1 == 0:
                 if abs(x_diff) > .1:
@@ -225,6 +229,7 @@ def face_extraction(host, extended_search=False, show=False):
             if faces:
                 cv2.rectangle(frame, (x,y), (x+w,y+h), (0, 0, 255), 2)
                 cv2.line(frame, (x + w/2, y + h/2), (rows/2, cols/2), (255,0,0), 2)
+                frame[-100:,-100:] = resized_face
                 cv2.waitKey(1)
             cv2.imshow('Faces', frame)
 
@@ -1021,10 +1026,9 @@ def learn_faces(host, debug=False):
         
         if face in events:
             new_face = utils.recv_array(face)
-            gray = cv2.cvtColor(new_face, cv2.COLOR_BGR2GRAY) / 255.
 
             if state['record']:
-                faces.append(gray)
+                faces.append(new_face)
 
         if eventQ in events:
             pushbutton = eventQ.recv_json()
@@ -1061,11 +1065,15 @@ def learn_faces(host, debug=False):
                             face_hashes.append([new_faces_hashes[-1]])
                             face_id = len(face_history) - 1
 
+                        # We erase old faces.
+                        if len(face_history) > FACE_MEMORY_SIZE:
+                            face_history[-FACE_MEMORY_SIZE-1] = [[]]
+
                         if len(face_history) > 1:
                             # Possible fast version: train only on last face.
 
-                            x_train = [ np.ndarray.flatten(f) for cluster in face_history for f in cluster ]
-                            targets = [ i for i,f in enumerate(face_history) for _ in f ]
+                            x_train = [ np.ndarray.flatten(f) for cluster in face_history for f in cluster if len(f) ]
+                            targets = [ i for i,cluster in enumerate(face_history) for f in cluster if len(f) ]
 
                             rPCA = RandomizedPCA(n_components=100)
                             x_train = rPCA.fit_transform(x_train)
