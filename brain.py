@@ -85,6 +85,7 @@ def cognition(host):
     face_timer = 0
     minimum_face_interval = 40 # minimum time between face responses
     minimum_urge_to_say_something = 4
+    default_minimum_urge_to_say_something = 4
 
     lastSentenceIds = []
     last_most_significant_audio_id = 0
@@ -134,7 +135,10 @@ def cognition(host):
             if 'rhyme' in pushbutton:
                 rhyme = pushbutton['rhyme']
                 print 'RHYME ?', rhyme
-                rhyme_enable_once = True
+                if rhyme:
+                    rhyme_enable_once = True
+                    minimum_urge_to_say_something = 0
+                    sender.send_json('clear play_events')
                 
             if 'urge_to_say_something' in pushbutton and (float(pushbutton['urge_to_say_something']) > minimum_urge_to_say_something) and state['enable_say_something']:
                 print 'I feel the urge to say something...'
@@ -149,6 +153,7 @@ def cognition(host):
                         if len(rhymes) > 7 : rhymes= rhymes[:7] # temporary length limit
                         print 'Rhyme sentence:', rhymes
                         sender.send_json('play_sentence {}'.format(rhymes))
+                        minimum_urge_to_say_something = default_minimum_urge_to_say_something
                     except:
                         utils.print_exception('Rhyme failed.')
                 
@@ -578,7 +583,7 @@ def respond(control_host, learn_host, debug=False):
 
             if 'respond_sentence' in pushbutton:
                 print 'SENTENCE Respond to', pushbutton['filename'][-12:]
-                
+                    
                 try:
                     filename = pushbutton['filename']
                     audio_segments = utils.get_segments(filename)

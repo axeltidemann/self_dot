@@ -146,6 +146,9 @@ class Controller:
                 audio_id = message[31:]
                 self.event.send_json({'last_most_significant_audio_id': audio_id })
             
+            if message == 'clear play_events':
+                self.event.send_json({'clear play_events' : 'True'})
+
             if 'calculate_cochlear' in message:
                 _, wav_file = message.split()
                 t0 = time.time()

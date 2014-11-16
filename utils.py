@@ -355,6 +355,10 @@ def scheduler(host):
     
     play_events = context.socket(zmq.PULL)
     play_events.bind('tcp://*:{}'.format(IO.SCHEDULER))
+    
+    eventQ = context.socket(zmq.SUB)
+    eventQ.connect('tcp://{}:{}'.format(host, IO.EVENT))
+    eventQ.setsockopt(zmq.SUBSCRIBE, b'') 
 
     sender = context.socket(zmq.PUSH)
     sender.connect('tcp://{}:{}'.format(host, IO.EXTERNAL))
@@ -370,6 +374,7 @@ def scheduler(host):
     poller = zmq.Poller()
     poller.register(play_events, zmq.POLLIN)
     poller.register(stateQ, zmq.POLLIN)
+    poller.register(eventQ, zmq.POLLIN)
 
     to_be_played = []
     enable_say_something = 0
@@ -397,6 +402,15 @@ def scheduler(host):
             enable_say_something = 0
             to_be_played = play_events.recv_pyobj()
             wait_time = 0
+
+        if eventQ in events:
+            pushbutton = eventQ.recv_json()
+            
+            if 'clear play_events' in pushbutton and pushbutton['clear play_events']:
+                print 'SCHEDULER CLEAR EVENTS'
+                to_be_played = []
+                sender.send_json('enable_say_something 1')
+                enable_say_something = 1
 
         if len(to_be_played) and time.time() - t0 > wait_time:
             t0 = time.time()
