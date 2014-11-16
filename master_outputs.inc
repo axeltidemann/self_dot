@@ -47,9 +47,9 @@
         iMaster         = 0.5
         aoutL           = (aL+(averb1L*iverb1Lev)+(averb2L*iverb2Lev))*iMaster
         aoutR           = (aR+(averb1R*iverb1Lev)+(averb2R*iverb2Lev))*iMaster
-                        chnmix aoutL, "MasterOut1"
-                        chnmix aoutR, "MasterOut2"
- 
+;                        chnmix aoutL, "MasterOut1"
+;                        chnmix aoutR, "MasterOut2"
+                        outs aoutL, aoutR
         endin
     
     
