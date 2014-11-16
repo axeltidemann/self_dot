@@ -9,6 +9,7 @@ import cPickle as pickle
 import zlib
 import random
 import multiprocessing as mp
+import threading
 
 import numpy as np
 import zmq
@@ -31,10 +32,25 @@ def load(filename):
     return data
 
 def write_cochlear(wav_file):
-    array_to_csv('{}-cochlear.txt'.format(wav_file), cochlear(wav_file))
+    array_to_csv('{}-cochlear.txt'.format(wav_file), cochlear(wav_file, stride=441, a_1 = -0.995)) #a_1 = -0.95
 
 def load_cochlear(wav_file):
     return csv_to_array('{}-cochlear.txt'.format(wav_file))
+
+def plot_NAP_and_energy(NAP, plt):
+    plt.clf()
+    plt.subplot(211)
+    plt.plot(np.mean(NAP, axis=1))
+    plt.xlim(xmax=len(NAP))
+    plt.title('Average energy')
+
+    plt.subplot(212)
+    plt.imshow(NAP.T, aspect='auto')
+    for x in np.where(NAP > .9)[0]:
+        plt.axvline(x, color='w')
+    plt.title('NAP')
+
+    plt.draw()
 
 # http://goo.gl/zeJZl
 def bytes2human(n, format="%(value)i%(symbol)s"):
@@ -117,6 +133,15 @@ def trim_right(A, threshold=.2):
             return A[:i+apex]
     return A
 
+def trim_wav(sound, threshold=100):
+    ''' Removes tresholded region at beginning and end '''
+    right = len(sound)-1
+    while sound[right] < threshold:
+        right -= 1
+    left = 0 
+    while sound[left] < threshold:
+        left += 1
+    return sound[left:right]
         
 def split_signal(data, threshold=100, length=5000, elbow_grease=100, plot=False, markers=[]):
     ''' Splits the signal after [length] silence '''
@@ -280,7 +305,7 @@ def getSoundInfo(wavfile):
     return startTime, totalDur, maxAmp, segments
 
 
-def get_segments(wavfile, threshold=.25):
+def get_segments(wavfile):
     ''' Find segments in audio descriptor file. Transients closer together than the threshold will be excluded.'''
     _, totalDur, _, segments = getSoundInfo(wavfile)
     segmentTimes = []
@@ -289,32 +314,11 @@ def get_segments(wavfile, threshold=.25):
     segmentTimes.append(totalDur)    
     return np.array(segmentTimes)
     
-#    audio_info = open(wavfile[:-4]+'.txt')
-#    segments = []
-#    for line in audio_info:
-#        if 'Total duration:' in line:
-#            segments.append(float(line[16:]))
-#        try:
-#            segments.append(float(line))
-#        except:
-#            continue
-#
-#    remove = [ i for i,d in enumerate(np.diff(segments)) if d < threshold ]
-#    for i in remove[::-1]:
-#        segments.pop(i+1)
-#        
-#    return np.array(segments)
-
-#def getSoundParmFromFile(responsefile):
-#    audioinfo = open(responsefile[:-4]+'.txt')
-#    maxamp = 1
-#    dur = 1
-#    for line in audioinfo:
-#        if 'Total duration:' in line: 
-#            dur = float(line[16:])
-#        if 'Max amp for file:' in line:
-#            maxamp = float(line[18:])
-#    return dur, maxamp
+def get_most_significant_word(wavfile):
+    _,_,_,segmentData = getSoundInfo(wavfile)
+    amps = [ item[0] for item in segmentData ]
+    return amps.index(max(amps))
+     
 
 def getLatestMemoryWavs(howmany):
     '''
@@ -353,7 +357,8 @@ def print_exception(msg=''):
 def scheduler(host):
     me = mp.current_process()
     print me.name, 'PID', me.pid
-
+    AliveNotifier(me)
+    
     context = zmq.Context()
     
     play_events = context.socket(zmq.PULL)
@@ -375,12 +380,13 @@ def scheduler(host):
     poller.register(stateQ, zmq.POLLIN)
 
     to_be_played = []
+    enable_say_something = 0
 
     t0 = 0
     wait_time = 0
 
     while True:
-        events = dict(poller.poll(timeout=50))
+        events = dict(poller.poll(timeout=100))
 
         if stateQ in events:
             state = stateQ.recv_json()
@@ -389,9 +395,14 @@ def scheduler(host):
             to_be_played = []
             wait_time = 4
             t0 = time.time()
-
+            if enable_say_something:
+                sender.send_json('enable_say_something 0')
+                enable_say_something = 0
+                
         if play_events in events:
+            print 'utils scheduler disabling say something'
             sender.send_json('enable_say_something 0')
+            enable_say_something = 0
             to_be_played = play_events.recv_pyobj()
             wait_time = 0
 
@@ -404,9 +415,15 @@ def scheduler(host):
                 send_array(projector, np.resize(row, frame_size[::-1]))
                 
             if len(to_be_played) == 0:
+                print 'utils scheduler enabling say something'
                 sender.send_json('enable_say_something 1')
+                enable_say_something = 1
 
 
+def true_wait(seconds):
+    time.sleep(seconds)
+    return True
+                
 def sentinel(host):
     me = mp.current_process()
     print me.name, 'PID', me.pid
@@ -414,4 +431,40 @@ def sentinel(host):
     context = zmq.Context()
     
     life_signal_Q = context.socket(zmq.PULL)
-    life_signal_Q.bind('tcp://*:{}'.format(IO.SCHEDULER))
+    life_signal_Q.bind('tcp://*:{}'.format(IO.SENTINEL))
+
+    sender = context.socket(zmq.PUSH)
+    sender.connect('tcp://{}:{}'.format(host, IO.EXTERNAL))
+
+    poller = zmq.Poller()
+    poller.register(life_signal_Q, zmq.POLLIN)
+
+    book = {}
+
+    while True:
+        events = dict(poller.poll(timeout=IO.TIME_OUT*2))
+
+        if life_signal_Q in events:
+            process = life_signal_Q.recv_pyobj()
+            book[process] = time.time()
+
+        for process in book.keys():
+            if time.time() - book[process] > IO.TIME_OUT*2:
+                print '{} HAS DIED, SAVING AND REBOOTING'.format(process)
+
+                
+class AliveNotifier(threading.Thread):
+    def __init__(self, me, host='localhost'):
+        threading.Thread.__init__(self)
+        self.name = '{} PID {}'.format(me.name, me.pid)
+        context = zmq.Context()
+        self.life_signal_Q = context.socket(zmq.PUSH)
+        self.life_signal_Q.connect('tcp://{}:{}'.format(host, IO.SENTINEL))
+
+        self.start()
+
+    def run(self):
+        while true_wait(IO.TIME_OUT):
+            self.life_signal_Q.send_pyobj(self.name)
+    
+    

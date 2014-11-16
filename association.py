@@ -25,8 +25,8 @@ import IO
 import re
 findfloat=re.compile(r"[0-9.]*")
 import copy
+import numpy as np
 import random
-import numpy
 import math
 import utils
 import time
@@ -36,6 +36,7 @@ from pyevolve import G1DList, GSimpleGA, Mutators, Selectors, Initializators, Mu
 
 #wavSegments = {}        # {(wavefile, id):[segstart,segend], (wavefile, id):[segstart,segend], ...} 
 #wavs_as_words = []      # list of wave files for each word (audio id) [[w1,w2,w3],[w4],...]
+#wavfile_words = {}      # {wavefile1:[audio_id1, id2, id3], wavefile2:[audio_id1, id2, id3],...}
 wordTime = {}           # {id1:[time1, time2, t3...]], id2: ...}
 time_word = []          # [[time,id1],[time,id2],...]
 duration_word = []      # [[dur, id1], [dur,id2]
@@ -43,7 +44,7 @@ similarWords = {}       # {id1: [distance to audio id 0, distance to audio id 1,
 neighbors = {}          # {id1: [[neighb_id1, how_many_times], [neighb_id2, how_many_times]...], id2:[[n,h],[n,h]...]}
 neighborAfter = {}      # as above, but only including words that immediately follow this word (not immediately preceding)
 wordFace = {}           # {id1:[face1,numtimes],[face2,numtimes],...], id2:[...]}
-faceWord ={}            # [face1:[id1,,numtimes],[id2,numtimes],[...], face2:[...]}
+faceWord ={}            # [face1:[id1,numtimes],[id2,numtimes],[...], face2:[...]}
 
 sentencePosition_item = [] # give each word a score for how much it belongs in the beginning of a sentence or in the end of a sentence   
 wordsInSentence = {}    # list ids that has occured in the same sentence {id:[[id1,numtimes],[id2,numtimes],[id3,nt]], idN:[...]}
@@ -85,6 +86,7 @@ currentSettings = [] # for temporal storage of globals (association weights)
 def association(host):
     me = mp.current_process()
     print me.name, 'PID', me.pid
+    utils.AliveNotifier(me)
 
     context = zmq.Context()
 
@@ -123,6 +125,9 @@ def association(host):
                 if func == 'getSimilarWords':
                     _,predicate, distance = thing
                     answer = getSimilarWords(predicate, distance)
+                if func == 'getFaceResponse':
+                    _,face, = thing
+                    answer = getFaceResponse(face)
                 if func == 'pushCurrentSettings':
                     pushCurrentSettings()
                 if func == 'popCurrentSettings':
@@ -179,12 +184,12 @@ def analyze(wav_file,wav_segments,segment_ids,wavs,similar_ids,_wordFace,_faceWo
     #print 'similar_ids:'
     #for item in similar_ids:
     #    print '   ', item
-    global wordFace,faceWord
+    global wordFace,faceWord#,wavfile_words
     wordFace = copy.copy(_wordFace)
     faceWord = copy.copy(_faceWord)
+    #wavfile_words[wav_file]= segment_ids
 
     markerfile = wav_file[:-4]+'.txt'
-    #startTime, totalDur = parseFile(markerfile) # COORDINATION! with utils.getSoundParmFromFile
     startTime,totalDur,_,_ = utils.getSoundInfo(markerfile)
     
     for i in range(len(segment_ids)):
@@ -199,17 +204,17 @@ def analyze(wav_file,wav_segments,segment_ids,wavs,similar_ids,_wordFace,_faceWo
         wordTime.setdefault(audio_id, []).append(segmentStart)
         duration_word.append((segmentDur, audio_id))   
         
-        similar_ids_this = similar_ids[i]
         wordTime.setdefault(audio_id, []).append(segmentStart)
         duration_word.append((segmentDur, audio_id))   
         
         similar_ids_this = similar_ids[i]
-        if max(similar_ids_this) == 0:
-            similarScaler = 1
-        else:
-            similarScaler = 1/float(max(similar_ids_this))
-        similarWords[audio_id] = scale(similar_ids_this, similarScaler)
-
+        #if max(similar_ids_this) == 0:
+        #    similarScaler = 1
+        #else:
+        #    similarScaler = 1/float(max(similar_ids_this))
+        #similarWords[audio_id] = scale(similar_ids_this, similarScaler)
+        similarWords[audio_id] = similar_ids_this
+        
         # fill in our best estimates for hamming distances between this id and earlier ids
         # (these will be updated with better values when a new sound similar to any earlier id comes in) 
         for k in similarWords.keys():
@@ -294,11 +299,11 @@ def sentence_fitness(genome):
 
         neighbors_to_this = [ item[0] for item in neighbors[predicate] if item[1] ]
         if debug: print 'neighbors_to_this', neighbors_to_this
-        fitness += numpy.mean([ word in neighbors_to_this for word in sentence ])
+        fitness += np.mean([ word in neighbors_to_this for word in sentence ])
 
         in_sentence = [ item[0] for item in wordsInSentence[predicate] if item[1] ]
         if debug: print 'in_sentence', in_sentence
-        fitness += numpy.mean([ word in in_sentence for word in sentence ])
+        fitness += np.mean([ word in in_sentence for word in sentence ])
 
         faces = [item[0] for item in wordFace[predicate]]
         if debug: print 'faces', faces
@@ -309,23 +314,23 @@ def sentence_fitness(genome):
         try:
             face_word =  [ item[0] for item in faceWord[face] if item[1] ]
             if debug: print 'face_word', face_word
-            fitness += numpy.mean([ word in face_word for word in sentence ])
+            fitness += np.mean([ word in face_word for word in sentence ])
         except:
             pass
 
         similar_scores = similarWords[predicate]
-        idxs = numpy.argsort(similar_scores)
+        idxs = np.argsort(similar_scores)
         winners = idxs[-int(len(idxs)/3):]
         if debug: print 'winners', winners
-        fitness += numpy.mean([ word in winners for word in sentence ])
+        fitness += np.mean([ word in winners for word in sentence ])
 
         time_short_before, time_short_after = getTimeContext(predicate, timeShortDistance)
         time_short_before = [ item[0] for item in time_short_before ]
         time_short_after = [ item[0] for item in time_short_after ]
         if debug: print 'time_short_before', time_short_before
         if debug: print 'time_short_after', time_short_after
-        fitness += numpy.mean([ word in time_short_before for word in sentence ])
-        fitness += numpy.mean([ word in time_short_after for word in sentence ])
+        fitness += np.mean([ word in time_short_before for word in sentence ])
+        fitness += np.mean([ word in time_short_after for word in sentence ])
 
         time_long_before, time_long_after = getTimeContext(predicate, timeLongDistance)
         time_long_before = [ item[0] for item in time_long_before ]
@@ -333,8 +338,8 @@ def sentence_fitness(genome):
 
         if debug: print 'time_long_before', time_long_before
         if debug: print 'time_long_after', time_long_after
-        fitness += numpy.mean([ word in time_long_before for word in sentence ])
-        fitness += numpy.mean([ word in time_long_after for word in sentence ])
+        fitness += np.mean([ word in time_long_before for word in sentence ])
+        fitness += np.mean([ word in time_long_after for word in sentence ])
 
         # HERE BE DRAGONS!
         posInSentenceWidth = .2     
@@ -342,7 +347,7 @@ def sentence_fitness(genome):
         pos_in_sentence_context = getCandidatesFromContext(sentencePosition_item, posInSentence, posInSentenceWidth)
         pos_in_sentence_context = [ item[0] for item in pos_in_sentence_context ]
         if debug: print 'pos_in_sentence_context', pos_in_sentence_context 
-        fitness += numpy.mean([ word in pos_in_sentence_context for word in sentence ])    
+        fitness += np.mean([ word in pos_in_sentence_context for word in sentence ])    
 
     return fitness
     
@@ -415,7 +420,7 @@ def generate(predicate, method,
     except:_faceWord = [] # if for some reason we can't find any faces
     if debug: print '\n_faceWord', _faceWord
     _similarWords = copy.copy(similarWords[predicate])
-    _similarWords = list(numpy.add(scale(_similarWords, -1), 1.0)) # invert scores (keeping in 0 to 1 range)
+    _similarWords = list(np.add(scale(_similarWords, -1), 1.0)) # invert scores (keeping in 0 to 1 range)
     _similarWords = normalizeItemScore(formatAsMembership(_similarWords))
     _similarWords = zeroMe(predicate, _similarWords)
     if debug: print '\n_similarWords', _similarWords
@@ -594,6 +599,7 @@ def getCandidatesFromContext(context, position, width):
 
 def getSimilarWords(predicate, distance):
     _similarWords = copy.copy(similarWords[predicate])
+    print 'getSimilarWords', predicate, distance, _similarWords 
     try:
         _similarWords = formatAsMembership(_similarWords)
         _similarWords = zeroMe(predicate, _similarWords)
@@ -605,6 +611,10 @@ def getSimilarWords(predicate, distance):
         simIds = [0]
     return simIds
 
+def getFaceResponse(face):
+    print 'getFaceResponse', face, faceWord
+    words = faceWord[face]
+    return random.choice(words)[0]
 
 def weightedSum(a_, weightA_, b_, weightB_):
     '''
@@ -708,14 +718,14 @@ def normalizeItemScore(a):
     return a
 
 def scale(a, scale):
-    a = list(numpy.array(a)*scale)
+    a = list(np.array(a)*scale)
     return a
 
 def clip(a, clipVal):
     if clipVal >= 0:
-        a = list(numpy.clip(a, 0, clipVal))
+        a = list(np.clip(a, 0, clipVal))
     else:
-        a = list(numpy.array(numpy.clip(a, 0, abs(clipVal)))*-1)
+        a = list(np.array(np.clip(a, 0, abs(clipVal)))*-1)
     return a
 
 def formatAsMembership(a):

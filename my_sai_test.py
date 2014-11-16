@@ -84,9 +84,14 @@ def _valid_file(filename, threshold=.1):
     except:
         return False    
 
-def _cochlear_trim_sai_marginals(filename):
+def _cochlear_trim_sai_marginals(filename_and_indexes):
     try:
-        NAP = brain.cochlear(filename, stride=1, new_rate=44100, apply_filter=0)
+        filename, segstart, segend, segment_id, NAP_detail = filename_and_indexes
+
+        if NAP_detail == 'high':
+            NAP = brain.cochlear(filename, stride=1, new_rate=44100, apply_filter=0)
+        if NAP_detail == 'low':
+            NAP = brain.cochlear(filename, apply_filter=0) # Seems to work best, in particular when they are all the same.
         
         num_channels = NAP.shape[1]
         input_segment_width = 2048
@@ -97,53 +102,43 @@ def _cochlear_trim_sai_marginals(filename):
 
         sai = pysai.SAI(sai_params)
 
-        audio_segments = utils.get_segments(filename)
-        norm_segments = np.rint(NAP.shape[0]*audio_segments/audio_segments[-1]).astype('int')
-        marginals = []
+        NAP = utils.trim_right(NAP[ np.int(np.rint(NAP.shape[0]*segstart)) : np.int(np.rint(NAP.shape[0]*segend)) ], threshold=.05)
+        sai_video = [ np.copy(sai.RunSegment(input_segment.T)) for input_segment in utils.chunks(NAP, input_segment_width) ]
+        return [ [ filename, segment_id, [ sai_rectangles(frame) for frame in sai_video ]] ]
         
-        for segment_id, NAP_segment in enumerate(utils.trim_right(NAP[norm_segments[i]:norm_segments[i+1]], threshold=.05) for i in range(len(norm_segments)-1)) :
-            sai_video = [ np.copy(sai.RunSegment(input_segment.T)) for input_segment in utils.chunks(NAP_segment, input_segment_width) ]
-            marginals.append([filename, segment_id, [ sai_rectangles(frame) for frame in sai_video ]])
-            sai.Reset()
+        
+        # audio_segments = utils.get_segments(filename)
+        # norm_segments = np.rint(NAP.shape[0]*audio_segments/audio_segments[-1]).astype('int')
+        # marginals = []
+        # for segment_id, NAP_segment in enumerate(utils.trim_right(NAP[norm_segments[i]:norm_segments[i+1]], threshold=.05) for i in range(len(norm_segments)-1)) :
+        #     sai_video = [ np.copy(sai.RunSegment(input_segment.T)) for input_segment in utils.chunks(NAP_segment, input_segment_width) ]
+        #     marginals.append([filename, segment_id, [ sai_rectangles(frame) for frame in sai_video ]])
+        #     sai.Reset()
             
-        return marginals
+        # return marginals
     except:
         print utils.print_exception()
         return [[filename, -1, None]]
-    
-if __name__ == '__main__':
-    import matplotlib.pyplot as plt
-    t0 = time.time()
 
+def experiment(filenames, k):
+    t0 = time.time()
     pool = mp.Pool() 
-    sai_video_marginals = pool.map(_cochlear_trim_sai_marginals, [ filename for filename in glob.glob('memory_recordings/*wav') if _valid_file(filename) ])
+    sai_video_marginals = pool.map(_cochlear_trim_sai_marginals, filenames)
     sai_video_marginals = list(itertools.chain.from_iterable(sai_video_marginals))
     pool.close()
-    #NAPs = [ _cochlear_trim_sai(filename) for filename in glob.glob('memory_recordings/*wav')[-5:] if _valid_file(filename) ]
-    #NAPs = [ utils.trim_right(brain.cochlear(filename, stride=1, new_rate=44100, apply_filter=0), threshold=.05) for filename in glob.glob('memory_recordings/*wav')[-10:] if _valid_file(filename) ]
     t1 = time.time()
     print 'Cochlear SAI marginals calculated in {} seconds'.format(t1 - t0)
-
-    # num_channels = NAPs[0][1].shape[1]
-    # input_segment_width = 2048
-    # sai_params = CreateSAIParams(num_channels=num_channels,
-    #                              input_segment_width=input_segment_width,
-    #                              trigger_window_width=input_segment_width,
-    #                              sai_width=1024)
-
-    # sai = pysai.SAI(sai_params)
-
-    # sai_videos = []
-    # for _, NAP in NAPs:
-    #     sai_videos.append([ np.copy(sai.RunSegment(input_segment.T)) for input_segment in utils.chunks(NAP, input_segment_width) ] ) # NOTICE THE NP.COPY FOR JESUS HOLY MOTHER OF JOSEPH SAKE!!! HOLY CRAP!
-    #     sai.Reset()
-
-    # print 'SAI video calculated in {} seconds'.format(time.time() - t1)
-
-    k = 256
     sparse_codes = sai_sparse_codes([ marginals for _,_,marginals in sai_video_marginals if marginals is not None ], k)
     print 'Sparse codes calculated in {} seconds'.format(time.time() - t1)
+    return sparse_codes
+    
+        
+if __name__ == '__main__':
+    import matplotlib.pyplot as plt
 
-    pickle.dump(sai_video_marginals, open('SAIVIDEOMARGINALS', 'w'))    
+    sparse_codes = experiment([ filename for filename in glob.glob('testing/*wav') if _valid_file(filename) ], k=4)
+    
+    #pickle.dump(sai_video_marginals, open('SAIVIDEOMARGINALS', 'w'))    
     plt.ion()
     plt.matshow(sparse_codes, aspect='auto')
+    plt.colorbar()

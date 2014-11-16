@@ -25,7 +25,8 @@ import association
 def idle(host):
     me = mp.current_process()
     print me.name, 'PID', me.pid
-
+    utils.AliveNotifier(me)
+    
     context = zmq.Context()
 
     face = context.socket(zmq.SUB)
@@ -48,10 +49,9 @@ def idle(host):
     sender = context.socket(zmq.PUSH)
     sender.connect('tcp://{}:{}'.format(host, IO.EXTERNAL))
 
-    saySomethingCounter = 0
-    saySomethingModulo = 8
-
     face_timer = 0
+    saysomething_timer = 0
+    saysomething_interval = 8.0
 
     while True:
         events = dict(poller.poll(timeout=100))
@@ -70,21 +70,19 @@ def idle(host):
             state = stateQ.recv_json()
 
         if not state['enable_say_something']:
-            saySomethingCounter = 1
-            saySomethingModulo = 8
+            saysomething_timer = time.time()
 
-        if state['enable_say_something'] and saySomethingCounter%(saySomethingModulo+np.random.randint(saySomethingModulo/2)) == 0:
+        if state['enable_say_something'] and time.time() - saysomething_timer > saysomething_interval:
             sender.send_json('saySomething')
+            print 'self idler disabling say something'
             sender.send_json('enable_say_something 0')
-            #saySomethingModulo += 2
-            #if saySomethingModulo >= 20: saySomethingModulo = 20
-
-        saySomethingCounter += 1
-
+        
+        
 class Controller:
     def __init__(self, init_state, host):
         me = mp.current_process()
         print me.name, 'PID', me.pid
+        utils.AliveNotifier(me)
 
         self.state = init_state
         
@@ -125,6 +123,9 @@ class Controller:
         print '[self.] received:', message
 
         try:
+            if message == 'dream':
+                self.event.send_json({'dream': True})
+            
             if 'enable_say_something' in message:
                 _, value = message.split()
                 self.state['enable_say_something'] = value in ['True', '1']
@@ -132,6 +133,10 @@ class Controller:
             if 'last_segment_ids' in message:
                 the_ids = message[17:]
                 self.event.send_json({'last_segment_ids': loads(the_ids) })
+                
+            if 'last_most_significant_audio_id' in message:
+                audio_id = message[31:]
+                self.event.send_json({'last_most_significant_audio_id': audio_id })
             
             if 'calculate_cochlear' in message:
                 _, wav_file = message.split()
@@ -288,8 +293,8 @@ if __name__ == '__main__':
     mp.Process(target=IO.audio, name='AUDIO').start() 
     mp.Process(target=IO.video, name='VIDEO').start()
     mp.Process(target=brain.face_extraction, args=('localhost',False,True,), name='FACE EXTRACTION').start()
-    mp.Process(target=brain.respond, args=('localhost','localhost',True,), name='RESPONDER').start()
-    mp.Process(target=brain.learn_audio, args=('localhost',True,), name='AUDIO LEARN').start()
+    mp.Process(target=brain.respond, args=('localhost','localhost',True), name='RESPONDER').start()
+    mp.Process(target=brain.learn_audio, args=('localhost',True), name='AUDIO LEARN').start()
     mp.Process(target=brain.learn_video, args=('localhost',), name='VIDEO LEARN').start()
     mp.Process(target=brain.learn_faces, args=('localhost',), name='FACES LEARN').start()
     #mp.Process(target=brain.calculate_sai_video_marginals, args=('localhost',), name='SAI VIDEO CALCULATION').start()
@@ -299,6 +304,7 @@ if __name__ == '__main__':
     mp.Process(target=utils.scheduler, args=('localhost',), name='SCHEDULER').start()
     mp.Process(target=Controller, args=(persistent_states,'localhost',), name='CONTROLLER').start()
     mp.Process(target=idle, args=('localhost',), name='IDLER').start()
+    mp.Process(target=utils.sentinel, args=('localhost',), name='SENTINEL').start()
     try:
         raw_input('')
     except KeyboardInterrupt:

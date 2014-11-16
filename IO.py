@@ -16,6 +16,7 @@ import myCsoundAudioOptions
 # Milliseconds between each image capture
 VIDEO_SAMPLE_TIME = 100
 FRAME_SIZE = (640,480)
+TIME_OUT = 5*60 # Seconds between each "alive" signal
 
 # ØMQ ports
 CAMERA = 5561
@@ -28,15 +29,18 @@ SNAPSHOT= 5567
 EVENT = 5568
 SCHEDULER = 5569
 ROBO = 5570
-#ROBOBACK = 5571
+COGNITION = 5571
 FACE = 5572
 BRAIN = 5573
-ASSOCIATION = 5574 
+ASSOCIATION = 5574
+SENTINEL = 5575
 
 def video():
     me = mp.current_process()
     print me.name, 'PID', me.pid
 
+    utils.AliveNotifier(me)
+    
     cv2.namedWindow('Output', cv2.WND_PROP_FULLSCREEN)
     camera = cv2.VideoCapture(0)
 
@@ -82,7 +86,7 @@ def video():
 def audio():
     me = mp.current_process()
     print me.name, 'PID', me.pid
-
+    utils.AliveNotifier(me)
     context = zmq.Context()
     publisher = context.socket(zmq.PUB)
     publisher.bind('tcp://*:{}'.format(MIC))
