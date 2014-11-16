@@ -10,6 +10,7 @@ import random
 # connect to arduino
 import serial
 import numpy as np
+import utils
 
 class NoSerial:
     def readline(self):
@@ -59,6 +60,7 @@ if serialAvailable:
 def robocontrol(host):
     me = mp.current_process()
     print me.name, 'PID', me.pid
+    utils.AliveNotifier(me)
 
     context = zmq.Context()
 

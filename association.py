@@ -106,6 +106,7 @@ def association(host):
         #time.sleep(.1)
         events = dict(poller.poll())
         if association in events:
+            t0 = time.time()
             address, _, message = association.recv_multipart()
             thing = pickle.loads(message)
             try:
@@ -142,7 +143,7 @@ def association(host):
                 association.send_multipart([ address,
                                              b'',
                                              pickle.dumps('Something went wrong in association.py, check the output log!') ])
-
+            print 'ASSOCIATION.ANALYZE {} seconds'.format(time.time() - t0)
 
         if eventQ in events:
             global wordTime, time_word, duration_word, similarWords, neighbors, neighborAfter, \

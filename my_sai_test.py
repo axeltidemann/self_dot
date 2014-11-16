@@ -73,7 +73,6 @@ def sai_histogram(sai_video_marginals, codebooks, k):
     return sparse_code
 
 def sai_sparse_codes(sai_video_marginals, k):
-    #sai_video_marginals = [[sai_rectangles(sai_frame) for sai_frame in video] for video in sai_videos]
     all_marginals = list(itertools.chain.from_iterable(sai_video_marginals))
     codebooks = sai_codebooks(all_marginals, k)
     return [ sai_histogram(s, codebooks, k) for s in sai_video_marginals ]
@@ -89,33 +88,29 @@ def _cochlear_trim_sai_marginals(filename_and_indexes):
         filename, segstart, segend, segment_id, NAP_detail = filename_and_indexes
 
         if NAP_detail == 'high':
-            NAP = brain.cochlear(filename, stride=1, new_rate=44100, apply_filter=0)
+            try: 
+                NAP = utils.csv_to_array(filename+'cochlear'+NAP_detail)
+            except:
+                NAP = brain.cochlear(filename, stride=1, new_rate=44100, apply_filter=0, suffix='cochlear'+NAP_detail)
         if NAP_detail == 'low':
-            NAP = brain.cochlear(filename, apply_filter=0) # Seems to work best, in particular when they are all the same.
-        
+            try: 
+                NAP = utils.csv_to_array(filename+'cochlear'+NAP_detail)
+            except: 
+                NAP = brain.cochlear(filename, apply_filter=0, suffix='cochlear'+NAP_detail) # Seems to work best, in particular when they are all the same.
+
         num_channels = NAP.shape[1]
         input_segment_width = 2048
         sai_params = CreateSAIParams(num_channels=num_channels,
-                                    input_segment_width=input_segment_width,
-                                    trigger_window_width=input_segment_width,
-                                    sai_width=1024)
+                                     input_segment_width=input_segment_width,
+                                     trigger_window_width=input_segment_width,
+                                     sai_width=1024)
 
         sai = pysai.SAI(sai_params)
 
         NAP = utils.trim_right(NAP[ np.int(np.rint(NAP.shape[0]*segstart)) : np.int(np.rint(NAP.shape[0]*segend)) ], threshold=.05)
         sai_video = [ np.copy(sai.RunSegment(input_segment.T)) for input_segment in utils.chunks(NAP, input_segment_width) ]
         return [ [ filename, segment_id, [ sai_rectangles(frame) for frame in sai_video ]] ]
-        
-        
-        # audio_segments = utils.get_segments(filename)
-        # norm_segments = np.rint(NAP.shape[0]*audio_segments/audio_segments[-1]).astype('int')
-        # marginals = []
-        # for segment_id, NAP_segment in enumerate(utils.trim_right(NAP[norm_segments[i]:norm_segments[i+1]], threshold=.05) for i in range(len(norm_segments)-1)) :
-        #     sai_video = [ np.copy(sai.RunSegment(input_segment.T)) for input_segment in utils.chunks(NAP_segment, input_segment_width) ]
-        #     marginals.append([filename, segment_id, [ sai_rectangles(frame) for frame in sai_video ]])
-        #     sai.Reset()
-            
-        # return marginals
+
     except:
         print utils.print_exception()
         return [[filename, -1, None]]

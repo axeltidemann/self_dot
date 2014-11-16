@@ -44,7 +44,7 @@ EYE_HAAR_CASCADE_PATH = opencv_prefix + '/share/OpenCV/haarcascades/haarcascade_
 # Hamming distance match criterions
 AUDIO_HAMMERTIME = 8 
 RHYME_HAMMERTIME = 11
-FACE_HAMMERTIME = 12
+FACE_HAMMERTIME = 15
 FRAME_SIZE = (160,120) # Neural network image size, 1/4 of full frame size.
 FACE_MEMORY_SIZE = 100
 
@@ -281,7 +281,6 @@ def train_network(x, y, output_dim=100, leak_rate=.9, bias_scaling=.2, reset_sta
                                               bias_scaling=bias_scaling, 
                                               reset_states=reset_states)
     readout = mdp.nodes.LinearRegressionNode(use_pinv=use_pinv)
-    #readout = Oger.nodes.RidgeRegressionNode(.001)
         
     net = mdp.hinet.FlowNode(reservoir + readout)
     net.train(x,y)
@@ -341,7 +340,8 @@ def dream(wavs, wav_segments):
 
     high_resolution_k = 256
     clusters = 24
-    sparse_codes = mysai.experiment(filenames_and_indexes, high_resolution_k)
+    sparse_codes = mysai.experiment(mega_filenames_and_indexes, high_resolution_k)
+    sparse_codes = np.array(sparse_codes)
     plt.matshow(sparse_codes, aspect='auto')
     plt.colorbar()
     plt.draw()
@@ -349,11 +349,14 @@ def dream(wavs, wav_segments):
     codebook,_ = kmeans(sparse_codes, clusters)
     instances = [ vq(np.atleast_2d(s), codebook)[0] for s in sparse_codes ]
 
-    cluster_list = zip(mega_filenames_and_indexes, instances)
-    
-    
+    cluster_list = {}
+    for mega, instances in zip(mega_filenames_and_indexes, instances):
+        soundfile,_,_,audio_id,_ = mega
+        cluster_list[(soundfile, audio_id)] = instance
+
+    print cluster_list
         
-def cochlear(filename, db=-40, stride=441, new_rate=22050, ears=1, a_1=-0.995, apply_filter=1):
+def cochlear(filename, db=-40, stride=441, new_rate=22050, ears=1, a_1=-0.995, apply_filter=1, suffix='cochlear'):
     rate, data = wavfile.read(filename)
     assert data.dtype == np.int16
     data = data / float(2**15)
@@ -361,20 +364,15 @@ def cochlear(filename, db=-40, stride=441, new_rate=22050, ears=1, a_1=-0.995, a
         data = resample(data, float(new_rate)/rate, 'sinc_best')
     data = data*10**(db/20)
     utils.array_to_csv('{}-audio.txt'.format(filename), data)
-    call(['./carfac-cmd', filename, str(len(data)), str(ears), str(new_rate), str(stride), str(a_1), str(apply_filter)])
-    naps = utils.csv_to_array('{}-output.txt'.format(filename))
+    call(['./carfac-cmd', filename, str(len(data)), str(ears), str(new_rate), str(stride), str(a_1), str(apply_filter), suffix])
+    naps = utils.csv_to_array(filename+suffix)
     os.remove('{}-audio.txt'.format(filename))
-    os.remove('{}-output.txt'.format(filename))
     return np.sqrt(np.maximum(0, naps)/np.max(naps))
 
 
 def _predict_audio_id(audio_classifier, NAP):
     x_test = audio_classifier.rPCA.transform(np.ndarray.flatten(NAP))
     return audio_classifier.predict(x_test)[0]
-
-def _NAP_resampled(wav_file, maxlen, maxlen_scaled):
-    NAP = utils.trim_right(utils.load_cochlear(wav_file))
-    return utils.zero_pad(resample(NAP, float(maxlen)/NAP.shape[0], 'sinc_best'), maxlen_scaled), NAP
 
 def calculate_sai_video_marginals(host, debug=False):
     me = mp.current_process()
@@ -435,8 +433,8 @@ def _project(audio_id, sound_to_face, dur, NAP, video_producer):
     stride = min(1,int(np.ceil(NAP.shape[0]/video_time)))
     return video_producer[(audio_id, face_id)](NAP[::stride])
 
-def _extract_NAP(segstart, segend, soundfile):
-    new_sentence = utils.load_cochlear(soundfile)
+def _extract_NAP(segstart, segend, soundfile, suffix='cochlear'):
+    new_sentence = utils.csv_to_array(soundfile + suffix)
     audio_segments = utils.get_segments(soundfile)
     segstart_norm = np.rint(new_sentence.shape[0]*segstart/audio_segments[-1])
     segend_norm = np.rint(new_sentence.shape[0]*segend/audio_segments[-1])
@@ -588,7 +586,7 @@ def respond(control_host, learn_host, debug=False):
                     filename = pushbutton['filename']
                     audio_segments = utils.get_segments(filename)
                     print 'Single response to {} duration {} seconds with {} segments'.format(filename, audio_segments[-1], len(audio_segments)-1)
-                    new_sentence = utils.load_cochlear(filename)
+                    new_sentence = utils.csv_to_array(filename + 'cochlear')
                     norm_segments = np.rint(new_sentence.shape[0]*audio_segments/audio_segments[-1]).astype('int')
 
                     segment_id = get_most_significant_word(filename)
@@ -675,7 +673,7 @@ def respond(control_host, learn_host, debug=False):
                     filename = pushbutton['filename']
                     audio_segments = utils.get_segments(filename)
                     print 'Sentence response to {} duration {} seconds with {} segments'.format(filename, audio_segments[-1], len(audio_segments)-1)
-                    new_sentence = utils.load_cochlear(filename)
+                    new_sentence = utils.csv_to_array(filename + 'cochlear')
                     norm_segments = np.rint(new_sentence.shape[0]*audio_segments/audio_segments[-1]).astype('int')
 
                     segment_id = utils.get_most_significant_word(filename)
@@ -935,7 +933,7 @@ def learn_audio(host, debug=False):
                     audio_segments = utils.get_segments(filename)
 
                     print 'Learning {} duration {} seconds with {} segments'.format(filename, audio_segments[-1], len(audio_segments)-1)
-                    new_sentence = utils.load_cochlear(filename)
+                    new_sentence = utils.csv_to_array(filename + 'cochlear')
                     norm_segments = np.rint(new_sentence.shape[0]*audio_segments/audio_segments[-1]).astype('int')
                     #print 'norm_segments', len(norm_segments), norm_segments
 
@@ -1016,7 +1014,7 @@ def learn_audio(host, debug=False):
 
                     t1 = time.time()
                     brainQ.send_pyobj(['audio_learn', filename, segment_ids, wavs, wav_segments, audio_classifier, audio_recognizer, global_audio_recognizer, mixture_audio_recognizer,  maxlen, NAP_hashes])
-                    print 'Audio learned in {} seconds, ZMQ time {} seconds'.format(t1 - t0, time.time() - t1)
+                    print 'Audio learned from {} in {} seconds, ZMQ time {} seconds'.format(filename, t1 - t0, time.time() - t1)
                 except:
                     utils.print_exception('Audio learning aborted.')
 
@@ -1074,7 +1072,7 @@ def learn_video(host, debug=False):
                 try:
                     t0 = time.time()
                     filename = pushbutton['filename']
-                    new_sentence = utils.trim_right(utils.load_cochlear(filename))
+                    new_sentence = utils.trim_right(utils.csv_to_array(filename + 'cochlear'))
                     
                     video_segment = np.array(list(video))
                     if video_segment.shape[0] == 0:

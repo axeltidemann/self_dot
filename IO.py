@@ -16,7 +16,7 @@ import myCsoundAudioOptions
 # Milliseconds between each image capture
 VIDEO_SAMPLE_TIME = 100
 FRAME_SIZE = (640,480)
-TIME_OUT = 5*60 # Seconds between each "alive" signal
+TIME_OUT = 5#5*60 # Seconds between each "alive" signal
 
 # ØMQ ports
 CAMERA = 5561
@@ -51,26 +51,23 @@ def video():
     projector = context.socket(zmq.PULL)
     projector.bind('tcp://*:{}'.format(PROJECTOR))
     
-    stateQ = context.socket(zmq.SUB)
-    stateQ.connect('tcp://localhost:{}'.format(STATE))
-    stateQ.setsockopt(zmq.SUBSCRIBE, b'')
-    
+    eventQ = context.socket(zmq.SUB)
+    eventQ.connect('tcp://localhost:{}'.format(EVENT))
+    eventQ.setsockopt(zmq.SUBSCRIBE, b'')
+
     poller = zmq.Poller()
-    poller.register(stateQ, zmq.POLLIN)
+    poller.register(eventQ, zmq.POLLIN)
     poller.register(projector, zmq.POLLIN)
 
-    state = stateQ.recv_json()
-    
     while True:
         events = dict(poller.poll(timeout=0))
 
-        # This probably should be a pushbutton event instead - now this will be done every time the state is updated.
-        if stateQ in events:
-            state = stateQ.recv_json()        
-            if state['fullscreen'] > 0:
-                cv2.setWindowProperty('Output', cv2.WND_PROP_FULLSCREEN, cv2.cv.CV_WINDOW_FULLSCREEN)
-            if state['display2'] > 0:
+        if eventQ in events:
+            pushbutton = eventQ.recv_json()
+            if 'display2' in pushbutton:
                 cv2.moveWindow('Output', 2000, 100)
+            if 'fullscreen' in pushbutton:
+                cv2.setWindowProperty('Output', cv2.WND_PROP_FULLSCREEN, cv2.cv.CV_WINDOW_FULLSCREEN)
 
         if projector in events:
             cv2.imshow('Output', cv2.resize(recv_array(projector), FRAME_SIZE))

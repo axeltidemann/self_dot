@@ -143,10 +143,11 @@ int main(int argc, char *argv[])
   int stride = atoi(argv[5]); 
   FPType a_1 = atof(argv[6]);
   int apply_filter = atoi(argv[7]);
+  std::string suffix = argv[8];
   ArrayXX sound_data = LoadAudio(fname + "-audio.txt", num_samples, num_ears);
   CARFAC carfac(num_ears, sample_rate, car_params_, ihc_params_, agc_params_);
   CARFACOutput output(true, true, false, false);
   carfac.RunSegment(sound_data, open_loop_, &output);
   //If you need more ears, this is where to loop it. Change the output filename accordingly.
-  WriteNAPOutput(output, fname + "-output.txt", 0, stride, a_1, apply_filter);
+  WriteNAPOutput(output, fname + suffix, 0, stride, a_1, apply_filter);
 }

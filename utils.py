@@ -10,6 +10,8 @@ import zlib
 import random
 import multiprocessing as mp
 import threading
+import glob
+from subprocess import call
 
 import numpy as np
 import zmq
@@ -30,12 +32,6 @@ def load(filename):
     data = pickle.load(file(filename, 'r'))
     print 'Part of brain loaded from file {} ({})'.format(filename, filesize(filename))
     return data
-
-def write_cochlear(wav_file):
-    array_to_csv('{}-cochlear.txt'.format(wav_file), cochlear(wav_file, stride=441, a_1 = -0.995)) #a_1 = -0.95
-
-def load_cochlear(wav_file):
-    return csv_to_array('{}-cochlear.txt'.format(wav_file))
 
 def plot_NAP_and_energy(NAP, plt):
     plt.clf()
@@ -124,7 +120,7 @@ def trim(A, threshold=100):
 
 
 def trim_right(A, threshold=.2):
-    return A
+    #return A
     ''' Trims right side of the thresholded part of the signal.'''
     #print 'A', A
     maxes = np.max(A, axis=1)
@@ -170,7 +166,6 @@ def split_wav(filename, threshold=100, length=5000, elbow_grease=100, plot=False
     from scipy.io import wavfile
     rate, data = wavfile.read(filename)
     return split_signal(data, threshold=threshold, length=length, elbow_grease=elbow_grease, plot=plot)
-
 
 
 def send_zipped_pickle(socket, obj, flags=0, protocol=-1):
@@ -458,6 +453,8 @@ def sentinel(host):
     poller.register(life_signal_Q, zmq.POLLIN)
 
     book = {}
+    save_name = False
+    save_time = 0
 
     while True:
         events = dict(poller.poll(timeout=IO.TIME_OUT*2))
@@ -468,8 +465,14 @@ def sentinel(host):
 
         for process in book.keys():
             if time.time() - book[process] > IO.TIME_OUT*2:
-                print '{} HAS DIED, SAVING AND REBOOTING'.format(process)
+                print '{} HAS DIED, SAVING'.format(process)
+                save_name = 'BRAIN{}'.format(time.strftime('%Y_%m_%d_%H_%M_%S'))
+                save_time = time.time()
+                sender.send_json('save {}'.format(save_name))
 
+        if save_name and (len(glob.glob('{}*'.format(save_name))) == 4 or time.time() - save_time > 1800):
+            call(['shutdown', '-r', 'now'])
+        
                 
 class AliveNotifier(threading.Thread):
     def __init__(self, me, host='localhost'):

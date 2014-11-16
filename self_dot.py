@@ -157,7 +157,7 @@ class Controller:
             if 'calculate_cochlear' in message:
                 _, wav_file = message.split()
                 t0 = time.time()
-                utils.write_cochlear(utils.wait_for_wav(wav_file))
+                brain.cochlear(utils.wait_for_wav(wav_file))
                 print 'Calculating cochlear neural activation patterns took {} seconds'.format(time.time() - t0)
             
             if message == 'evolve':
@@ -169,10 +169,12 @@ class Controller:
                 self.state['brains'][name] = int(free)
 
             if 'fullscreen' in message:
-                self.state['fullscreen'] = int(message[11:])
+                _, value = message.split()
+                self.event.send_json({ 'fullscreen': value in ['True', '1'] })
 
             if 'display2' in message:
-                self.state['display2'] = int(message[9:])
+                _, value = message.split()
+                self.event.send_json({ 'display2': value in ['True', '1'] })
 
             if message == 'startrec':
                 self.state['record'] = True
@@ -203,9 +205,7 @@ class Controller:
                 self.state['memoryRecording'] = message[16:] in ['True', '1']
                
             if '_audioLearningStatus' in message:
-                #self.event.send_json({ '_audioLearningStatus': message[21:] in ['True', '1'] })
                 self.state['_audioLearningStatus'] = message[21:] in ['True', '1']
-                #print '** audio learning status set to', self.state['_audioLearningStatus']
 
             if 'roboActive' in message:
                 self.state['roboActive'] = int(message[11:])
@@ -220,10 +220,6 @@ class Controller:
 
             if 'learnwav' in message:
                 _, filename = message.split()
-                # d = self.state['brains']
-                # winner = max(d, key=d.get)
-                # print '{} chosen to learn, has {} available slots'.format(winner, self.state['brains'][winner])
-                # self.event.send_json({ 'learn': winner, 'filename': filename })
                 self.event.send_json({ 'learn': True, 'filename': filename })
 
             if 'respondwav_single' in message:
