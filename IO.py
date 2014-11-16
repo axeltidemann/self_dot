@@ -16,7 +16,7 @@ import myCsoundAudioOptions
 # Milliseconds between each image capture
 VIDEO_SAMPLE_TIME = 100
 FRAME_SIZE = (640,480)
-TIME_OUT = 5#5*60 # Seconds between each "alive" signal
+TIME_OUT = 5*60 # Seconds between each "alive" signal
 
 # ØMQ ports
 CAMERA = 5561

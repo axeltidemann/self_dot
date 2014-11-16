@@ -120,17 +120,17 @@ def trim(A, threshold=100):
 
 
 def trim_right(A, threshold=.2):
-    #return A
-    ''' Trims right side of the thresholded part of the signal.'''
-    #print 'A', A
-    maxes = np.max(A, axis=1)
-    #print 'maxes', maxes
-    apex = np.argmax(maxes)
-    #print 'apex', apex
-    for i,m in enumerate(maxes[apex:]):
-        if m < threshold:
-            return A[:i+apex]
     return A
+    # ''' Trims right side of the thresholded part of the signal.'''
+    # #print 'A', A
+    # maxes = np.max(A, axis=1)
+    # #print 'maxes', maxes
+    # apex = np.argmax(maxes)
+    # #print 'apex', apex
+    # for i,m in enumerate(maxes[apex:]):
+    #     if m < threshold:
+    #         return A[:i+apex]
+    # return A
 
 def trim_wav(sound, threshold=100):
     ''' Removes tresholded region at beginning and end '''
@@ -464,7 +464,7 @@ def sentinel(host):
             book[process] = time.time()
 
         for process in book.keys():
-            if time.time() - book[process] > IO.TIME_OUT*2:
+            if not save_name and time.time() - book[process] > IO.TIME_OUT*2:
                 print '{} HAS DIED, SAVING'.format(process)
                 save_name = 'BRAIN{}'.format(time.strftime('%Y_%m_%d_%H_%M_%S'))
                 save_time = time.time()

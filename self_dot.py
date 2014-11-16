@@ -319,7 +319,7 @@ if __name__ == '__main__':
     mp.Process(target=Controller, args=(persistent_states,'localhost',), name='CONTROLLER').start()
     mp.Process(target=idle, args=('localhost',), name='IDLER').start()
     mp.Process(target=utils.sentinel, args=('localhost',), name='SENTINEL').start()
-    try:
-        raw_input('')
-    except KeyboardInterrupt:
-        map(lambda x: x.terminate(), mp.active_children())
+    # try:
+    #     raw_input('')
+    # except KeyboardInterrupt:
+    #     map(lambda x: x.terminate(), mp.active_children())
