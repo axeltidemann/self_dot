@@ -27,10 +27,11 @@
         ktimer          init 0
         kskiptimer      init 0
 
-ktest =  ((kFollowdb1 > krec_floor) || (ktimer>0) ? 1:0)
-printk2 ktest
+ktest =  (kFollowdb1 > krec_floor ? 1:0)
+ktest2 = (ktimer == 0 ? 1 : ktest)
+printk2 ktest2
 
-if (kFollowdb1 > krec_floor) || (ktimer>0) kgoto record
+if (ktest2 > 0) kgoto record
         kskiptimer      += 1
         kskiptime       = kskiptimer/kr     ; time in seconds (only counting when we are not recording
 kgoto record_done
