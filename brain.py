@@ -87,6 +87,14 @@ def cognition(host):
     minimum_urge_to_say_something = 4
     default_minimum_urge_to_say_something = 4
 
+    # (default) play events params
+    default_voiceType1 = 1
+    default_voiceType2 = 6
+    default_wordSpace1 = 0.3
+    default_wordSpaceDev1 = 0.3
+    default_wordSpace2 = 0.1
+    default_wordSpaceDev2 = 0.3
+
     lastSentenceIds = []
     last_most_significant_audio_id = 0
     face_recognizer = []
@@ -152,7 +160,11 @@ def cognition(host):
                         rhymes = association.recv_pyobj()
                         if len(rhymes) > 7 : rhymes= rhymes[:7] # temporary length limit
                         print 'Rhyme sentence:', rhymes
+                        sender.send_json('respond_setParam wordSpace 1 0')
+                        sender.send_json('respond_setParam wordSpaceDev 1 0')
                         sender.send_json('play_sentence {}'.format(rhymes))
+                        sender.send_json('respond_setParam wordSpace 1 {}'.format(default_wordSpace1))
+                        sender.send_json('respond_setParam wordSpaceDev 1 {}'.format(default_wordSpaceDev1))
                         minimum_urge_to_say_something = default_minimum_urge_to_say_something
                     except:
                         utils.print_exception('Rhyme failed.')
@@ -572,6 +584,7 @@ def respond(control_host, learn_host, debug=False):
                         voice1 = 'playfile {} {} {} {} {} {} {} {} {}'.format(1, voiceType1, start, soundfile, speed, segstart, segend, amp, maxamp)
                         voice2 = 'playfile {} {} {} {} {} {} {} {} {}'.format(2, voiceType1, start, soundfile, speed, segstart, segend, amp, maxamp)
                         wordSpacing1 = wordSpace1 + np.random.random()*wordSpaceDev1
+                        print 'PLAY RESPOND SPACING', wordSpacing1
                         nextTime1 += (dur/speed)+wordSpacing1
 
                         projection = _project(audio_id, sound_to_face, dur, NAP, video_producer)
@@ -665,7 +678,7 @@ def respond(control_host, learn_host, debug=False):
                         if nextTime1 > nextTime2: enableVoice2 = 1 
 
                         projection = _project(audio_id, sound_to_face, dur, NAP, video_producer)
-                        
+                        print 'SENTENCE RESPOND SPACING', wordSpacing1
                         play_events.append([ dur+wordSpacing1, voice1, voice2, projection, FRAME_SIZE ])
 
                     scheduler.send_pyobj(play_events)
