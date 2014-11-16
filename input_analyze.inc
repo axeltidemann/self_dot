@@ -46,7 +46,9 @@
 			chnset krms1gated, "level1gated"
 */
         ; send audio to memory recording
-	arec            delay a1, 0.3;0.02  ; delay to sync with transient detection (and then add some to capture a bit of potential soft starts like 'h')
+        irecdelay       = 0.03
+                        chnset irecdelay, "recdelay"
+	    arec            delay a1, irecdelay  ; delay to sync with transient detection (and then add some to capture a bit of potential soft starts like 'h')
                         chnset arec, "rec_in1"
                         
         ; enable by setting kinputMonitor if we want to monitor the input signal
