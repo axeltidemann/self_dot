@@ -30,12 +30,12 @@
 
         chnset 300, "SecondaryMasterLoCut"       ; cut LF on master out for secondary associations synth
         chnset -2, "SecondaryMasterLevel"       ; in dB
-        chnset -18, "SecondaryCompThresh"
-        chnset 5, "SecondaryCompRatio"
+        chnset -12, "SecondaryCompThresh"
+        chnset 3, "SecondaryCompRatio"
 
         chnset -2, "PrimaryMasterLevel"       ; in dB
-        chnset -12, "PrimaryCompThresh"
-        chnset 4, "PrimaryCompRatio"
+        chnset -9, "PrimaryCompThresh"
+        chnset 3, "PrimaryCompRatio"
         
         chnset -3, "ambientLevel"      ; set level of self's own background sound
 

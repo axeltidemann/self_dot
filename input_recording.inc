@@ -11,17 +11,15 @@
 
 	    krec_floor	= -65                   ; safe to set statically, as the input should be gated before here anyway
 	    kAttack		= 0.001			        ; envelope follower attack
-	    kRelease	= 0.2                   ;chnget "in_envelopeRelease" ; 0.3 ; envelope follower release
+	    kRelease	= 0.25                   ;chnget "in_envelopeRelease" ; 0.3 ; envelope follower release
 	    aFollow1	follow2	a1, kAttack, kRelease	; envelope follower
 	    kFollow1	downsamp aFollow1	
 	    kFollowdb1	= dbfsamp(kFollow1)		    ; convert to dB
 
-ktest =  (kFollowdb1 > krec_floor ? 1:0)
-printk2 ktest
 
 ; compress before recording
-	    kthresh         = -20
-	    kratio          = 4
+	    kthresh         = -15
+	    kratio          = 2.5
 	    kattack		    = 15				; attack time 
 	    krelease	    = 20				; release time 
 #include "compressor.inc"
@@ -29,7 +27,10 @@ printk2 ktest
         ktimer          init 0
         kskiptimer      init 0
 
-if kFollowdb1 > krec_floor kgoto record
+ktest =  ((kFollowdb1 > krec_floor) || (ktimer>0) ? 1:0)
+printk2 ktest
+
+if (kFollowdb1 > krec_floor) || (ktimer>0) kgoto record
         kskiptimer      += 1
         kskiptime       = kskiptimer/kr     ; time in seconds (only counting when we are not recording
 kgoto record_done
