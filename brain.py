@@ -127,7 +127,7 @@ def cognition(host):
             if 'learn' in pushbutton or 'respond_sentence' in pushbutton:
                 filename = pushbutton['filename']
                 _,_,_,segmentData = utils.getSoundInfo(filename)
-                pitches = [ item[2] for item in segmentData ]
+                pitches = [ item[3] for item in segmentData ]
                 question = pitches[-1] > np.mean(pitches[:-1]) if len(pitches) > 1 else False
                 print 'QUESTION ?', question
     
@@ -399,9 +399,9 @@ def respond(control_host, learn_host, debug=False):
     video_producer = {}
     voiceType1 = 1
     voiceType2 = 6
-    wordSpace1 = 0.2
+    wordSpace1 = 0.3
     wordSpaceDev1 = 0.3
-    wordSpace2 = 0.2
+    wordSpace2 = 0.1
     wordSpaceDev2 = 0.3
     
     if debug:
@@ -500,9 +500,7 @@ def respond(control_host, learn_host, debug=False):
                     new_sentence = utils.load_cochlear(filename)
                     norm_segments = np.rint(new_sentence.shape[0]*audio_segments/audio_segments[-1]).astype('int')
 
-                    _,_,_,segmentData = utils.getSoundInfo(filename)
-                    amps = [ item[0] for item in segmentData ]
-                    segment_id = amps.index(max(amps))
+                    segment_id = get_most_significant_word(filename)
                     #print 'Single selected to respond to segment {}'.format(segment_id)
 
                     NAP = utils.trim_right(new_sentence[norm_segments[segment_id]:norm_segments[segment_id+1]])

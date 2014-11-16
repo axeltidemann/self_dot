@@ -291,14 +291,14 @@ def getSoundInfo(wavfile):
         if 'Max amp for file:' in line:
             maxAmp = float(line[18:])
         if enable:
-            start,amp,pitch,centroid = line.split(' ')
-            segments.append([float(start),float(amp),float(pitch),float(centroid)]) 
-        if 'Sub segments (start, amp, ' in line: enable = 1
+            start,skiptime,amp,pitch,centroid = line.split(' ')
+            segments.append([float(start),float(skiptime),float(amp),float(pitch),float(centroid)]) 
+        if 'Sub segments (start, skiptime, amp, ' in line: enable = 1
     return startTime, totalDur, maxAmp, segments
 
 
-def get_segments(wavfile, threshold=.25):
-    ''' Find segments in audio descriptor file. Transients closer together than the threshold will be excluded.'''
+def get_segments(wavfile):
+    ''' Find segments in audio descriptor file'''
     _, totalDur, _, segments = getSoundInfo(wavfile)
     segmentTimes = []
     for item in segments:
@@ -309,7 +309,7 @@ def get_segments(wavfile, threshold=.25):
     
 def get_most_significant_word(wavfile):
     _,_,_,segmentData = getSoundInfo(wavfile)
-    amps = [ item[0] for item in segmentData ]
+    amps = [ item[2] for item in segmentData ]
     return amps.index(max(amps))
      
 

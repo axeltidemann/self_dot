@@ -156,13 +156,12 @@ def audio():
         audioStatus = cGet("audioStatus")           
         audioStatusTrig = cGet("audioStatusTrig")       # signals start of a statement (audio in)
         transient = cGet("transient")                   # signals start of a segment within a statement (audio in)        
-        memRecTimeMarker = cGet("memRecTimeMarker")     # (in memRec) get the time since start of statement
+        memRecTimeMarker = cGet("memRecTimeMarker")     # (in memRec) get (active record) the time since start of statement
+        memRecSkiptime = cGet("memRecSkiptime")         # (in memRec) get the time (amount) of stripped sielence) in the latest segment
         memRecActive = cGet("memRecActive")             # flag to check if memoryRecording is currently recording to file in Csound
         memRecMaxAmp = cGet("memRecMaxAmp")             # max amplitude for each recorded file
-        #statusRelease = cGet("statusRel")               # audio status release time, hold status=1 for this long after signal has dropped below thresh, 
-                                                        # we subtract this from the total time recorded in each memoryRecording file,
-                                                        # to compensate for the start of recording being delayed by the same amount.
-                                                        # This let us skip the silent section that would otherwise be recorded at the end of each file.
+        statusRel = cGet("statusRel")                   # audio status release time 
+        noiseFloor = cGet("inputNoisefloor")            # measured noise floor in dB
 
         
         i_am_speaking = cGet("i_am_speaking")           # signals cognition that I'm currently speaking
@@ -206,7 +205,7 @@ def audio():
                 markerfileName = memRecPath+timestr+'.txt'
                 markerfile = open(markerfileName, 'w')
                 markerfile.write('Self. audio clip perceived at %s\n'%tim_time)
-                segmentstring = 'Sub segments (start, amp, pitch, cent): \n'
+                segmentstring = 'Sub segments (start, skiptime, amp, pitch, cent): \n'
                 segStart = 0.0
                 ampPitchCentroid = [[],[],[]]
             if audioStatus > 0:
@@ -227,7 +226,7 @@ def audio():
                     l = ampPitchCentroid[2]
                     centroidMean = np.mean(l[int(len(l)*0.25):int(len(l)*0.9)])
                     ampPitchCentroid = [[],[],[]]
-                    segmentstring += '%.3f %.3f %.3f %.3f\n'%(segStart,ampMean,pitchMean,centroidMean)
+                    segmentstring += '%.3f %.3f %.3f %.3f %.3f\n'%(segStart,memRecSkiptime,ampMean,pitchMean,centroidMean)
                     segStart = memRecTimeMarker 
             if (audioStatusTrig < 0) & (memRecActive > 0):
                 print '... ...get final medians and update segments'
@@ -241,7 +240,7 @@ def audio():
                 l = ampPitchCentroid[2]
                 centroidMean = np.mean(l[int(len(l)*0.25):int(len(l)*0.9)])
                 ampPitchCentroid = [[],[],[]]
-                segmentstring += '%.3f %.3f %.3f %.3f\n'%(segStart,ampMean,pitchMean,centroidMean)
+                segmentstring += '%.3f %.3f %.3f %.3f %.3f\n'%(segStart,memRecSkiptime-statusRel,ampMean,pitchMean,centroidMean) #normal termination of recording, we should subtract statusRel from last skiptime
                 cs.InputMessage('i -34 0 1')
                 markerfile.write(segmentstring)
                 markerfile.write('Total duration: %f\n'%memRecTimeMarker)
@@ -261,7 +260,7 @@ def audio():
             l = ampPitchCentroid[2]
             centroidMean = np.mean(l[int(len(l)*0.25):int(len(l)*0.9)])
             ampPitchCentroid = [[],[],[]]
-            segmentstring += '%.3f %.3f %.3f %.3f\n'%(segStart,ampMean,pitchMean,centroidMean)
+            segmentstring += '%.3f %.3f %.3f %.3f %.3f\n'%(segStart,memRecSkiptime,ampMean,pitchMean,centroidMean) # do not subract statusRel here, as we have probably interrupted recording in this case
             cs.InputMessage('i -34 0 1')
             markerfile.write(segmentstring)
             markerfile.write('Total duration: %f'%memRecTimeMarker)
