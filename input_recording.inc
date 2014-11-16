@@ -23,7 +23,7 @@
 	    kattack		    = 15				; attack time 
 	    krelease	    = 20				; release time 
 #include "compressor.inc"
-
+ 
         ktimer          init 0
         kskiptimer      init 0
 
