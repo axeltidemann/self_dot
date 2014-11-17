@@ -112,18 +112,19 @@ def cognition(host):
         if cognitionQ in events:
             face_recognizer = cognitionQ.recv_pyobj()
 
-        if face in events and face_recognizer:
+        if face in events:
             new_face = utils.recv_array(face)
-            x_test = face_recognizer.rPCA.transform(np.ndarray.flatten(new_face))
-            this_face_id = face_recognizer.predict(x_test)
-            if this_face_id != last_face_id:
-                print 'FACE ID', last_face_id
-                if time.time() - face_timer > minimum_face_interval:
-                    face_timer = time.time()
-                    face_enable_once = True
-                    print 'face_enable_once', face_enable_once
+            if face_recognizer:
+                x_test = face_recognizer.rPCA.transform(np.ndarray.flatten(new_face))
+                this_face_id = face_recognizer.predict(x_test)
+                if this_face_id != last_face_id:
+                    print 'FACE ID', last_face_id
+                    if time.time() - face_timer > minimum_face_interval:
+                        face_timer = time.time()
+                        face_enable_once = True
+                        print 'face_enable_once', face_enable_once
 
-            last_face_id = this_face_id
+                last_face_id = this_face_id
 
         if stateQ in events:
             state = stateQ.recv_json()
@@ -938,29 +939,21 @@ def learn_audio(host, debug=False):
                     print 'Learning {} duration {} seconds with {} segments'.format(filename, audio_segments[-1], len(audio_segments)-1)
                     new_sentence = utils.csv_to_array(filename + 'cochlear')
                     norm_segments = np.rint(new_sentence.shape[0]*audio_segments/audio_segments[-1]).astype('int')
-                    #print 'norm_segments', len(norm_segments), norm_segments
 
                     segment_ids = []
                     new_audio_hash = []
                     for segment, new_sound in enumerate([ utils.trim_right(new_sentence[norm_segments[i]:norm_segments[i+1]]) for i in range(len(norm_segments)-1) ]):
                         # We filter out short, abrupt sounds with lots of noise.
-                        if np.mean(new_sound) < .2:
+                        if np.mean(new_sound) < .2 or new_sound.shape[0] == 0:
                             black_list.write('{} {}\n'.format(filename, segment))
                             continue
 
                         if debug:
                             utils.plot_NAP_and_energy(new_sound, plt)
-                            # plt.imshow(new_sound.T, aspect='auto')
-                            # plt.title('learn_audio raw signal')
-                            # plt.draw()
                         
                         hammings = [ np.inf ]
-                        try:
-                            new_hash = utils.d_hash(new_sound, hash_size=8)
-                            new_audio_hash.append(new_hash)
-                        except:
-                            utils.print_exception('Hash calculation failed, shape of NAP: {}'.format(new_sound.shape))
-                            continue
+                        new_hash = utils.d_hash(new_sound, hash_size=8)
+                        new_audio_hash.append(new_hash)
 
                         audio_id = 0
                         if len(NAPs) == 1:

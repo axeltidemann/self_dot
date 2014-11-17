@@ -4,7 +4,10 @@ sleep 5
 qjackctl -s &
 
 cd /home/self/Projects/self_dot/
-python self_dot.py > OUTPUT 2>&1 &
+
+now=$(date +"%Y_%m_%d_%H_%M_%S")
+
+python self_dot.py &> "OUTPUT_$now" &
 
 sleep 10
 
