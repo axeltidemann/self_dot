@@ -32,9 +32,9 @@
 if ktransient > 0 then
 reinit startgate        
 endif
-        irecdelay       chnget "recdelay"
+;        irecdelay       chnget "recdelay"
 startgate:
-        kinit           linseg 1, irecdelay+(2/kr), 1, 0, 0, 1, 0
+        kinit           linseg 1, 0.4, 1, 0, 0, 1, 0
 rireturn
         ktest2          = (kinit == 1 ? 1 : ktest)
         kgate           init 1

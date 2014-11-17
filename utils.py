@@ -42,9 +42,9 @@ def plot_NAP_and_energy(NAP, plt):
 
     plt.subplot(212)
     plt.imshow(NAP.T, aspect='auto')
-    for x in np.where(NAP > .9)[0]:
-        plt.axvline(x, color='w')
-    plt.title('NAP')
+    # for x in np.where(NAP > .9)[0]:
+    #     plt.axvline(x, color='w')
+    plt.title('NAP mean {}'.format(np.mean(NAP)))
 
     plt.draw()
 
@@ -120,17 +120,13 @@ def trim(A, threshold=100):
 
 
 def trim_right(A, threshold=.2):
+    ''' Trims right side of the thresholded part of the signal.'''
+    maxes = np.max(A, axis=1)
+    apex = np.argmax(maxes)
+    for i,m in enumerate(maxes[apex:]):
+        if m < threshold:
+            return A[:i+apex]
     return A
-    # ''' Trims right side of the thresholded part of the signal.'''
-    # #print 'A', A
-    # maxes = np.max(A, axis=1)
-    # #print 'maxes', maxes
-    # apex = np.argmax(maxes)
-    # #print 'apex', apex
-    # for i,m in enumerate(maxes[apex:]):
-    #     if m < threshold:
-    #         return A[:i+apex]
-    # return A
 
 def trim_wav(sound, threshold=100):
     ''' Removes tresholded region at beginning and end '''
@@ -314,6 +310,8 @@ def get_segments(wavfile):
     return np.array(segmentTimes)
     
 def get_most_significant_word(wavfile):
+    print 'HERE BE DRAGONS!!! get_most_significant_word'
+    return 0
     _,_,_,segmentData = getSoundInfo(wavfile)
     amps = [ item[2] for item in segmentData ]
     return amps.index(max(amps))

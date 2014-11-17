@@ -574,9 +574,10 @@ def respond(control_host, learn_host, debug=False):
                 most_significant_segment_id = utils.get_most_significant_word(wav_file)
                 print 'most_significant_segment_id', most_significant_segment_id
                 print 'segment_ids', segment_ids
-                most_significant_audio_id = segment_ids[most_significant_segment_id]
+                most_significant_audio_id = segment_ids[most_significant_segment_id] if len(segment_ids) else 0
                 print 'most_significant_audio_id', most_significant_audio_id
                 sender.send_json('last_most_significant_audio_id {}'.format(most_significant_audio_id))
+
                 cognitionQ.send_pyobj(face_recognizer)
                                 
         if eventQ in events:
@@ -589,7 +590,7 @@ def respond(control_host, learn_host, debug=False):
                     new_sentence = utils.csv_to_array(filename + 'cochlear')
                     norm_segments = np.rint(new_sentence.shape[0]*audio_segments/audio_segments[-1]).astype('int')
 
-                    segment_id = get_most_significant_word(filename)
+                    segment_id = utils.get_most_significant_word(filename)
                     #print 'Single selected to respond to segment {}'.format(segment_id)
 
                     NAP = utils.trim_right(new_sentence[norm_segments[segment_id]:norm_segments[segment_id+1]])
@@ -909,6 +910,8 @@ def learn_audio(host, debug=False):
 
     state = stateQ.recv_json()
     
+    black_list = open('black_list.txt', 'a')
+
     if debug:
         import matplotlib.pyplot as plt
         plt.ion()
@@ -940,8 +943,11 @@ def learn_audio(host, debug=False):
                     segment_ids = []
                     new_audio_hash = []
                     for segment, new_sound in enumerate([ utils.trim_right(new_sentence[norm_segments[i]:norm_segments[i+1]]) for i in range(len(norm_segments)-1) ]):
-                        #print segment, new_sound
-                        # Do we know this sound?
+                        # We filter out short, abrupt sounds with lots of noise.
+                        if np.mean(new_sound) < .2:
+                            black_list.write('{} {}\n'.format(filename, segment))
+                            continue
+
                         if debug:
                             utils.plot_NAP_and_energy(new_sound, plt)
                             # plt.imshow(new_sound.T, aspect='auto')
@@ -1003,7 +1009,8 @@ def learn_audio(host, debug=False):
 
                     all_hammings = [ utils.hamming_distance(new_audio_hash[i], new_audio_hash[j])
                                                             for i in range(len(new_audio_hash)) for j in range(len(new_audio_hash)) if i > j ]
-
+                    
+                    black_list.flush()
                     print 'RHYME VALUE', np.mean(sorted(all_hammings)[int(len(all_hammings)/2):])
                     rhyme = np.mean(sorted(all_hammings)[int(len(all_hammings)/2):]) < RHYME_HAMMERTIME
 
