@@ -84,10 +84,6 @@ LastSentenceID_debug = 0
 currentSettings = [] # for temporal storage of globals (association weights)
 
 def association(host):
-    me = mp.current_process()
-    print me.name, 'PID', me.pid
-    utils.AliveNotifier(me)
-
     context = zmq.Context()
 
     association = context.socket(zmq.ROUTER)
@@ -156,7 +152,7 @@ def association(host):
                    durationWeight2, posInSentenceWeight2
             pushbutton = eventQ.recv_json()
             if 'save' in pushbutton:
-                utils.save('{}.{}'.format(pushbutton['save'], me.name), [ wordTime, time_word, duration_word, similarWords, neighbors, neighborAfter, \
+                utils.save('{}.{}'.format(pushbutton['save'], mp.current_process().name), [ wordTime, time_word, duration_word, similarWords, neighbors, neighborAfter, \
                         wordFace, faceWord, sentencePosition_item, wordsInSentence, numWords, \
                         method, neighborsWeight, wordsInSentenceWeight, similarWordsWeight, wordFaceWeight, faceWordWeight, \
                         timeShortBeforeWeight, timeShortAfterWeight, timeShortDistance, timeLongBeforeWeight, timeLongAfterWeight, timeLongDistance, \
@@ -173,7 +169,7 @@ def association(host):
                 durationWeight, posInSentenceWeight, \
                 method2, neighborsWeight2, wordsInSentenceWeight2, similarWordsWeight2, wordFaceWeight2, faceWordWeight2, \
                 timeShortBeforeWeight2, timeShortAfterWeight2, timeShortDistance2, timeLongBeforeWeight2, timeLongAfterWeight2, timeLongDistance2, \
-                durationWeight2, posInSentenceWeight2 = utils.load('{}.{}'.format(pushbutton['load'], me.name))
+                durationWeight2, posInSentenceWeight2 = utils.load('{}.{}'.format(pushbutton['load'], mp.current_process().name))
 
 def analyze(wav_file,wav_segments,segment_ids,wavs,similar_ids,_wordFace,_faceWord):
     print 'analyze', wav_file, segment_ids

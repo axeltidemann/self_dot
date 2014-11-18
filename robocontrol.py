@@ -58,10 +58,6 @@ if serialAvailable:
     time.sleep(1)
 
 def robocontrol(host):
-    me = mp.current_process()
-    print me.name, 'PID', me.pid
-    utils.AliveNotifier(me)
-
     context = zmq.Context()
 
     robo = context.socket(zmq.PULL)
