@@ -35,6 +35,7 @@ BRAIN = 5573
 ASSOCIATION = 5574
 SENTINEL = 5575
 LOGGER = 5576
+DREAM = 5577
 
 def video():
     cv2.namedWindow('Output', cv2.WND_PROP_FULLSCREEN)
@@ -329,7 +330,7 @@ def audio():
                 zeroChannelsOnNoBrain = int('{}'.format(pushbutton['zerochannels']))
 
             if 'playfile' in pushbutton:
-                #print '[self.] playfile {}'.format(pushbutton['playfile'])
+                print '[self.] AUDIO playfile {}'.format(pushbutton['playfile'])
                 try:
                     params = pushbutton['playfile']
                     voiceChannel, voiceType, start, soundfile, speed, segstart, segend, amp, maxamp = params.split(' ')

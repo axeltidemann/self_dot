@@ -280,7 +280,7 @@ def train_network(x, y, output_dim=100, leak_rate=.9, bias_scaling=.2, reset_sta
 
     return net
 
-def dream(wavs, wav_segments):
+def dream(wavs, wav_segments, dreamQ):
     import matplotlib.pyplot as plt
     plt.ion()
     print 'Removing wrongly binned filenames'
@@ -289,25 +289,26 @@ def dream(wavs, wav_segments):
         NAP_detail = 'low'
         print 'Examining audio_id {}'.format(audio_id)
 
-        if len(wav_files) == 1:
-            print 'Just one member in this audio_id, skipping analysis'
-            continue
         k = 2
-
         filenames_and_indexes = []
         for soundfile in wav_files:
             segstart, segend = wav_segments[(soundfile, audio_id)]
             audio_segments = utils.get_segments(soundfile)
-            segstart /= audio_segments[-1]
-            segend /= audio_segments[-1]
-            filenames_and_indexes.append([ soundfile, segstart, segend, audio_id, NAP_detail ])
+            norm_segstart = segstart/audio_segments[-1]
+            norm_segend = segend/audio_segments[-1]
+            filenames_and_indexes.append([ soundfile, segstart, segend, norm_segstart, norm_segend, audio_id, NAP_detail ])
+            dreamQ.send_pyobj(filenames_and_indexes[-1])
 
         mega_filenames_and_indexes.extend(filenames_and_indexes)
+
+        if len(wav_files) == 1:
+            print 'Just one member in this audio_id, skipping analysis'
+            continue
             
         sparse_codes = mysai.experiment(filenames_and_indexes, k)
-        plt.matshow(sparse_codes, aspect='auto')
-        plt.colorbar()
-        plt.draw()
+        # plt.matshow(sparse_codes, aspect='auto')
+        # plt.colorbar()
+        # plt.draw()
 
         coarse = np.mean(sparse_codes, axis=1)
         coarse.shape = (len(coarse), 1)
@@ -323,31 +324,36 @@ def dream(wavs, wav_segments):
             print 'Considered to be all the same.'
             continue
         
+        # Delete wav file from this entry in the wavs, delete (soundfile, audio_id) in wav_segments
         fewest_class = sorted_freqs[0][0]
-        print 'Class {} has fewest members, deleting {}'.format(fewest_class, [ filename for filename, i in zip(wav_files, instances) if i == fewest_class ])
+        ousted_files = [ filename for filename, i in zip(wav_files, instances) if i == fewest_class ]
+        print 'Class {} has fewest members, deleting audio_id {} related to file {}'.format(fewest_class, audio_id, ousted_files)
+        for delete_file in ousted_files:
+            wav_files.pop(wav_files.index(delete_file))
+            del wav_segments[(delete_file, audio_id)]
+    
+    # print 'Creating mega super self-organized class'
 
-    print 'Creating mega super self-organized class'
+    # for row in mega_filenames_and_indexes:
+    #     row[-1] = 'high'
 
-    for row in mega_filenames_and_indexes:
-        row[-1] = 'high'
+    # high_resolution_k = 256
+    # clusters = 24
+    # sparse_codes = mysai.experiment(mega_filenames_and_indexes, high_resolution_k)
+    # sparse_codes = np.array(sparse_codes)
+    # plt.matshow(sparse_codes, aspect='auto')
+    # plt.colorbar()
+    # plt.draw()
 
-    high_resolution_k = 256
-    clusters = 24
-    sparse_codes = mysai.experiment(mega_filenames_and_indexes, high_resolution_k)
-    sparse_codes = np.array(sparse_codes)
-    plt.matshow(sparse_codes, aspect='auto')
-    plt.colorbar()
-    plt.draw()
+    # codebook,_ = kmeans(sparse_codes, clusters)
+    # instances = [ vq(np.atleast_2d(s), codebook)[0] for s in sparse_codes ]
 
-    codebook,_ = kmeans(sparse_codes, clusters)
-    instances = [ vq(np.atleast_2d(s), codebook)[0] for s in sparse_codes ]
+    # cluster_list = {}
+    # for mega, instances in zip(mega_filenames_and_indexes, instances):
+    #     soundfile,_,_,audio_id,_ = mega
+    #     cluster_list[(soundfile, audio_id)] = instance
 
-    cluster_list = {}
-    for mega, instances in zip(mega_filenames_and_indexes, instances):
-        soundfile,_,_,audio_id,_ = mega
-        cluster_list[(soundfile, audio_id)] = instance
-
-    print cluster_list
+    # print cluster_list
         
 def cochlear(filename, db=-40, stride=441, new_rate=22050, ears=1, a_1=-0.995, apply_filter=1, suffix='cochlear'):
     rate, data = wavfile.read(filename)
@@ -425,12 +431,16 @@ def respond(control_host, learn_host, debug=False):
     scheduler = context.socket(zmq.PUSH)
     scheduler.connect('tcp://{}:{}'.format(control_host, IO.SCHEDULER))
 
+    dreamQ = context.socket(zmq.PULL)
+    dreamQ.bind('tcp://*:{}'.format(IO.DREAM))
+
     snapshot.send_json('Give me state!')
     state = snapshot.recv_json()
 
     poller = zmq.Poller()
     poller.register(eventQ, zmq.POLLIN)
     poller.register(brainQ, zmq.POLLIN)
+    poller.register(dreamQ, zmq.POLLIN)
 
     sound_to_face = []
     wordFace = {}
@@ -451,6 +461,21 @@ def respond(control_host, learn_host, debug=False):
     
     while True:
         events = dict(poller.poll())
+
+        if dreamQ in events:
+            soundfile, segstart, segend, _,_, audio_id,_ = dreamQ.recv_pyobj()
+            audio_segments = utils.get_segments(soundfile)
+            NAP = _extract_NAP(segstart, segend, soundfile)
+            speed = 1 # TWICE THE SPEED, HIGHER VIDEO FRAME RATE
+            amp = -3
+            maxamp = 1
+            start = 0
+            dur = segend - segstart
+            print 'DURATION',dur
+            voice1 = 'playfile {} {} {} {} {} {} {} {} {}'.format(1, voiceType1, start, soundfile, speed, segstart, segend, amp, maxamp)
+            projection = _project(audio_id, sound_to_face, dur, NAP, video_producer)
+            voice2 = ''
+            scheduler.send_pyobj([[ dur, voice1, voice2, projection, FRAME_SIZE ]])
 
         if brainQ in events:
             cells = brainQ.recv_pyobj()
@@ -834,6 +859,9 @@ def learn_audio(host, debug=False):
     mic.connect('tcp://{}:{}'.format(host, IO.MIC))
     mic.setsockopt(zmq.SUBSCRIBE, b'')
 
+    dreamQ = context.socket(zmq.PUSH)
+    dreamQ.connect('tcp://{}:{}'.format(host, IO.DREAM))
+
     stateQ, eventQ, brainQ = _three_amigos(context, host)
 
     sender = context.socket(zmq.PUSH)
@@ -891,9 +919,9 @@ def learn_audio(host, debug=False):
                     new_audio_hash = []
                     for segment, new_sound in enumerate([ utils.trim_right(new_sentence[norm_segments[i]:norm_segments[i+1]]) for i in range(len(norm_segments)-1) ]):
                         # We filter out short, abrupt sounds with lots of noise.
-                        #if np.mean(new_sound) < .2 or new_sound.shape[0] == 0:
-                        #    black_list.write('{} {}\n'.format(filename, segment))
-                        #    continue
+                        if np.mean(new_sound) < .2 or new_sound.shape[0] == 0:
+                           black_list.write('{} {}\n'.format(filename, segment))
+                           continue
 
                         if debug:
                             utils.plot_NAP_and_energy(new_sound, plt)
@@ -968,7 +996,11 @@ def learn_audio(host, debug=False):
                 audio.clear()
 
             if 'dream' in pushbutton:
-                dream(wavs, wav_segments)
+                # Build delete list that you must send to the other learn processes.
+                # This will be both of structured elements [ audio_id, [element_ids] ] and (soundfile, audio_id)
+                # MAYBE NOT NECESSARY if you delete NAPs and NAP_hashes as well, since video / face and not related 
+                # very deeply. Look into this.
+                dream(wavs, wav_segments, dreamQ) 
                 
             if 'save' in pushbutton:
                 utils.save('{}.{}'.format(pushbutton['save'], mp.current_process().name), [ NAPs, wavs, wav_segments, NAP_hashes, audio_classifier, maxlen ])

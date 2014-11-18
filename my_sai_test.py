@@ -85,7 +85,7 @@ def _valid_file(filename, threshold=.1):
 
 def _cochlear_trim_sai_marginals(filename_and_indexes):
     try:
-        filename, segstart, segend, segment_id, NAP_detail = filename_and_indexes
+        filename, _, _, norm_segstart, norm_segend, audio_id, NAP_detail = filename_and_indexes
 
         if NAP_detail == 'high':
             try: 
@@ -107,13 +107,13 @@ def _cochlear_trim_sai_marginals(filename_and_indexes):
 
         sai = pysai.SAI(sai_params)
 
-        NAP = utils.trim_right(NAP[ np.int(np.rint(NAP.shape[0]*segstart)) : np.int(np.rint(NAP.shape[0]*segend)) ], threshold=.05)
+        NAP = utils.trim_right(NAP[ np.int(np.rint(NAP.shape[0]*norm_segstart)) : np.int(np.rint(NAP.shape[0]*norm_segend)) ], threshold=.05)
         sai_video = [ np.copy(sai.RunSegment(input_segment.T)) for input_segment in utils.chunks(NAP, input_segment_width) ]
-        return [ [ filename, segment_id, [ sai_rectangles(frame) for frame in sai_video ]] ]
+        return [ [ filename, audio_id, [ sai_rectangles(frame) for frame in sai_video ]] ]
 
     except:
         print utils.print_exception()
-        return [[filename, -1, None]]
+        return [[filename, audio_id, None]]
 
 def experiment(filenames, k):
     t0 = time.time()
