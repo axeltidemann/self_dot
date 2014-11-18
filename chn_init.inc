@@ -2,10 +2,10 @@
 ; init chn values for various purposes
 
         chnset 2000, "td_HiShelfFq"     ; pre emphasis for transient detection of sibliants
-        chnset 40, "td_HiShelfGain"     ; in dB
+        chnset 6, "td_HiShelfGain"     ; in dB
         chnset 300, "td_LoShelfFq"
         chnset -25, "td_LoShelfGain"
-        chnset -10, "td_AmpAdjust"      ; approximate amp compensation for EQ
+        ;;;NO!;chnset -10, "td_AmpAdjust"      ; approximate amp compensation for EQ
         
         ; transient detect parameters
         chnset 1.5, "in_envelopeRelease"    ; envelope follower release
@@ -29,7 +29,7 @@
         chnset 6000, "SecondaryReverbFiltFq"
 
         chnset 300, "SecondaryMasterLoCut"       ; cut LF on master out for secondary associations synth
-        chnset -2, "SecondaryMasterLevel"       ; in dB
+        chnset -7, "SecondaryMasterLevel"       ; in dB
         chnset -12, "SecondaryCompThresh"
         chnset 3, "SecondaryCompRatio"
 
@@ -37,6 +37,8 @@
         chnset -9, "PrimaryCompThresh"
         chnset 3, "PrimaryCompRatio"
         
+	    chnset 1, "selfAutoEqEnable"
+
         chnset -3, "ambientLevel"      ; set level of self's own background sound
 
 

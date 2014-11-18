@@ -235,6 +235,7 @@ def audio():
                 centroidMean = np.mean(l[int(len(l)*0.25):int(len(l)*0.9)])
                 ampPitchCentroid = [[],[],[]]
                 segmentstring += '%.3f %.3f %.3f %.3f %.3f\n'%(segStart,memRecSkiptime-statusRel,ampMean,pitchMean,centroidMean) #normal termination of recording, we should subtract statusRel from last skiptime
+                #segmentstring += '%.3f %.3f %.3f %.3f %.3f\n'%(segStart,memRecSkiptime,ampMean,pitchMean,centroidMean) 
                 cs.InputMessage('i -34 0 1')
                 markerfile.write(segmentstring)
                 markerfile.write('Total duration: %f\n'%memRecTimeMarker)
@@ -300,6 +301,11 @@ def audio():
                 if mode == 'reset': 
                     cs.InputMessage('i 21 0 .1 0')
                     cs.InputMessage('i 21 1 .1 1')
+
+            if 'calibrateEq' in pushbutton:
+                cs.InputMessage('i -99 0 1') # turn off master out
+                cs.InputMessage('i 19 0.5 2') # eq profiling
+                cs.InputMessage('i 99 3 -1') # turn on master out
 
             if 'calibrateAudio' in pushbutton:
                 cs.InputMessage('i -17 0 1') # turn off old noise gate

@@ -87,7 +87,7 @@
 ; ******************************
 ; master output 
 	instr 99
-
+print p1, p2, p3
 	a1	        chnget "MasterOut1"
         a1              butterhp a1, 100                ; low cut 
 
@@ -107,6 +107,16 @@
 	kattack		= 15				; attack time 
 	krelease	= 20				; release time 
 #include "compressor.inc"
+
+/*
+krms_1a rms a1
+#include "autoEQ_apply.inc" 
+krms_1b rms a1
+if krms_1a > 0.1 then
+printk2 krms_1a
+printk2 krms_1b, 5
+endif
+*/
 	klevel          chnget "PrimaryMasterLevel"
         klevel          = ampdbfs(klevel)
         a1out           = a1*klevel

@@ -313,8 +313,8 @@ def get_segments(wavfile):
     return np.array(segmentTimes)
     
 def get_most_significant_word(wavfile):
-    print 'HERE BE DRAGONS!!! get_most_significant_word'
-    return 0
+    #print 'HERE BE DRAGONS!!! get_most_significant_word'
+    #return 0
     _,_,_,segmentData = getSoundInfo(wavfile)
     amps = [ item[2] for item in segmentData ]
     return amps.index(max(amps))

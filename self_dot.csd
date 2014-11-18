@@ -88,7 +88,7 @@ i77  0 $SCORELEN			; delay for secondary associations playback
 i78  0 $SCORELEN			; reverb for secondary associations playback
 i79  0 $SCORELEN			; mixer for secondary associations playback
 i93  0 $SCORELEN			; ambient sound reverb
-i99  0 $SCORELEN			; master out
+i99  0 -1       			; master out
 ;i100 0 $SCORELEN              ; debug
 
 ;instr, start, soundfile,                               segstart, segend, amp, maxamp, voiceChannel, delaySend, reverbSend, speed)
