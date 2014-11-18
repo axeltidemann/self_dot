@@ -1,3 +1,6 @@
+#!/usr/bin/python
+# -*- coding: latin-1 -*-
+
 import os
 import wave
 import csv
@@ -448,22 +451,23 @@ def sentinel(host):
     save_time = 0
 
     while True:
-        events = dict(poller.poll(timeout=IO.TIME_OUT*2))
+        events = dict(poller.poll(timeout=IO.PROCESS_TIME_OUT*2))
 
         if life_signal_Q in events:
             process = life_signal_Q.recv_pyobj()
             book[process] = time.time()
 
         for process in book.keys():
-            if not save_name and time.time() - book[process] > IO.TIME_OUT*2:
+            if not save_name and time.time() - book[process] > IO.PROCESS_TIME_OUT*2:
                 print '{} HAS DIED, SAVING'.format(process)
                 save_name = 'BRAIN_{}'.format(time.strftime('%Y_%m_%d_%H_%M_%S'))
                 save_time = time.time()
                 sender.send_json('save {}'.format(save_name))
 
-        if save_name and (len(glob.glob('{}*'.format(save_name))) == 4 or time.time() - save_time > 1800):
+        if save_name and (len(glob.glob('{}*'.format(save_name))) == 4 or time.time() - save_time > IO.SYSTEM_TIME_OUT):
             status = open('STATUS_{}'.format(save_name), 'w')
             call(['ps', 'aux'], stdout=status)
+            call(['df', '-h'], stdout=status)
             status.close()
             call(['shutdown', '-r', 'now'])
         
@@ -472,6 +476,7 @@ class AliveNotifier(threading.Thread):
     def __init__(self, me, host='localhost'):
         threading.Thread.__init__(self)
         self.name = '{} PID {}'.format(me.name, me.pid)
+        print self.name
         context = zmq.Context()
         self.life_signal_Q = context.socket(zmq.PUSH)
         self.life_signal_Q.connect('tcp://{}:{}'.format(host, IO.SENTINEL))
@@ -479,7 +484,7 @@ class AliveNotifier(threading.Thread):
         self.start()
 
     def run(self):
-        while true_wait(IO.TIME_OUT):
+        while true_wait(IO.PROCESS_TIME_OUT):
             self.life_signal_Q.send_pyobj(self.name)
 
 class SimpleLogger:
@@ -518,9 +523,9 @@ def log_sink():
         output.flush()
                         
 class LoggerProcess(mp.Process):
-    # This must be here - if in __init__, the capture of sys.stdout is all messed up.
+    ''' File to write log over ØMQ socket. '''
     def run(self):
-        my_logger = Logger()
+        my_logger = Logger() # Must be in run, not __init__
         sys.stdout = my_logger
         sys.stderr = my_logger
 
@@ -530,3 +535,8 @@ class LoggerProcess(mp.Process):
         
         mp.Process.run(self)
         
+class MyProcess(mp.Process):
+    def run(self):
+        AliveNotifier(mp.current_process())
+        
+        mp.Process.run(self)
