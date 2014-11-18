@@ -2,11 +2,13 @@
 ; init chn values for various purposes
 
         chnset 2000, "td_HiShelfFq"     ; pre emphasis for transient detection of sibliants
-        chnset 6, "td_HiShelfGain"     ; in dB
-        chnset 300, "td_LoShelfFq"
-        chnset -25, "td_LoShelfGain"
+        chnset 9, "td_HiShelfGain"     ; in dB
+        chnset 200, "	"
+        chnset -12, "td_LoShelfGain"
         ;;;NO!;chnset -10, "td_AmpAdjust"      ; approximate amp compensation for EQ
         
+        chnset -60, "inputNoisefloor"
+
         ; transient detect parameters
         chnset 1.5, "in_envelopeRelease"    ; envelope follower release
         chnset 5, "transientThresh"         ; transient trig threshold 

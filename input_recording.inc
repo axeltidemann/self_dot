@@ -9,9 +9,9 @@
         Swavname        strget p4
         a1              chnget "rec_in1"
 
-	    krec_floor	= -60                   ; safe to set statically, as the input should be gated before here anyway
+	    krec_floor	= -63                   ; safe to set statically, as the input should be gated before here anyway
 	    kAttack		= 0.001			        ; envelope follower attack
-	    kRelease	= 0.25                   ;chnget "in_envelopeRelease" ; 0.3 ; envelope follower release
+	    kRelease	= 0.4                   ;chnget "in_envelopeRelease" ; 0.3 ; envelope follower release
 	    aFollow1	follow2	a1, kAttack, kRelease	; envelope follower
 	    kFollow1	downsamp aFollow1	
 	    kFollowdb1	= dbfsamp(kFollow1)		    ; convert to dB
@@ -58,6 +58,7 @@ record:
 record_done:
         Swavname1       strcat Swavname, "ALL.wav"
                 	    fout Swavname1, 14, a1
+
 
         ;printk2 krectime, 5
                         

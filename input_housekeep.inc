@@ -102,7 +102,16 @@ endif
 #include "panalyzer.inc"
         ain1    chnget "in1"
         ain2    chnget "in2"
-                        chnset ain1+ain2, "in1"
+        inGain  = 1.3
+        a1      = (ain1+ain2)*inGain
+/*
+	kthresh     = -5
+	kratio      = 4
+	kattack		= 15				; attack time 
+	krelease	= 20				; release time 
+#include "compressor.inc"
+*/
+                        chnset a1, "in1"
         endin
 
 ;******************************

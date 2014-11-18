@@ -33,7 +33,7 @@
 ;analyze transients
 	iresponse	= 10 			            ; response time in milliseconds
 	ktthresh	chnget "transientThresh"    ;= 9 ; transient trig threshold 
-	klowThresh	= knoiseFloor_dB+ktd_HiShelfGain	        ; lower threshold for transient detection
+	klowThresh	= knoiseFloor_dB+(ktd_HiShelfGain*0.5)	        ; lower threshold for transient detection
 	;idoubleLimit = 0.02			            ; minimum duration between events, (double trig limit)
     kdoubleLimit chnget "doubleLimit"          ; minimum duration between events, (double trig limit)
     kdecThresh	chnget "transientDecThresh"  ;= 6 ; retrig threshold, how much must the level decay from its local max before allowing new transient trig

@@ -79,8 +79,8 @@ def robocontrol(host):
                 # send pan position to head (eg. 'p 60')
                 pan1 += int((value)*120)
                 #pan1 += int((value)*80)
-                if pan1 < 10: pan1 += 180
-                if pan1 > 200: pan1 -= 180
+                if pan1 < 5: pan1 += 180
+                if pan1 > 205: pan1 -= 180
                 ser.write('p %03dn'%pan1)
             if axis == 'tilt':
                 #print 'head 1 tiltposition', value
