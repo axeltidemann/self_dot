@@ -17,6 +17,10 @@
 	giNoiseFloor	ftgen 0, 0, 8192, 2, 0					; just init, to be used as noise gate 
 	gifnaNoiseIn   	ftgen   0 ,0 ,giFftTabSize, 7, 0, giFftTabSize, 0   	; for pvs analysis of bacground noise
 	gifnaNoise     	ftgen   0 ,0 ,giFftTabSize, 7, 0, giFftTabSize, 0   	; for pvs analysis of bacground noise
+	
+	gifnaEq_test    ftgen   0 ,0 ,giFftTabSize, 7, 0, giFftTabSize, 0   	; for audio system Eq profiling
+	gifnaEqProfile  ftgen   0 ,0 ,giFftTabSize, 7, 0, giFftTabSize, 0   	; init audio system Eq profile
+	gifnaEq         ftgen   0 ,0 ,giFftTabSize, 7, 0, giFftTabSize, 0   	; for audio system Eq application
 
 ; classic waveforms
 	giSine		ftgen	0, 0, 65536, 10, 1					; sine wave

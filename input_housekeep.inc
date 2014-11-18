@@ -156,6 +156,14 @@ print p1, p2, p3
         endin
 
 ;******************************
+; get audio system Eq profile
+        instr 19
+        a1          chnget "in1"
+#include "autoEQ_profile.inc"
+        endin
+
+
+;******************************
 ; audio input mute
         instr 21
         ilevel  = p4

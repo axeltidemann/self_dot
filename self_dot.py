@@ -255,6 +255,9 @@ class Controller:
             if 'inputLevel' in message:
                 self.event.send_json({ 'inputLevel': message[11:] })
 
+            if 'calibrateEq' in message:
+                self.event.send_json({ 'calibrateEq': True })
+
             if 'calibrateAudio' in message:
                 self.event.send_json({ 'calibrateAudio': True })
 

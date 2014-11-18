@@ -309,6 +309,11 @@ def audio():
                     cs.InputMessage('i 21 0 .1 0')
                     cs.InputMessage('i 21 1 .1 1')
 
+            if 'calibrateEq' in pushbutton:
+                cs.InputMessage('i -99 0 1') # turn off master out
+                cs.InputMessage('i 19 0.5 2') # eq profiling
+                cs.InputMessage('i 99 3 -1') # turn on master out
+
             if 'calibrateAudio' in pushbutton:
                 cs.InputMessage('i -17 0 1') # turn off old noise gate
                 cs.InputMessage('i 12 0 4') # measure roundtrip latency

@@ -37,6 +37,8 @@
         chnset -9, "PrimaryCompThresh"
         chnset 3, "PrimaryCompRatio"
         
+	    chnset 1, "selfAutoEqEnable"
+
         chnset -3, "ambientLevel"      ; set level of self's own background sound
 
 
