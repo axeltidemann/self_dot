@@ -11,10 +11,13 @@
 
 	    krec_floor	= -60                   ; safe to set statically, as the input should be gated before here anyway
 	    kAttack		= 0.001			        ; envelope follower attack
-	    kRelease	= 0.15                   ;chnget "in_envelopeRelease" ; 0.3 ; envelope follower release
+	    kRelease	= 0.25                   ;chnget "in_envelopeRelease" ; 0.3 ; envelope follower release
 	    aFollow1	follow2	a1, kAttack, kRelease	; envelope follower
 	    kFollow1	downsamp aFollow1	
 	    kFollowdb1	= dbfsamp(kFollow1)		    ; convert to dB
+
+;	    knoiseFloor_dB	chnget "inputNoisefloor"
+;	    kFollowdb1  chnget "envelope1"
 
 ; compress before recording
 	    kthresh         = -15
@@ -25,22 +28,25 @@
 
         ktimer          init 0
         kskiptimer      init 0
-
         ktransient      chnget "transient"
+        printk2 ktransient
         ktest           =  (kFollowdb1 > krec_floor ? 1:0)
+        printk2 ktest, 15
 if ktransient > 0 then
 reinit startgate        
 endif
-;        irecdelay       chnget "recdelay"
+        irecdelay       chnget "recdelay"
 startgate:
-        kinit           linseg 1, 0.4, 1, 0, 0, 1, 0
+        kinit           linseg 1, irecdelay+(4/kr), 1, 0, 0, 1, 0
 rireturn
+        printk2 kinit,30
         ktest2          = (kinit == 1 ? 1 : ktest)
         kgate           init 1
         kgate           = (kinit == 1 ? 1 : kgate)
         kgate           = (ktransient == 1 ? 1 : kgate)
         kgate           = (ktest2 < 1 ? 0 : kgate)
-
+        printk2 kgate, 45
+        ;kgate1 = 1
 if (kgate > 0) kgoto record
         kskiptimer      += 1
         kskiptime       = kskiptimer/kr     ; time in seconds (only counting when we are not recording
@@ -50,6 +56,8 @@ record:
         krectime        = ktimer/kr         ; time in seconds (only counting when we are recording
                 	    fout Swavname, 14, a1
 record_done:
+        Swavname1       strcat Swavname, "ALL.wav"
+                	    fout Swavname1, 14, a1
 
         ;printk2 krectime, 5
                         

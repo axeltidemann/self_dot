@@ -27,6 +27,7 @@
 /*
 			chnset kflag, "pvsinflag"
 			chnset krms1, "level1"
+			chnset kFollowdb1, "envelope1"
 			chnset kcps1, "pitch1ptrack"
 			chnset kcps1p, "pitch1pll"
 			chnset kautocorr, "autocorr1"
@@ -46,7 +47,7 @@
 			chnset krms1gated, "level1gated"
 */
         ; send audio to memory recording
-        irecdelay       = 0.03
+        irecdelay       = 0.05
                         chnset irecdelay, "recdelay"
 	    arec            delay a1, irecdelay  ; delay to sync with transient detection (and then add some to capture a bit of potential soft starts like 'h')
                         chnset arec, "rec_in1"

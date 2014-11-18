@@ -6,11 +6,11 @@
 	ktd_HiShelfGain	chnget "td_HiShelfGain"
 	ktd_LoShelfFq	chnget "td_LoShelfFq"
 	ktd_LoShelfGain	chnget "td_LoShelfGain"
-	ktd_AmpAdjust	chnget "td_AmpAdjust"
+	;;ktd_AmpAdjust	chnget "td_AmpAdjust"
 	
     atd_input	pareq a1, ktd_HiShelfFq, ampdb(ktd_HiShelfGain), 0.7,  2
     atd_input	pareq atd_input, ktd_HiShelfFq, ampdb(ktd_LoShelfGain), 0.7,  1
-    atd_input	= atd_input*ampdb(ktd_AmpAdjust)
+    ;;atd_input	= atd_input*ampdb(ktd_AmpAdjust)
 
 
 ; ***************
@@ -33,7 +33,7 @@
 ;analyze transients
 	iresponse	= 10 			            ; response time in milliseconds
 	ktthresh	chnget "transientThresh"    ;= 9 ; transient trig threshold 
-	klowThresh	= knoiseFloor_dB	        ; lower threshold for transient detection
+	klowThresh	= knoiseFloor_dB+ktd_HiShelfGain	        ; lower threshold for transient detection
 	;idoubleLimit = 0.02			            ; minimum duration between events, (double trig limit)
     kdoubleLimit chnget "doubleLimit"          ; minimum duration between events, (double trig limit)
     kdecThresh	chnget "transientDecThresh"  ;= 6 ; retrig threshold, how much must the level decay from its local max before allowing new transient trig
