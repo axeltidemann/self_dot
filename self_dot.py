@@ -23,10 +23,6 @@ import robocontrol
 import association
 
 def idle(host):
-    me = mp.current_process()
-    print me.name, 'PID', me.pid
-    utils.AliveNotifier(me)
-    
     context = zmq.Context()
 
     face = context.socket(zmq.SUB)
@@ -89,10 +85,6 @@ def idle(host):
         
 class Controller:
     def __init__(self, init_state, host):
-        me = mp.current_process()
-        print me.name, 'PID', me.pid
-        utils.AliveNotifier(me)
-
         self.state = init_state
         
         context = zmq.Context()
@@ -129,7 +121,7 @@ class Controller:
                                           dumps(self.state) ])
 
     def parse(self, message):
-        print '[self.] received:', message
+        print '[self.] received: {}'.format(message)
 
         try:
             if message == 'dream':
@@ -285,7 +277,7 @@ class Controller:
             self.publisher.send_json(self.state)
 
         except Exception as e:
-            print utils.print_exception('Something went wrong when parsing the message - try again.')
+            utils.print_exception('Something went wrong when parsing the message - try again.')
 
 if __name__ == '__main__':
 
@@ -307,22 +299,18 @@ if __name__ == '__main__':
     me = mp.current_process()
     print 'SELF MAIN PID', me.pid
 
-    mp.Process(target=IO.audio, name='AUDIO').start() 
-    mp.Process(target=IO.video, name='VIDEO').start()
-    mp.Process(target=brain.face_extraction, args=('localhost',False,True,), name='FACE EXTRACTION').start()
-    mp.Process(target=brain.respond, args=('localhost','localhost',True), name='RESPONDER').start()
-    mp.Process(target=brain.learn_audio, args=('localhost',True), name='AUDIO LEARN').start()
-    mp.Process(target=brain.learn_video, args=('localhost',), name='VIDEO LEARN').start()
-    mp.Process(target=brain.learn_faces, args=('localhost',), name='FACES LEARN').start()
-    #mp.Process(target=brain.calculate_sai_video_marginals, args=('localhost',), name='SAI VIDEO CALCULATION').start()
-    mp.Process(target=robocontrol.robocontrol, args=('localhost',), name='ROBOCONTROL').start()
-    mp.Process(target=association.association, args=('localhost',), name='ASSOCIATION').start()
-    mp.Process(target=brain.cognition, args=('localhost',), name='COGNITION').start()
-    mp.Process(target=utils.scheduler, args=('localhost',), name='SCHEDULER').start()
-    mp.Process(target=Controller, args=(persistent_states,'localhost',), name='CONTROLLER').start()
-    mp.Process(target=idle, args=('localhost',), name='IDLER').start()
-    mp.Process(target=utils.sentinel, args=('localhost',), name='SENTINEL').start()
-    # try:
-    #     raw_input('')
-    # except KeyboardInterrupt:
-    #     map(lambda x: x.terminate(), mp.active_children())
+    mp.Process(target=utils.log_sink).start()
+    utils.LoggerProcess(target=IO.audio, name='AUDIO').start() 
+    utils.LoggerProcess(target=IO.video, name='VIDEO').start()
+    utils.LoggerProcess(target=brain.face_extraction, args=('localhost',False,True,), name='FACE EXTRACTION').start()
+    utils.LoggerProcess(target=brain.respond, args=('localhost','localhost',True), name='RESPONDER').start()
+    utils.LoggerProcess(target=brain.learn_audio, args=('localhost',True), name='AUDIO LEARN').start()
+    utils.LoggerProcess(target=brain.learn_video, args=('localhost',), name='VIDEO LEARN').start()
+    utils.LoggerProcess(target=brain.learn_faces, args=('localhost',), name='FACES LEARN').start()
+    utils.LoggerProcess(target=robocontrol.robocontrol, args=('localhost',), name='ROBOCONTROL').start()
+    utils.LoggerProcess(target=association.association, args=('localhost',), name='ASSOCIATION').start()
+    utils.LoggerProcess(target=brain.cognition, args=('localhost',), name='COGNITION').start()
+    utils.LoggerProcess(target=utils.scheduler, args=('localhost',), name='SCHEDULER').start()
+    utils.LoggerProcess(target=Controller, args=(persistent_states,'localhost',), name='CONTROLLER').start()
+    utils.LoggerProcess(target=idle, args=('localhost',), name='IDLER').start()
+    utils.LoggerProcess(target=utils.sentinel, args=('localhost',), name='SENTINEL').start()

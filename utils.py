@@ -352,10 +352,6 @@ def print_exception(msg=''):
     print '{} EXCEPTION IN ({}, LINE {} "{}"): {}'.format(msg, filename, lineno, line.strip(), exc_obj)
 
 def scheduler(host):
-    me = mp.current_process()
-    print me.name, 'PID', me.pid
-    AliveNotifier(me)
-    
     context = zmq.Context()
     
     play_events = context.socket(zmq.PULL)
@@ -436,9 +432,6 @@ def true_wait(seconds):
     return True
                 
 def sentinel(host):
-    me = mp.current_process()
-    print me.name, 'PID', me.pid
-
     context = zmq.Context()
     
     life_signal_Q = context.socket(zmq.PULL)
@@ -464,11 +457,14 @@ def sentinel(host):
         for process in book.keys():
             if not save_name and time.time() - book[process] > IO.TIME_OUT*2:
                 print '{} HAS DIED, SAVING'.format(process)
-                save_name = 'BRAIN{}'.format(time.strftime('%Y_%m_%d_%H_%M_%S'))
+                save_name = 'BRAIN_{}'.format(time.strftime('%Y_%m_%d_%H_%M_%S'))
                 save_time = time.time()
                 sender.send_json('save {}'.format(save_name))
 
         if save_name and (len(glob.glob('{}*'.format(save_name))) == 4 or time.time() - save_time > 1800):
+            status = open('STATUS_{}'.format(save_name), 'w')
+            call(['ps', 'aux'], stdout=status)
+            status.close()
             call(['shutdown', '-r', 'now'])
         
                 
@@ -485,5 +481,52 @@ class AliveNotifier(threading.Thread):
     def run(self):
         while true_wait(IO.TIME_OUT):
             self.life_signal_Q.send_pyobj(self.name)
+
+class SimpleLogger:
+    def __init__(self, host='localhost'):
+        self.out = sys.stdout
     
+    def write(self, txt):
+        if len(txt.rstrip()):
+            self.out.write('PASSED VIA LOGGER:' + txt + '\n')
+            
+    def flush(self):
+        self.write('DEATH')
+        
+class Logger:
+    def __init__(self, host='localhost'):
+        context = zmq.Context()
+        self.logger = context.socket(zmq.PUSH)
+        self.logger.connect('tcp://{}:{}'.format(host, IO.LOGGER))
     
+    def write(self, txt):
+        if len(txt.rstrip()):
+            self.logger.send_json(txt)
+
+    def flush(self):
+        self.write('DEATH')
+
+def log_sink():
+    context = zmq.Context()
+    logger = context.socket(zmq.PULL)
+    logger.bind('tcp://*:{}'.format(IO.LOGGER))
+
+    output = open('LOG_{}'.format(time.strftime('%Y_%m_%d_%H_%M_%S')), 'w')
+    
+    while True:
+        output.write(logger.recv_json() + '\n')
+        output.flush()
+                        
+class LoggerProcess(mp.Process):
+    # This must be here - if in __init__, the capture of sys.stdout is all messed up.
+    def run(self):
+        my_logger = Logger()
+        sys.stdout = my_logger
+        sys.stderr = my_logger
+
+        me = mp.current_process()
+        print '{} PID {}'.format(me.name, me.pid)
+        AliveNotifier(me)
+        
+        mp.Process.run(self)
+        

@@ -7,7 +7,7 @@ cd /home/self/Projects/self_dot/
 
 now=$(date +"%Y_%m_%d_%H_%M_%S")
 
-python self_dot.py &> "OUTPUT_$now" &
+python self_dot.py &> "CSOUND_OUTPUT_$now" &
 
 sleep 10
 

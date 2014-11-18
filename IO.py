@@ -34,13 +34,9 @@ FACE = 5572
 BRAIN = 5573
 ASSOCIATION = 5574
 SENTINEL = 5575
+LOGGER = 5576
 
 def video():
-    me = mp.current_process()
-    print me.name, 'PID', me.pid
-
-    utils.AliveNotifier(me)
-    
     cv2.namedWindow('Output', cv2.WND_PROP_FULLSCREEN)
     camera = cv2.VideoCapture(0)
 
@@ -81,9 +77,6 @@ def video():
         cv2.waitKey(VIDEO_SAMPLE_TIME)
 
 def audio():
-    me = mp.current_process()
-    print me.name, 'PID', me.pid
-    utils.AliveNotifier(me)
     context = zmq.Context()
     publisher = context.socket(zmq.PUB)
     publisher.bind('tcp://*:{}'.format(MIC))

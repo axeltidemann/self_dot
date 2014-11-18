@@ -50,10 +50,6 @@ FACE_MEMORY_SIZE = 100
 
 
 def cognition(host):
-    me = mp.current_process()
-    print me.name, 'PID', me.pid
-    utils.AliveNotifier(me)
-
     context = zmq.Context()
 
     eventQ = context.socket(zmq.SUB)
@@ -190,10 +186,6 @@ def cognition(host):
 # LOOK AT EYES? CAN YOU DETERMINE ANYTHING FROM THEM?
 # PRESENT VISUAL INFORMATION - MOVE UP OR DOWN
 def face_extraction(host, extended_search=False, show=False):
-    me = mp.current_process()
-    print me.name, 'PID', me.pid
-    utils.AliveNotifier(me)
-
     eye_cascade = cv2.cv.Load(EYE_HAAR_CASCADE_PATH)
     face_cascade = cv2.cv.Load(FACE_HAAR_CASCADE_PATH)
     storage = cv2.cv.CreateMemStorage()
@@ -295,7 +287,7 @@ def dream(wavs, wav_segments):
     mega_filenames_and_indexes = []
     for audio_id, wav_files in enumerate(wavs):
         NAP_detail = 'low'
-        print 'Examining audio_id', audio_id
+        print 'Examining audio_id {}'.format(audio_id)
 
         if len(wav_files) == 1:
             print 'Just one member in this audio_id, skipping analysis'
@@ -375,43 +367,6 @@ def _predict_audio_id(audio_classifier, NAP):
     x_test = audio_classifier.rPCA.transform(np.ndarray.flatten(NAP))
     return audio_classifier.predict(x_test)[0]
 
-def calculate_sai_video_marginals(host, debug=False):
-    me = mp.current_process()
-    print '{} PID {}'.format(me.name, me.pid)
-
-    context = zmq.Context()
-    eventQ = context.socket(zmq.SUB)
-    eventQ.connect('tcp://{}:{}'.format(host, IO.EVENT))
-    eventQ.setsockopt(zmq.SUBSCRIBE, b'') 
-
-    while True:
-        pushbutton = eventQ.recv_json()
-        if 'learn' in pushbutton:
-            t0 = time.time()
-            filename = pushbutton['filename']
-            audio_segments = utils.get_segments(filename)
-
-            NAP = cochlear(filename, stride=1, new_rate=22050, apply_filter=0)
-            input_segment_width = 2048
-            num_channels = NAP.shape[1]
-
-            sai_params = mysai.CreateSAIParams(num_channels=num_channels,
-                                               input_segment_width=input_segment_width,
-                                               trigger_window_width=input_segment_width,
-                                               sai_width=1024)
-            sai = pysai.SAI(sai_params)
-
-            input_segment_width = 2048
-            norm_segments = np.rint(NAP.shape[0]*audio_segments/audio_segments[-1]).astype('int')
-
-            for segment_id, NAP_segment in enumerate(utils.trim_right(NAP[norm_segments[i]:norm_segments[i+1]], threshold=.05) for i in range(len(norm_segments)-1)) :
-                sai_video = [ np.copy(sai.RunSegment(input_segment.T)) for input_segment in utils.chunks(NAP_segment, input_segment_width) ]
-                sai.Reset()
-                marginals = [ mysai.sai_rectangles(frame) for frame in sai_video ]
-                pickle.dump(marginals, open('{}-sai_video_marginals_segment_{}'.format(filename, segment_id), 'w'))
-
-            print 'SAI video marginals for {} calculated in {} seconds'.format(filename, time.time() - t0)
-
 def _hamming_distance_predictor(audio_classifier, NAP, maxlen, NAP_hashes):
     NAP_hash = utils.d_hash(NAP, hash_size=8)
     NAP_scales = [ utils.exact(NAP, maxlen), 
@@ -443,10 +398,6 @@ def _extract_NAP(segstart, segend, soundfile, suffix='cochlear'):
 
 
 def respond(control_host, learn_host, debug=False):
-    me = mp.current_process()
-    print me.name, 'PID', me.pid
-    utils.AliveNotifier(me)
-
     context = zmq.Context()
     
     eventQ = context.socket(zmq.SUB)
@@ -823,10 +774,10 @@ def respond(control_host, learn_host, debug=False):
                     print e, 'showme print failed.'
 
             if 'save' in pushbutton:
-                utils.save('{}.{}'.format(pushbutton['save'], me.name), [ sound_to_face, wordFace, face_to_sound, faceWord, video_producer, segment_ids, wavs, wav_segments, audio_classifier, maxlen, NAP_hashes, face_id, face_recognizer ])
+                utils.save('{}.{}'.format(pushbutton['save'], mp.current_process().name), [ sound_to_face, wordFace, face_to_sound, faceWord, video_producer, segment_ids, wavs, wav_segments, audio_classifier, maxlen, NAP_hashes, face_id, face_recognizer ])
 
             if 'load' in pushbutton:
-                sound_to_face, wordFace, face_to_sound, faceWord, video_producer, segment_ids, wavs, wav_segments, audio_classifier, maxlen, NAP_hashes, face_id, face_recognizer = utils.load('{}.{}'.format(pushbutton['load'], me.name))
+                sound_to_face, wordFace, face_to_sound, faceWord, video_producer, segment_ids, wavs, wav_segments, audio_classifier, maxlen, NAP_hashes, face_id, face_recognizer = utils.load('{}.{}'.format(pushbutton['load'], mp.current_process().name))
                     
 def _train_audio_recognizer(signal):
     noise = np.random.rand(signal.shape[0], signal.shape[1])
@@ -877,10 +828,6 @@ def _recognize_global_audio_id(audio_recognizer, NAP, plt):
     print 'GLOBAL AUDIO IDS:', np.mean(output, axis=0)
 
 def learn_audio(host, debug=False):
-    me = mp.current_process()
-    print '{} PID {}'.format(me.name, me.pid)
-    utils.AliveNotifier(me)
-
     context = zmq.Context()
 
     mic = context.socket(zmq.SUB)
@@ -1024,17 +971,13 @@ def learn_audio(host, debug=False):
                 dream(wavs, wav_segments)
                 
             if 'save' in pushbutton:
-                utils.save('{}.{}'.format(pushbutton['save'], me.name), [ NAPs, wavs, wav_segments, NAP_hashes, audio_classifier, maxlen ])
+                utils.save('{}.{}'.format(pushbutton['save'], mp.current_process().name), [ NAPs, wavs, wav_segments, NAP_hashes, audio_classifier, maxlen ])
 
             if 'load' in pushbutton:
-                NAPs, wavs, wav_segments, NAP_hashes, audio_classifier, maxlen = utils.load('{}.{}'.format(pushbutton['load'], me.name))
+                NAPs, wavs, wav_segments, NAP_hashes, audio_classifier, maxlen = utils.load('{}.{}'.format(pushbutton['load'], mp.current_process().name))
 
                 
 def learn_video(host, debug=False):
-    me = mp.current_process()
-    print '{} PID {}'.format(me.name, me.pid)
-    utils.AliveNotifier(me)
-
     context = zmq.Context()
 
     camera = context.socket(zmq.SUB)
@@ -1101,10 +1044,6 @@ def learn_video(host, debug=False):
 
                 
 def learn_faces(host, debug=False):
-    me = mp.current_process()
-    print '{} PID {}'.format(me.name, me.pid)
-    utils.AliveNotifier(me)
-    
     context = zmq.Context()
 
     face = context.socket(zmq.SUB)
@@ -1199,10 +1138,10 @@ def learn_faces(host, debug=False):
                 faces.clear()
 
             if 'save' in pushbutton:
-                utils.save('{}.{}'.format(pushbutton['save'], me.name), [ face_history, face_hashes, face_recognizer ])
+                utils.save('{}.{}'.format(pushbutton['save'], mp.current_process().name), [ face_history, face_hashes, face_recognizer ])
 
             if 'load' in pushbutton:
-                face_history, face_hashes, face_recognizer = utils.load('{}.{}'.format(pushbutton['load'], me.name))
+                face_history, face_hashes, face_recognizer = utils.load('{}.{}'.format(pushbutton['load'], mp.current_process().name))
 
 
 def _three_amigos(context, host):
