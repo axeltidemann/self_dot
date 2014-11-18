@@ -13,10 +13,10 @@ import zmq
 from utils import send_array, recv_array
 import myCsoundAudioOptions
 
-# Milliseconds between each image capture
-VIDEO_SAMPLE_TIME = 100
+VIDEO_SAMPLE_TIME = 100 # Milliseconds
 FRAME_SIZE = (640,480)
-TIME_OUT = 5*60 # Seconds between each "alive" signal
+PROCESS_TIME_OUT = 5*60 
+SYSTEM_TIME_OUT = 30*60 
 
 # ØMQ ports
 CAMERA = 5561
