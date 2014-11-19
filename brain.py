@@ -31,6 +31,7 @@ import utils
 import IO
 import association
 import my_sai_test as mysai
+import myCsoundAudioOptions
 
 try:
     opencv_prefix = os.environ['VIRTUAL_ENV']
@@ -1087,11 +1088,11 @@ def learn_video(host, debug=False):
                     tarantino = train_network(x,y, output_dim=10)
                     tarantino.stride = stride
 
-                    esn_name = 'video_esn_{}'.format(uuid4())
+                    esn_name = '{}video_esn_{}'.format(myCsoundAudioOptions.memRecPath, uuid4())
 
                     tz = time.time()
                     pickle.dump(tarantino, open(esn_name, 'w'))
-                    print 'Pickle time {} seconds'.format(time.time() - tz)
+                    print 'Video ESN pickle time {} seconds'.format(time.time() - tz)
                     
                     t1 = time.time()
                     #brainQ.send_pyobj([ 'video_learn', filename, tarantino ])
