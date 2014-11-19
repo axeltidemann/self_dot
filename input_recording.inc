@@ -29,9 +29,9 @@
         ktimer          init 0
         kskiptimer      init 0
         ktransient      chnget "transient"
-        printk2 ktransient
+;        printk2 ktransient
         ktest           =  (kFollowdb1 > krec_floor ? 1:0)
-        printk2 ktest, 15
+;        printk2 ktest, 15
 if ktransient > 0 then
 reinit startgate        
 endif
@@ -39,13 +39,13 @@ endif
 startgate:
         kinit           linseg 1, irecdelay+(4/kr), 1, 0, 0, 1, 0
 rireturn
-        printk2 kinit,30
+;        printk2 kinit,30
         ktest2          = (kinit == 1 ? 1 : ktest)
         kgate           init 1
         kgate           = (kinit == 1 ? 1 : kgate)
         kgate           = (ktransient == 1 ? 1 : kgate)
         kgate           = (ktest2 < 1 ? 0 : kgate)
-        printk2 kgate, 45
+;        printk2 kgate, 45
         ;kgate1 = 1
 if (kgate > 0) kgoto record
         kskiptimer      += 1
