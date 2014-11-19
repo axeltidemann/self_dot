@@ -159,8 +159,10 @@ def cognition(host):
                     print '*\n*I will now try to do a rhyme'
                     try:
                         rhyme_seed = last_most_significant_audio_id
+                        print 'COGNITION IS WAITING...'
                         association.send_pyobj(['getSimilarWords',rhyme_seed, RHYME_HAMMERTIME])
                         rhymes = association.recv_pyobj()
+                        print 'COGNITION OK'
                         if len(rhymes) > 7 : rhymes= rhymes[:7] # temporary length limit
                         print 'Rhyme sentence:', rhymes
                         sender.send_json('respond_setParam wordSpace 1 0')
