@@ -284,82 +284,85 @@ def dream(wavs, wav_audio_ids, NAPs, NAP_hashes, dreamQ):
     import matplotlib.pyplot as plt
     plt.ion()
 
-    dream_list=[ [ soundfile, wav_audio_ids[(soundfile, audio_id)], audio_id ] for audio_id, wav_files in enumerate(wavs) for soundfile in wav_files ]
-    dreamQ.send_pyobj(dream_list)
-    
-    print 'Removing wrongly binned filenames'
-    mega_filenames_and_indexes = []
-    for audio_id, wav_files in enumerate(wavs):
-        NAP_detail = 'low'
-        filenames_and_indexes = []
+    try:
+        dream_list=[ [ soundfile, wav_audio_ids[(soundfile, audio_id)], audio_id ] for audio_id, wav_files in enumerate(wavs) for soundfile in wav_files ]
+        dreamQ.send_pyobj(dream_list)
 
-        for soundfile in wav_files:
-            segstart, segend = wav_audio_ids[(soundfile, audio_id)]
-            audio_segments = utils.get_segments(soundfile)
-            norm_segstart = segstart/audio_segments[-1]
-            norm_segend = segend/audio_segments[-1]
-            filenames_and_indexes.append([ soundfile, norm_segstart, norm_segend, audio_id, NAP_detail ])
+        print 'Removing wrongly binned filenames'
+        mega_filenames_and_indexes = []
+        for audio_id, wav_files in enumerate(wavs):
+            NAP_detail = 'low'
+            filenames_and_indexes = []
 
-        mega_filenames_and_indexes.extend(filenames_and_indexes)
+            for soundfile in wav_files:
+                segstart, segend = wav_audio_ids[(soundfile, audio_id)]
+                audio_segments = utils.get_segments(soundfile)
+                norm_segstart = segstart/audio_segments[-1]
+                norm_segend = segend/audio_segments[-1]
+                filenames_and_indexes.append([ soundfile, norm_segstart, norm_segend, audio_id, NAP_detail ])
 
-        k = 2
-        print 'Examining audio_id {}'.format(audio_id)
-        if len(wav_files) == 1:
-            print 'Just one member in this audio_id, skipping analysis'
-            continue
-            
-        sparse_codes = mysai.experiment(filenames_and_indexes, k)
-        # plt.matshow(sparse_codes, aspect='auto')
-        # plt.colorbar()
-        # plt.draw()
+            mega_filenames_and_indexes.extend(filenames_and_indexes)
 
-        coarse = np.mean(sparse_codes, axis=1)
-        coarse.shape = (len(coarse), 1)
+            k = 2
+            print 'Examining audio_id {}'.format(audio_id)
+            if len(wav_files) == 1:
+                print 'Just one member in this audio_id, skipping analysis'
+                continue
 
-        codebook,_ = kmeans(coarse, k)
-        instances = [ vq(np.atleast_2d(s), codebook)[0] for s in coarse ]
+            sparse_codes = mysai.experiment(filenames_and_indexes, k)
+            # plt.matshow(sparse_codes, aspect='auto')
+            # plt.colorbar()
+            # plt.draw()
 
-        freqs = itemfreq(instances)
-        sorted_freqs = sorted(freqs, key=lambda x: x[1])
-        print 'Average sparse codes: {} Class count: {}'.format(list(itertools.chain.from_iterable(coarse)), sorted_freqs)
+            coarse = np.mean(sparse_codes, axis=1)
+            coarse.shape = (len(coarse), 1)
 
-        if len(sorted_freqs) == 1:
-            print 'Considered to be all the same.'
-            continue
-        
-        fewest_class = sorted_freqs[0][0]
-        ousted_files = [ filename for filename, i in zip(wav_files, instances) if i == fewest_class ]
-        print 'Class {} has fewest members, deleting audio_id {} related to file {}'.format(fewest_class, audio_id, ousted_files)
-        for delete_file in ousted_files:
-            index = wav_files.index(delete_file)
-            wav_files.pop(index)
-            NAPs[audio_id].pop(index)
-            NAP_hashes[audio_id].pop(index)
-            del wav_audio_ids[(delete_file, audio_id)]
-    
-    print 'Creating mega super self-organized class'
+            codebook,_ = kmeans(coarse, k)
+            instances = [ vq(np.atleast_2d(s), codebook)[0] for s in coarse ]
 
-    for row in mega_filenames_and_indexes:
-        row[-1] = 'high'
+            freqs = itemfreq(instances)
+            sorted_freqs = sorted(freqs, key=lambda x: x[1])
+            print 'Average sparse codes: {} Class count: {}'.format(list(itertools.chain.from_iterable(coarse)), sorted_freqs)
 
-    high_resolution_k = 256
-    clusters = 24
-    sparse_codes = mysai.experiment(mega_filenames_and_indexes, high_resolution_k)
-    sparse_codes = np.array(sparse_codes)
-    plt.matshow(sparse_codes, aspect='auto')
-    plt.colorbar()
-    plt.draw()
+            if len(sorted_freqs) == 1:
+                print 'Considered to be all the same.'
+                continue
 
-    codebook,_ = kmeans(sparse_codes, clusters)
-    instances = [ vq(np.atleast_2d(s), codebook)[0] for s in sparse_codes ]
+            fewest_class = sorted_freqs[0][0]
+            ousted_files = [ filename for filename, i in zip(wav_files, instances) if i == fewest_class ]
+            print 'Class {} has fewest members, deleting audio_id {} related to file {}'.format(fewest_class, audio_id, ousted_files)
+            for delete_file in ousted_files:
+                index = wav_files.index(delete_file)
+                wav_files.pop(index)
+                NAPs[audio_id].pop(index)
+                NAP_hashes[audio_id].pop(index)
+                del wav_audio_ids[(delete_file, audio_id)]
 
-    cluster_list = {}
-    for mega, instance in zip(mega_filenames_and_indexes, instances):
-        soundfile,_,_,audio_id,_ = mega
-        cluster_list[(soundfile, audio_id)] = instance
+        print 'Creating mega super self-organized class'
 
-    print cluster_list
-        
+        for row in mega_filenames_and_indexes:
+            row[-1] = 'high'
+
+        high_resolution_k = 256
+        clusters = 24
+        sparse_codes = mysai.experiment(mega_filenames_and_indexes, high_resolution_k)
+        sparse_codes = np.array(sparse_codes)
+        plt.matshow(sparse_codes, aspect='auto')
+        plt.colorbar()
+        plt.draw()
+
+        codebook,_ = kmeans(sparse_codes, clusters)
+        instances = [ vq(np.atleast_2d(s), codebook)[0] for s in sparse_codes ]
+
+        cluster_list = {}
+        for mega, instance in zip(mega_filenames_and_indexes, instances):
+            soundfile,_,_,audio_id,_ = mega
+            cluster_list[(soundfile, audio_id)] = instance
+
+        print cluster_list
+    except:
+        utils.print_exception('NIGHTMARE!')
+                
 def cochlear(filename, stride, rate, db=-40, ears=1, a_1=-0.995, apply_filter=1, suffix='cochlear'):
     original_rate, data = wavfile.read(filename)
     assert data.dtype == np.int16
