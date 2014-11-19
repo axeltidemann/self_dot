@@ -85,18 +85,18 @@ def _valid_file(filename, threshold=.1):
 
 def _cochlear_trim_sai_marginals(filename_and_indexes):
     try:
-        filename, _, _, norm_segstart, norm_segend, audio_id, NAP_detail = filename_and_indexes
+        filename, norm_segstart, norm_segend, audio_id, NAP_detail = filename_and_indexes
 
         if NAP_detail == 'high':
             try: 
                 NAP = utils.csv_to_array(filename+'cochlear'+NAP_detail)
             except:
-                NAP = brain.cochlear(filename, stride=1, new_rate=44100, apply_filter=0, suffix='cochlear'+NAP_detail)
+                NAP = brain.cochlear(filename, stride=1, rate=44100, apply_filter=0, suffix='cochlear'+NAP_detail)
         if NAP_detail == 'low':
             try: 
                 NAP = utils.csv_to_array(filename+'cochlear'+NAP_detail)
             except: 
-                NAP = brain.cochlear(filename, apply_filter=0, suffix='cochlear'+NAP_detail) # Seems to work best, in particular when they are all the same.
+                NAP = brain.cochlear(filename, stride=IO.NAP_STRIDE, rate=IO.NAP_RATE, apply_filter=0, suffix='cochlear'+NAP_detail) # Seems to work best, in particular when they are all the same.
 
         num_channels = NAP.shape[1]
         input_segment_width = 2048
@@ -112,7 +112,7 @@ def _cochlear_trim_sai_marginals(filename_and_indexes):
         return [ [ filename, audio_id, [ sai_rectangles(frame) for frame in sai_video ]] ]
 
     except:
-        print utils.print_exception()
+        print utils.print_exception('Calculation SAI video failed for file {}, NAP detail {}'.format(filename, NAP_detail))
         return [[filename, audio_id, None]]
 
 def experiment(filenames, k):

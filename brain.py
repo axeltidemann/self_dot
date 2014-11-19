@@ -280,92 +280,99 @@ def train_network(x, y, output_dim=100, leak_rate=.9, bias_scaling=.2, reset_sta
 
     return net
 
-def dream(wavs, wav_segments, dreamQ):
+def dream(wavs, wav_audio_ids, NAPs, NAP_hashes, dreamQ):
     import matplotlib.pyplot as plt
     plt.ion()
-    print 'Removing wrongly binned filenames'
-    mega_filenames_and_indexes = []
-    for audio_id, wav_files in enumerate(wavs):
-        NAP_detail = 'low'
-        print 'Examining audio_id {}'.format(audio_id)
 
-        k = 2
-        filenames_and_indexes = []
-        for soundfile in wav_files:
-            segstart, segend = wav_segments[(soundfile, audio_id)]
-            audio_segments = utils.get_segments(soundfile)
-            norm_segstart = segstart/audio_segments[-1]
-            norm_segend = segend/audio_segments[-1]
-            filenames_and_indexes.append([ soundfile, segstart, segend, norm_segstart, norm_segend, audio_id, NAP_detail ])
-            dreamQ.send_pyobj(filenames_and_indexes[-1])
+    try:
+        dream_list=[ [ soundfile, wav_audio_ids[(soundfile, audio_id)], audio_id ] for audio_id, wav_files in enumerate(wavs) for soundfile in wav_files ]
+        dreamQ.send_pyobj(dream_list)
 
-        mega_filenames_and_indexes.extend(filenames_and_indexes)
+        print 'Removing wrongly binned filenames'
+        mega_filenames_and_indexes = []
+        for audio_id, wav_files in enumerate(wavs):
+            NAP_detail = 'low'
+            filenames_and_indexes = []
 
-        if len(wav_files) == 1:
-            print 'Just one member in this audio_id, skipping analysis'
-            continue
-            
-        sparse_codes = mysai.experiment(filenames_and_indexes, k)
-        # plt.matshow(sparse_codes, aspect='auto')
-        # plt.colorbar()
-        # plt.draw()
+            for soundfile in wav_files:
+                segstart, segend = wav_audio_ids[(soundfile, audio_id)]
+                audio_segments = utils.get_segments(soundfile)
+                norm_segstart = segstart/audio_segments[-1]
+                norm_segend = segend/audio_segments[-1]
+                filenames_and_indexes.append([ soundfile, norm_segstart, norm_segend, audio_id, NAP_detail ])
 
-        coarse = np.mean(sparse_codes, axis=1)
-        coarse.shape = (len(coarse), 1)
+            mega_filenames_and_indexes.extend(filenames_and_indexes)
 
-        codebook,_ = kmeans(coarse, k)
-        instances = [ vq(np.atleast_2d(s), codebook)[0] for s in coarse ]
+            k = 2
+            print 'Examining audio_id {}'.format(audio_id)
+            if len(wav_files) == 1:
+                print 'Just one member in this audio_id, skipping analysis'
+                continue
 
-        freqs = itemfreq(instances)
-        sorted_freqs = sorted(freqs, key=lambda x: x[1])
-        print 'Average sparse codes: {} Class count: {}'.format(list(itertools.chain.from_iterable(coarse)), sorted_freqs)
+            sparse_codes = mysai.experiment(filenames_and_indexes, k)
+            # plt.matshow(sparse_codes, aspect='auto')
+            # plt.colorbar()
+            # plt.draw()
 
-        if len(sorted_freqs) == 1:
-            print 'Considered to be all the same.'
-            continue
-        
-        # Delete wav file from this entry in the wavs, delete (soundfile, audio_id) in wav_segments
-        fewest_class = sorted_freqs[0][0]
-        ousted_files = [ filename for filename, i in zip(wav_files, instances) if i == fewest_class ]
-        print 'Class {} has fewest members, deleting audio_id {} related to file {}'.format(fewest_class, audio_id, ousted_files)
-        for delete_file in ousted_files:
-            wav_files.pop(wav_files.index(delete_file))
-            del wav_segments[(delete_file, audio_id)]
-    
-    # print 'Creating mega super self-organized class'
+            coarse = np.mean(sparse_codes, axis=1)
+            coarse.shape = (len(coarse), 1)
 
-    # for row in mega_filenames_and_indexes:
-    #     row[-1] = 'high'
+            codebook,_ = kmeans(coarse, k)
+            instances = [ vq(np.atleast_2d(s), codebook)[0] for s in coarse ]
 
-    # high_resolution_k = 256
-    # clusters = 24
-    # sparse_codes = mysai.experiment(mega_filenames_and_indexes, high_resolution_k)
-    # sparse_codes = np.array(sparse_codes)
-    # plt.matshow(sparse_codes, aspect='auto')
-    # plt.colorbar()
-    # plt.draw()
+            freqs = itemfreq(instances)
+            sorted_freqs = sorted(freqs, key=lambda x: x[1])
+            print 'Average sparse codes: {} Class count: {}'.format(list(itertools.chain.from_iterable(coarse)), sorted_freqs)
 
-    # codebook,_ = kmeans(sparse_codes, clusters)
-    # instances = [ vq(np.atleast_2d(s), codebook)[0] for s in sparse_codes ]
+            if len(sorted_freqs) == 1:
+                print 'Considered to be all the same.'
+                continue
 
-    # cluster_list = {}
-    # for mega, instances in zip(mega_filenames_and_indexes, instances):
-    #     soundfile,_,_,audio_id,_ = mega
-    #     cluster_list[(soundfile, audio_id)] = instance
+            fewest_class = sorted_freqs[0][0]
+            ousted_files = [ filename for filename, i in zip(wav_files, instances) if i == fewest_class ]
+            print 'Class {} has fewest members, deleting audio_id {} related to file {}'.format(fewest_class, audio_id, ousted_files)
+            for delete_file in ousted_files:
+                index = wav_files.index(delete_file)
+                wav_files.pop(index)
+                NAPs[audio_id].pop(index)
+                NAP_hashes[audio_id].pop(index)
+                del wav_audio_ids[(delete_file, audio_id)]
 
-    # print cluster_list
-        
-def cochlear(filename, db=-40, stride=441, new_rate=22050, ears=1, a_1=-0.995, apply_filter=1, suffix='cochlear'):
-    rate, data = wavfile.read(filename)
+        print 'Creating mega super self-organized class'
+
+        for row in mega_filenames_and_indexes:
+            row[-1] = 'high'
+
+        high_resolution_k = 256
+        clusters = 24
+        sparse_codes = mysai.experiment(mega_filenames_and_indexes, high_resolution_k)
+        sparse_codes = np.array(sparse_codes)
+        plt.matshow(sparse_codes, aspect='auto')
+        plt.colorbar()
+        plt.draw()
+
+        codebook,_ = kmeans(sparse_codes, clusters)
+        instances = [ vq(np.atleast_2d(s), codebook)[0] for s in sparse_codes ]
+
+        cluster_list = {}
+        for mega, instance in zip(mega_filenames_and_indexes, instances):
+            soundfile,_,_,audio_id,_ = mega
+            cluster_list[(soundfile, audio_id)] = instance
+
+        print cluster_list
+    except:
+        utils.print_exception('NIGHTMARE!')
+                
+def cochlear(filename, stride, rate, db=-40, ears=1, a_1=-0.995, apply_filter=1, suffix='cochlear'):
+    original_rate, data = wavfile.read(filename)
     assert data.dtype == np.int16
     data = data / float(2**15)
-    if rate != new_rate:
-        data = resample(data, float(new_rate)/rate, 'sinc_best')
+    if original_rate != rate:
+        data = resample(data, float(rate)/original_rate, 'sinc_best')
     data = data*10**(db/20)
     utils.array_to_csv('{}-audio.txt'.format(filename), data)
-    call(['./carfac-cmd', filename, str(len(data)), str(ears), str(new_rate), str(stride), str(a_1), str(apply_filter), suffix])
+    call(['./carfac-cmd', filename, str(len(data)), str(ears), str(rate), str(stride), str(a_1), str(apply_filter), suffix])
     naps = utils.csv_to_array(filename+suffix)
-    os.remove('{}-audio.txt'.format(filename))
     return np.sqrt(np.maximum(0, naps)/np.max(naps))
 
 
@@ -389,17 +396,16 @@ def _recognize_audio_id(audio_recognizer, NAP):
     for audio_id, net in enumerate(audio_recognizer):
         print 'AUDIO ID: {} OUTPUT MEAN: {}'.format(audio_id, np.mean(net(NAP)))
 
-def _project(audio_id, sound_to_face, dur, NAP, video_producer):
+def _project(audio_id, sound_to_face, NAP, video_producer):
     face_id = np.random.choice(sound_to_face[audio_id])
-    video_time = (1000*dur)/IO.VIDEO_SAMPLE_TIME
-    stride = min(1,int(np.ceil(NAP.shape[0]/video_time)))
+    stride = video_producer[(audio_id, face_id)].stride
     return video_producer[(audio_id, face_id)](NAP[::stride])
 
 def _extract_NAP(segstart, segend, soundfile, suffix='cochlear'):
     new_sentence = utils.csv_to_array(soundfile + suffix)
     audio_segments = utils.get_segments(soundfile)
-    segstart_norm = np.rint(new_sentence.shape[0]*segstart/audio_segments[-1])
-    segend_norm = np.rint(new_sentence.shape[0]*segend/audio_segments[-1])
+    segstart_norm = int(np.rint(new_sentence.shape[0]*segstart/audio_segments[-1]))
+    segend_norm = int(np.rint(new_sentence.shape[0]*segend/audio_segments[-1]))
     return utils.trim_right(new_sentence[segstart_norm:segend_norm])
 
 
@@ -463,19 +469,20 @@ def respond(control_host, learn_host, debug=False):
         events = dict(poller.poll())
 
         if dreamQ in events:
-            soundfile, segstart, segend, _,_, audio_id,_ = dreamQ.recv_pyobj()
-            audio_segments = utils.get_segments(soundfile)
-            NAP = _extract_NAP(segstart, segend, soundfile)
-            speed = 1 # TWICE THE SPEED, HIGHER VIDEO FRAME RATE
-            amp = -3
-            maxamp = 1
-            start = 0
-            dur = segend - segstart
-            print 'DURATION',dur
-            voice1 = 'playfile {} {} {} {} {} {} {} {} {}'.format(1, voiceType1, start, soundfile, speed, segstart, segend, amp, maxamp)
-            projection = _project(audio_id, sound_to_face, dur, NAP, video_producer)
-            voice2 = ''
-            scheduler.send_pyobj([[ dur, voice1, voice2, projection, FRAME_SIZE ]])
+            play_events = []
+            for soundfile, seg_indexes, audio_id in dreamQ.recv_pyobj():
+                segstart, segend = seg_indexes
+                dur = segend - segstart
+                NAP = _extract_NAP(segstart, segend, soundfile)
+                speed = 1
+                amp = -3
+                maxamp = 1
+                start = 0
+                voice1 = 'playfile {} {} {} {} {} {} {} {} {}'.format(1, voiceType1, start, soundfile, speed, segstart, segend, amp, maxamp)
+                projection = _project(audio_id, sound_to_face, NAP, video_producer)
+                voice2 = ''
+                play_events.append([ dur, voice1, voice2, projection, FRAME_SIZE ])
+            scheduler.send_pyobj(play_events)
 
         if brainQ in events:
             cells = brainQ.recv_pyobj()
@@ -498,13 +505,12 @@ def respond(control_host, learn_host, debug=False):
             if all(register[wav_file]):
                 filetime = time.mktime(time.strptime(wav_file[wav_file.rfind('/')+1:wav_file.rfind('.wav')], '%Y_%m_%d_%H_%M_%S'))
                 print 'Audio - video - face recognizers related to {} arrived at responder, total processing time {} seconds'.format(wav_file, time.time() - filetime)
-                # segment_ids: list of audio_ids in sentence
-                _, _, segment_ids, wavs, wav_segments, audio_classifier, audio_recognizer, global_audio_recognizer, mixture_audio_recognizer, maxlen, NAP_hashes = register[wav_file][0]
+                _, _, audio_ids, wavs, wav_audio_ids, audio_classifier, audio_recognizer, global_audio_recognizer, mixture_audio_recognizer, maxlen, NAP_hashes, most_significant_audio_id = register[wav_file][0]
                 _, _, tarantino = register[wav_file][1]
                 _, _, face_id, face_recognizer = register[wav_file][2]          
 
-                for audio_id in segment_ids:
-                    video_producer[(audio_id, face_id)] = tarantino
+                for audio_id in audio_ids: # If audio_ids is empty, none of this will happen
+                    video_producer[(audio_id, face_id)] = tarantino 
                     # By eliminating the last logical sentence, you can effectively get a statistical storage of audio_id.
                     if audio_id < len(sound_to_face) and not face_id in sound_to_face[audio_id]: # sound heard before, but not said by this face 
                         sound_to_face[audio_id].append(face_id)
@@ -540,22 +546,17 @@ def respond(control_host, learn_host, debug=False):
                 del register[wav_file]
                 
                 similar_ids = []
-                for audio_id in segment_ids:
+                for audio_id in audio_ids:
                     new_audio_hash = NAP_hashes[audio_id][-1]
                     similar_ids_for_this_audio_id = [ utils.hamming_distance(new_audio_hash, np.random.choice(h)) for h in NAP_hashes ]
                     similar_ids.append(similar_ids_for_this_audio_id)
-                association.send_pyobj(['analyze',wav_file,wav_segments,segment_ids,wavs,similar_ids,wordFace,faceWord])
-                association.recv_pyobj()
-                
-                sender.send_json('last_segment_ids {}'.format(dumps(segment_ids)))
-                most_significant_segment_id = utils.get_most_significant_word(wav_file)
-                print 'most_significant_segment_id', most_significant_segment_id
-                print 'segment_ids', segment_ids
-                most_significant_audio_id = segment_ids[most_significant_segment_id] if len(segment_ids) else 0
-                print 'most_significant_audio_id', most_significant_audio_id
-                sender.send_json('last_most_significant_audio_id {}'.format(most_significant_audio_id))
 
-                cognitionQ.send_pyobj(face_recognizer)
+                if len(audio_ids):
+                    association.send_pyobj(['analyze',wav_file,wav_audio_ids,audio_ids,wavs,similar_ids,wordFace,faceWord])
+                    association.recv_pyobj()
+                    sender.send_json('last_most_significant_audio_id {}'.format(most_significant_audio_id))
+
+                cognitionQ.send_pyobj(face_recognizer) # A possiblity of recognizing a face that is not connecting to any soundfiles
                                 
         if eventQ in events:
             pushbutton = eventQ.recv_json()
@@ -590,7 +591,7 @@ def respond(control_host, learn_host, debug=False):
                         print 'Responding having only heard 1 sound.'
 
                     soundfile = np.random.choice(wavs[audio_id])
-                    segstart, segend = wav_segments[(soundfile, audio_id)]
+                    segstart, segend = wav_audio_ids[(soundfile, audio_id)]
 
                     voiceChannel = 1
                     speed = 1
@@ -604,7 +605,7 @@ def respond(control_host, learn_host, debug=False):
 
                     print 'Recognized as sound {}'.format(audio_id)
 
-                    projection = _project(audio_id, sound_to_face, dur, NAP, video_producer)
+                    projection = _project(audio_id, sound_to_face, NAP, video_producer)
 
                     scheduler.send_pyobj([[ dur, voice1, voice2, projection, FRAME_SIZE ]])
                 except:
@@ -623,7 +624,7 @@ def respond(control_host, learn_host, debug=False):
                         soundfile = np.random.choice(wavs[word_id])
                         speed = 1
 
-                        segstart, segend = wav_segments[(soundfile, word_id)]
+                        segstart, segend = wav_audio_ids[(soundfile, word_id)]
                         NAP = _extract_NAP(segstart, segend, soundfile)
 
                         amp = -3 # voice amplitude in dB
@@ -637,7 +638,7 @@ def respond(control_host, learn_host, debug=False):
                         print 'PLAY RESPOND SPACING', wordSpacing1
                         nextTime1 += (dur/speed)+wordSpacing1
 
-                        projection = _project(audio_id, sound_to_face, dur, NAP, video_producer)
+                        projection = _project(audio_id, sound_to_face, NAP, video_producer)
 
                         play_events.append([ dur+wordSpacing1, voice1, voice2, projection, FRAME_SIZE ])                        
                     scheduler.send_pyobj(play_events)
@@ -694,7 +695,7 @@ def respond(control_host, learn_host, debug=False):
                         speed = 1
                         
                         # segment start and end within sound file, if zero, play whole file
-                        segstart, segend = wav_segments[(soundfile, word_id)]
+                        segstart, segend = wav_audio_ids[(soundfile, word_id)]
                         NAP = _extract_NAP(segstart, segend, soundfile)
                         
                         amp = -3 # voice amplitude in dB
@@ -715,7 +716,7 @@ def respond(control_host, learn_host, debug=False):
                             start2 = 0.7 #  set delay between voice 1 and 2
                             speed2 = 0.7
                             amp2 = -10 # voice amplitude in dB
-                            segstart2, segend2 = wav_segments[(soundfile2, word_id2)]
+                            segstart2, segend2 = wav_audio_ids[(soundfile2, word_id2)]
                             dur2 = segend2-segstart2
                             #totalDur2, maxamp2 = utils.getSoundParmFromFile(soundfile2)
                             _,totalDur2,maxamp2,_ = utils.getSoundInfo(soundfile)
@@ -727,7 +728,7 @@ def respond(control_host, learn_host, debug=False):
                         # trig another word in voice 2 only if word 2 has finished playing (and sync to start of voice 1)
                         if nextTime1 > nextTime2: enableVoice2 = 1 
 
-                        projection = _project(audio_id, sound_to_face, dur, NAP, video_producer)
+                        projection = _project(audio_id, sound_to_face, NAP, video_producer)
                         print 'SENTENCE RESPOND SPACING', wordSpacing1
                         play_events.append([ dur+wordSpacing1, voice1, voice2, projection, FRAME_SIZE ])
 
@@ -777,8 +778,8 @@ def respond(control_host, learn_host, debug=False):
                     soundfile = np.random.choice(wavs[play_audio_id])
                     
                     speed = 1
-                    #print 'wav_segments', wav_segments
-                    segstart, segend = wav_segments[(soundfile, play_audio_id)]
+                    #print 'wav_audio_ids', wav_audio_ids
+                    segstart, segend = wav_audio_ids[(soundfile, play_audio_id)]
                     #segstart = 0 # segment start and end within sound file
                     #segend = 0 # if zero, play whole file
                     amp = -3 # voice amplitude in dB
@@ -799,10 +800,10 @@ def respond(control_host, learn_host, debug=False):
                     print e, 'showme print failed.'
 
             if 'save' in pushbutton:
-                utils.save('{}.{}'.format(pushbutton['save'], mp.current_process().name), [ sound_to_face, wordFace, face_to_sound, faceWord, video_producer, segment_ids, wavs, wav_segments, audio_classifier, maxlen, NAP_hashes, face_id, face_recognizer ])
+                utils.save('{}.{}'.format(pushbutton['save'], mp.current_process().name), [ sound_to_face, wordFace, face_to_sound, faceWord, video_producer, segment_ids, wavs, wav_audio_ids, audio_classifier, maxlen, NAP_hashes, face_id, face_recognizer ])
 
             if 'load' in pushbutton:
-                sound_to_face, wordFace, face_to_sound, faceWord, video_producer, segment_ids, wavs, wav_segments, audio_classifier, maxlen, NAP_hashes, face_id, face_recognizer = utils.load('{}.{}'.format(pushbutton['load'], mp.current_process().name))
+                sound_to_face, wordFace, face_to_sound, faceWord, video_producer, segment_ids, wavs, wav_audio_ids, audio_classifier, maxlen, NAP_hashes, face_id, face_recognizer = utils.load('{}.{}'.format(pushbutton['load'], mp.current_process().name))
                     
 def _train_audio_recognizer(signal):
     noise = np.random.rand(signal.shape[0], signal.shape[1])
@@ -875,7 +876,7 @@ def learn_audio(host, debug=False):
     audio = deque()
     NAPs = []
     wavs = []
-    wav_segments = {}
+    wav_audio_ids = {}
     NAP_hashes = []
 
     audio_classifier = []
@@ -915,8 +916,11 @@ def learn_audio(host, debug=False):
                     new_sentence = utils.csv_to_array(filename + 'cochlear')
                     norm_segments = np.rint(new_sentence.shape[0]*audio_segments/audio_segments[-1]).astype('int')
 
-                    segment_ids = []
+                    audio_ids = []
                     new_audio_hash = []
+                    amps = utils.get_amps(filename)
+                    most_significant_value = -np.inf
+                    most_significant_audio_id = []
                     for segment, new_sound in enumerate([ utils.trim_right(new_sentence[norm_segments[i]:norm_segments[i+1]]) for i in range(len(norm_segments)-1) ]):
                         # We filter out short, abrupt sounds with lots of noise.
                         if np.mean(new_sound) < .2 or new_sound.shape[0] == 0:
@@ -959,12 +963,19 @@ def learn_audio(host, debug=False):
                             audio_id = len(NAPs) - 1
 
                         # The mapping from wavfile and audio ID to the segment within the audio file
-                        wav_segments[(filename, audio_id)] = [ audio_segments[segment], audio_segments[segment+1] ]
-                        segment_ids.append(audio_id)
+                        wav_audio_ids[(filename, audio_id)] = [ audio_segments[segment], audio_segments[segment+1] ]
+                        audio_ids.append(audio_id)
+                        if amps[segment] > most_significant_value:
+                            most_significant_audio_id = audio_id
+                            most_significant_value = amps[segment]
                         
                         maxlen = max([ m.shape[0] for memory in NAPs for m in memory ])
                         memories = [ np.ndarray.flatten(utils.zero_pad(m, maxlen)) for memory in NAPs for m in memory ]
 
+                        # Potential for saving time. Now we re-train the classifier for each new segment, so we can catch
+                        # the possibility of hearing the same word repeated over and over. Often, this will not be the case though, and
+                        # then we can make do with just one training pass. Check hamming distance for new words with other new words, to see
+                        # if they belong in the same audio_id?
                         if len(NAPs) > 1:
                             targets = [ i for i,f in enumerate(NAPs) for _ in f ]
                             
@@ -988,7 +999,7 @@ def learn_audio(host, debug=False):
                     sender.send_json('rhyme {}'.format(rhyme))
 
                     t1 = time.time()
-                    brainQ.send_pyobj(['audio_learn', filename, segment_ids, wavs, wav_segments, audio_classifier, audio_recognizer, global_audio_recognizer, mixture_audio_recognizer,  maxlen, NAP_hashes])
+                    brainQ.send_pyobj(['audio_learn', filename, audio_ids, wavs, wav_audio_ids, audio_classifier, audio_recognizer, global_audio_recognizer, mixture_audio_recognizer,  maxlen, NAP_hashes, most_significant_audio_id])
                     print 'Audio learned from {} in {} seconds, ZMQ time {} seconds'.format(filename, t1 - t0, time.time() - t1)
                 except:
                     utils.print_exception('Audio learning aborted.')
@@ -1000,13 +1011,13 @@ def learn_audio(host, debug=False):
                 # This will be both of structured elements [ audio_id, [element_ids] ] and (soundfile, audio_id)
                 # MAYBE NOT NECESSARY if you delete NAPs and NAP_hashes as well, since video / face and not related 
                 # very deeply. Look into this.
-                dream(wavs, wav_segments, dreamQ) 
+                dream(wavs, wav_audio_ids, NAPs, NAP_hashes, dreamQ) 
                 
             if 'save' in pushbutton:
-                utils.save('{}.{}'.format(pushbutton['save'], mp.current_process().name), [ NAPs, wavs, wav_segments, NAP_hashes, audio_classifier, maxlen ])
+                utils.save('{}.{}'.format(pushbutton['save'], mp.current_process().name), [ NAPs, wavs, wav_audio_ids, NAP_hashes, audio_classifier, maxlen ])
 
             if 'load' in pushbutton:
-                NAPs, wavs, wav_segments, NAP_hashes, audio_classifier, maxlen = utils.load('{}.{}'.format(pushbutton['load'], mp.current_process().name))
+                NAPs, wavs, wav_audio_ids, NAP_hashes, audio_classifier, maxlen = utils.load('{}.{}'.format(pushbutton['load'], mp.current_process().name))
 
                 
 def learn_video(host, debug=False):
@@ -1054,14 +1065,11 @@ def learn_video(host, debug=False):
                         video_segment = np.array([ np.ndarray.flatten(np.zeros(FRAME_SIZE)) for _ in range(10) ])
                         print 'No video recorded. Using black image as stand-in.'
 
-                    NAP_len = new_sentence.shape[0]
-                    video_len = video_segment.shape[0]
-                    stride = int(max(1,np.floor(float(NAP_len)/video_len)))
-                    
-                    x = new_sentence[:NAP_len - np.mod(NAP_len, stride*video_len):stride]
-                    if x.shape[0] == 0:
-                        x = new_sentence[::stride]
-                    y = video_segment[:x.shape[0]]
+                    stride = IO.VIDEO_SAMPLE_TIME / (IO.NAP_RATE/IO.NAP_STRIDE)
+                    x = new_sentence[::stride]
+                    min_length = min(x.shape[0], video_segment.shape[0])
+                    x = new_sentence[:min_length]
+                    y = video_segment[:min_length]
 
                     tarantino = train_network(x,y, output_dim=10)
                     tarantino.stride = stride
