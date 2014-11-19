@@ -14,6 +14,9 @@ from utils import send_array, recv_array
 import myCsoundAudioOptions
 
 VIDEO_SAMPLE_TIME = 100 # Milliseconds
+NAP_STRIDE = 441
+NAP_RATE = 22050
+
 FRAME_SIZE = (640,480)
 PROCESS_TIME_OUT = 5*60 
 SYSTEM_TIME_OUT = 30*60 
@@ -330,7 +333,7 @@ def audio():
                 zeroChannelsOnNoBrain = int('{}'.format(pushbutton['zerochannels']))
 
             if 'playfile' in pushbutton:
-                print '[self.] AUDIO playfile {}'.format(pushbutton['playfile'])
+                #print '[self.] AUDIO playfile {}'.format(pushbutton['playfile'])
                 try:
                     params = pushbutton['playfile']
                     voiceChannel, voiceType, start, soundfile, speed, segstart, segend, amp, maxamp = params.split(' ')

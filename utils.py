@@ -15,6 +15,7 @@ import multiprocessing as mp
 import threading
 import glob
 from subprocess import call
+import fcntl
 
 import numpy as np
 import zmq
@@ -71,19 +72,20 @@ def bytes2human(n, format="%(value)i%(symbol)s"):
 
 
 def csv_to_array(filename, delimiter=' '):
-    with open(filename, 'rb') as csvfile:
+    with open(filename, 'r') as csvfile:
         reader = csv.reader(csvfile, delimiter=delimiter)
         return np.array([ [ float(r) for r in row ] for row in reader ])
 
 
 def array_to_csv(filename, data, delimiter=' '):
-    with open(filename, 'wb') as csvfile: #b
+    with open(filename, 'w') as csvfile:
+        fcntl.flock(csvfile, fcntl.LOCK_EX)
         writer = csv.writer(csvfile, delimiter=delimiter)
         if len(data.shape) == 1:
             data.shape = (data.shape[0],1)
         for row in data:
             writer.writerow(row)
-
+        fcntl.flock(csvfile, fcntl.LOCK_UN)
 
 def wait_for_wav(filename):
     # Super ugly hack! Since Csound might not be finished writing to the file, we try to read it, and upon fail (i.e. it was not closed) we wait .05 seconds.
@@ -311,12 +313,15 @@ def get_segments(wavfile):
     segmentTimes.append(totalDur) 
     #print 'utils.get_segments', segmentTimes
     return np.array(segmentTimes)
-    
-def get_most_significant_word(wavfile):
+
+def get_amps(filename):
+    _,_,_,segmentData = getSoundInfo(filename)
+    return [ item[2] for item in segmentData ]
+
+def get_most_significant_word(filename):
     #print 'HERE BE DRAGONS!!! get_most_significant_word'
     #return 0
-    _,_,_,segmentData = getSoundInfo(wavfile)
-    amps = [ item[2] for item in segmentData ]
+    amps = get_amps(filename)
     return amps.index(max(amps))
      
 

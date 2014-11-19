@@ -47,7 +47,7 @@ def idle(host):
 
     face_timer = 0
     saysomething_timer = 0
-    saysomething_interval = 0.5
+    saysomething_interval = 10
     urge_to_say_something = 0
     
     def update_urge_to_say_something(urge_to_say_something, saysomething_interval):
@@ -149,7 +149,7 @@ class Controller:
             if 'calculate_cochlear' in message:
                 _, wav_file = message.split()
                 t0 = time.time()
-                brain.cochlear(utils.wait_for_wav(wav_file))
+                brain.cochlear(utils.wait_for_wav(wav_file), stride=IO.NAP_STRIDE, rate=IO.NAP_RATE)
                 print 'Calculating cochlear neural activation patterns took {} seconds'.format(time.time() - t0)
             
             if message == 'evolve':
