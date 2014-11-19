@@ -399,11 +399,9 @@ def _recognize_audio_id(audio_recognizer, NAP):
 def _project(audio_id, sound_to_face, NAP, video_producer):
     face_id = np.random.choice(sound_to_face[audio_id])
     t0 = time.time()
-    tarantino = pickle.load(open(video_producer[(audio_id, face_id)], 'r'))
+    tarantino = utils.load_esn(video_producer[(audio_id, face_id)])
     print 'Video ESN unpickling time {} seconds'.format(time.time() - t0)
-    # stride = video_producer[(audio_id, face_id)].stride
-    # return video_producer[(audio_id, face_id)](NAP[::stride])
-    stride = tarantino.stride
+    stride = IO.VIDEO_SAMPLE_TIME / (IO.NAP_RATE/IO.NAP_STRIDE)
     return tarantino(NAP[::stride])
 
 def _extract_NAP(segstart, segend, soundfile, suffix='cochlear'):
@@ -1086,12 +1084,11 @@ def learn_video(host, debug=False):
                     y = video_segment[:min_length]
 
                     tarantino = train_network(x,y, output_dim=10)
-                    tarantino.stride = stride
 
                     esn_name = '{}video_esn_{}'.format(myCsoundAudioOptions.memRecPath, uuid4())
 
                     tz = time.time()
-                    pickle.dump(tarantino, open(esn_name, 'w'))
+                    utils.dump_esn(tarantino, esn_name)
                     print 'Video ESN pickle time {} seconds'.format(time.time() - tz)
                     
                     t1 = time.time()
