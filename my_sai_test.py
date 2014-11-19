@@ -112,7 +112,7 @@ def _cochlear_trim_sai_marginals(filename_and_indexes):
         return [ [ filename, audio_id, [ sai_rectangles(frame) for frame in sai_video ]] ]
 
     except:
-        print utils.print_exception()
+        print utils.print_exception('Calculation SAI video failed for file {}, NAP detail {}'.format(filename, NAP_detail))
         return [[filename, audio_id, None]]
 
 def experiment(filenames, k):
