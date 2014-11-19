@@ -2,7 +2,7 @@
 # -*- coding: latin-1 -*-
 
 import multiprocessing as mp
-from uuid import uuid1
+from uuid import uuid4
 from collections import deque
 import sys
 import glob
@@ -42,12 +42,11 @@ FACE_HAAR_CASCADE_PATH = opencv_prefix + '/share/OpenCV/haarcascades/haarcascade
 EYE_HAAR_CASCADE_PATH = opencv_prefix + '/share/OpenCV/haarcascades/haarcascade_eye_tree_eyeglasses.xml'
 
 # Hamming distance match criterions
-AUDIO_HAMMERTIME = 8 
+AUDIO_HAMMERTIME = 9
 RHYME_HAMMERTIME = 11
 FACE_HAMMERTIME = 15
 FRAME_SIZE = (160,120) # Neural network image size, 1/4 of full frame size.
 FACE_MEMORY_SIZE = 100
-
 
 def cognition(host):
     context = zmq.Context()
@@ -398,8 +397,13 @@ def _recognize_audio_id(audio_recognizer, NAP):
 
 def _project(audio_id, sound_to_face, NAP, video_producer):
     face_id = np.random.choice(sound_to_face[audio_id])
-    stride = video_producer[(audio_id, face_id)].stride
-    return video_producer[(audio_id, face_id)](NAP[::stride])
+    t0 = time.time()
+    tarantino = pickle.load(open(video_producer[(audio_id, face_id)], 'r'))
+    print 'Video ESN unpickling time {} seconds'.format(time.time() - t0)
+    # stride = video_producer[(audio_id, face_id)].stride
+    # return video_producer[(audio_id, face_id)](NAP[::stride])
+    stride = tarantino.stride
+    return tarantino(NAP[::stride])
 
 def _extract_NAP(segstart, segend, soundfile, suffix='cochlear'):
     new_sentence = utils.csv_to_array(soundfile + suffix)
@@ -853,6 +857,24 @@ def _recognize_global_audio_id(audio_recognizer, NAP, plt):
 
     print 'GLOBAL AUDIO IDS:', np.mean(output, axis=0)
 
+class OneTrickPony:
+    def predict(self, x):
+        return np.array([0])
+    
+def train_rPCA_SVM(x, y):
+    rPCA = RandomizedPCA(n_components=100)
+    x = rPCA.fit_transform(x)
+
+    if len(np.unique(y)) == 1:
+        classifier = OneTrickPony()
+        classifier.rPCA = rPCA
+    else:
+        classifier = svm.LinearSVC()
+        classifier.fit(x, y)
+        classifier.rPCA = rPCA
+
+    return classifier
+    
 def learn_audio(host, debug=False):
     context = zmq.Context()
 
@@ -921,6 +943,9 @@ def learn_audio(host, debug=False):
                     amps = utils.get_amps(filename)
                     most_significant_value = -np.inf
                     most_significant_audio_id = []
+
+                    original_NAP_length = len(NAPs)
+                    
                     for segment, new_sound in enumerate([ utils.trim_right(new_sentence[norm_segments[i]:norm_segments[i+1]]) for i in range(len(norm_segments)-1) ]):
                         # We filter out short, abrupt sounds with lots of noise.
                         if np.mean(new_sound) < .2 or new_sound.shape[0] == 0:
@@ -935,56 +960,47 @@ def learn_audio(host, debug=False):
                         new_audio_hash.append(new_hash)
 
                         audio_id = 0
-                        if len(NAPs) == 1:
-                            hammings = [ utils.hamming_distance(new_audio_hash[-1], h) for h in NAP_hashes[0] ]
                         
                         if audio_classifier:
-                            #audio_id, new_sound_scaled = _hamming_distance_predictor(audio_classifier, new_sound, maxlen, NAP_hashes)
                             new_sound_exact = utils.exact(new_sound, maxlen)
                             audio_id = _predict_audio_id(audio_classifier, new_sound_exact)
-
                             hammings = [ utils.hamming_distance(new_audio_hash[-1], h) for h in NAP_hashes[audio_id] ]
 
                         if np.mean(hammings) < AUDIO_HAMMERTIME:
-                            #NAPs[audio_id].append(new_sound_scaled)
                             NAPs[audio_id].append(new_sound)
                             NAP_hashes[audio_id].append(new_audio_hash[-1])
                             wavs[audio_id].append(filename)
                             print 'Sound is similar to sound {}, hamming mean {}'.format(audio_id, np.mean(hammings))
-                            # Training audio recognizer network
-                            #audio_recognizer[audio_id] = _train_audio_recognizer(np.vstack(NAPs[audio_id]))
                             
                         else:
                             print 'New sound, hamming mean {} from sound {}'.format(np.mean(hammings), audio_id)
-                            NAPs.append([new_sound])
-                            NAP_hashes.append([new_audio_hash[-1]])
-                            wavs.append([filename])
-                            #audio_recognizer.append(_train_audio_recognizer(new_sound))
-                            audio_id = len(NAPs) - 1
+                            new_hammings = [ np.mean([utils.hamming_distance(new_audio_hash[-1], h) for h in hashes ]) for hashes in NAP_hashes[original_NAP_length:] ]
+                            print 'Examining whether new sound is the same as previous new sound(s): {}'.format(new_hammings)
+                            if len(new_hammings) and min(new_hammings) < AUDIO_HAMMERTIME:
+                                similar = np.argmin(new_hammings)
+                                print 'Found to be similar to new sound {}'.format(similar)
+                                audio_id = original_NAP_length + similar
+                                NAPs[audio_id].append(new_sound)
+                                NAP_hashes[audio_id].append(new_audio_hash[-1])
+                                wavs[audio_id].append(filename)
+                            else:
+                                print 'Not similar to any of the new sounds.'
+                                NAPs.append([new_sound])
+                                NAP_hashes.append([new_audio_hash[-1]])
+                                wavs.append([filename])
+                                audio_id = len(NAPs) - 1
 
-                        # The mapping from wavfile and audio ID to the segment within the audio file
                         wav_audio_ids[(filename, audio_id)] = [ audio_segments[segment], audio_segments[segment+1] ]
                         audio_ids.append(audio_id)
                         if amps[segment] > most_significant_value:
                             most_significant_audio_id = audio_id
                             most_significant_value = amps[segment]
                         
-                        maxlen = max([ m.shape[0] for memory in NAPs for m in memory ])
-                        memories = [ np.ndarray.flatten(utils.zero_pad(m, maxlen)) for memory in NAPs for m in memory ]
+                    maxlen = max([ m.shape[0] for memory in NAPs for m in memory ])
+                    memories = [ np.ndarray.flatten(utils.zero_pad(m, maxlen)) for memory in NAPs for m in memory ]
 
-                        # Potential for saving time. Now we re-train the classifier for each new segment, so we can catch
-                        # the possibility of hearing the same word repeated over and over. Often, this will not be the case though, and
-                        # then we can make do with just one training pass. Check hamming distance for new words with other new words, to see
-                        # if they belong in the same audio_id?
-                        if len(NAPs) > 1:
-                            targets = [ i for i,f in enumerate(NAPs) for _ in f ]
-                            
-                            rPCA = RandomizedPCA(n_components=100)
-                            x_train = rPCA.fit_transform(memories)
-
-                            audio_classifier = svm.LinearSVC()
-                            audio_classifier.fit(x_train, targets)
-                            audio_classifier.rPCA = rPCA
+                    targets = [ i for i,f in enumerate(NAPs) for _ in f ]
+                    audio_classifier = train_rPCA_SVM(memories, targets)
 
                     all_hammings = [ utils.hamming_distance(new_audio_hash[i], new_audio_hash[j])
                                                             for i in range(len(new_audio_hash)) for j in range(len(new_audio_hash)) if i > j ]
@@ -993,9 +1009,6 @@ def learn_audio(host, debug=False):
                     print 'RHYME VALUE', np.mean(sorted(all_hammings)[int(len(all_hammings)/2):])
                     rhyme = np.mean(sorted(all_hammings)[int(len(all_hammings)/2):]) < RHYME_HAMMERTIME
 
-                    #global_audio_recognizer = _train_global_audio_recognizer(NAPs)
-                    # mixture_audio_recognizer = _train_mixture_audio_recognizer(NAPs)
-                    
                     sender.send_json('rhyme {}'.format(rhyme))
 
                     t1 = time.time()
@@ -1074,8 +1087,16 @@ def learn_video(host, debug=False):
                     tarantino = train_network(x,y, output_dim=10)
                     tarantino.stride = stride
 
+                    esn_name = 'video_esn_{}'.format(uuid4())
+
+                    tz = time.time()
+                    pickle.dump(tarantino, open(esn_name, 'w'))
+                    print 'Pickle time {} seconds'.format(time.time() - tz)
+                    
                     t1 = time.time()
-                    brainQ.send_pyobj([ 'video_learn', filename, tarantino ])
+                    #brainQ.send_pyobj([ 'video_learn', filename, tarantino ])
+                    brainQ.send_pyobj([ 'video_learn', filename, esn_name ])
+
                     print 'Video learned in {} seconds, ZMQ time {} seconds'.format(t1 - t0, time.time() - t1)
                 except:
                     utils.print_exception('Video learning aborted.')
@@ -1131,9 +1152,7 @@ def learn_faces(host, debug=False):
                     face_id = -1
                     if new_faces:
                         face_id = 0
-                        if len(face_history) == 1:
-                            hammings = [ utils.hamming_distance(f, m) for f in new_faces_hashes for m in face_hashes[0] ]
-
+                        
                         if face_recognizer:
                             x_test = [ face_recognizer.rPCA.transform(np.ndarray.flatten(f)) for f in new_faces ]
                             predicted_faces = [ face_recognizer.predict(x)[0] for x in x_test ]
@@ -1155,17 +1174,10 @@ def learn_faces(host, debug=False):
                         if len(face_history) > FACE_MEMORY_SIZE:
                             face_history[-FACE_MEMORY_SIZE-1] = [[]]
 
-                        if len(face_history) > 1:
-                            # Possible fast version: train only on last face.
+                        x_train = [ np.ndarray.flatten(f) for cluster in face_history for f in cluster if len(f) ]
+                        targets = [ i for i,cluster in enumerate(face_history) for f in cluster if len(f) ]
 
-                            x_train = [ np.ndarray.flatten(f) for cluster in face_history for f in cluster if len(f) ]
-                            targets = [ i for i,cluster in enumerate(face_history) for f in cluster if len(f) ]
-
-                            rPCA = RandomizedPCA(n_components=100)
-                            x_train = rPCA.fit_transform(x_train)
-                            face_recognizer = svm.LinearSVC()
-                            face_recognizer.fit(x_train, targets)
-                            face_recognizer.rPCA = rPCA
+                        face_recognizer = train_rPCA_SVM(x_train, targets)
                     else:
                         print 'Face not detected.'
 

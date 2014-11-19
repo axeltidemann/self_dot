@@ -319,8 +319,6 @@ def get_amps(filename):
     return [ item[2] for item in segmentData ]
 
 def get_most_significant_word(filename):
-    #print 'HERE BE DRAGONS!!! get_most_significant_word'
-    #return 0
     amps = get_amps(filename)
     return amps.index(max(amps))
      
