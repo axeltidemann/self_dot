@@ -126,7 +126,10 @@ class Controller:
         try:
             if message == 'dream':
                 self.event.send_json({'dream': True})
-            
+
+            if message == 'reboot':
+                utils.reboot()
+                
             if 'i_am_speaking' in message:
                 _, value = message.split()
                 self.state['i_am_speaking'] = value in ['True', '1']
@@ -269,10 +272,15 @@ class Controller:
                 self.event.send_json({ 'selfvoice': message[10:] })
 
             if 'save' in message:
-                self.event.send_json({ 'save': 'cns' if len(message) == 4 else message[5:] })
+                self.event.send_json({ 'save': utils.brain_name() if len(message) == 4 else message[5:] })
 
             if 'load' in message:
-                self.event.send_json({ 'load': 'cns' if len(message) == 4 else message[5:] })
+                if len(message) == 4:
+                    brain_name = utils.find_last_valid_brain()
+                else:
+                    _, brain_name = message.split()
+                if brain_name:
+                    self.event.send_json({ 'load': brain_name })
 
             self.publisher.send_json(self.state)
 
@@ -312,4 +320,6 @@ if __name__ == '__main__':
     utils.MyProcess(target=utils.scheduler, args=('localhost',), name='SCHEDULER').start()
     utils.MyProcess(target=Controller, args=(persistent_states,'localhost',), name='CONTROLLER').start()
     utils.MyProcess(target=idle, args=('localhost',), name='IDLER').start()
+    utils.MyProcess(target=utils.counter, args=('localhost',), name='COUNTER').start()
     utils.MyProcess(target=utils.sentinel, args=('localhost',), name='SENTINEL').start()
+    utils.daily_routine('localhost')

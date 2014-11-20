@@ -39,6 +39,7 @@ ASSOCIATION = 5574
 SENTINEL = 5575
 LOGGER = 5576
 DREAM = 5577
+COUNTER = 5578
 
 def video():
     cv2.namedWindow('Output', cv2.WND_PROP_FULLSCREEN)

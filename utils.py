@@ -17,6 +17,8 @@ import glob
 from subprocess import call
 import fcntl
 import json
+import sched
+import datetime
 
 import numpy as np
 import zmq
@@ -24,10 +26,17 @@ from scipy.io import wavfile
 import scipy.fftpack
 from sklearn.covariance import EmpiricalCovariance, MinCovDet
 import cv2
+from scipy.stats import itemfreq
 
 from brain import cochlear
+from brain import NUMBER_OF_BRAINS
 import IO
 findfloat=re.compile(r"[0-9.]*")
+
+DREAM_HOUR = 23
+EVOLVE_HOUR = 03
+SAVE_HOUR = 04
+REBOOT_HOUR = 05
 
 def save(filename, data):
     pickle.dump(data, file(filename, 'w'))
@@ -437,7 +446,42 @@ def scheduler(host):
 def true_wait(seconds):
     time.sleep(seconds)
     return True
-                
+
+def reboot():
+    status = open('STATUS_{}'.format(time.strftime('%Y_%m_%d_%H_%M_%S')), 'w')
+    call(['ps', 'aux'], stdout=status)
+    call(['df', '-h'], stdout=status)
+    status.close()
+    call(['shutdown', '-r', 'now'])
+    
+def counter(host):
+    context = zmq.Context()
+
+    counterQ = context.socket(zmq.ROUTER)
+    counterQ.bind('tcp://*:{}'.format(IO.COUNTER))
+
+    audio_ids_counter = []
+    face_ids_counter = []
+
+    while True:
+        address, _, message = counterQ.recv_multipart()
+        request, value = pickle.loads(message)
+        sorted_freqs = False
+        if request == 'audio_id':
+            audio_ids_counter.append(value)
+        if request == 'face_id':
+            face_ids_counter.append(value)
+        if request == 'audio_ids_counter':
+            freqs = itemfreq(audio_ids_counter)
+            sorted_freqs = sorted(freqs, key=lambda x: x[1])
+        if request == 'face_ids_counter':
+            freqs = itemfreq(audio_ids_counter)
+            sorted_freqs = sorted(freqs, key=lambda x: x[1])
+
+        counterQ.send_multipart([ address,
+                                b'',
+                                pickle.dumps(sorted_freqs) ])
+    
 def sentinel(host):
     context = zmq.Context()
     
@@ -464,17 +508,12 @@ def sentinel(host):
         for process in book.keys():
             if not save_name and time.time() - book[process] > IO.PROCESS_TIME_OUT*2:
                 print '{} HAS DIED, SAVING'.format(process)
-                save_name = 'BRAIN_{}'.format(time.strftime('%Y_%m_%d_%H_%M_%S'))
+                save_name = brain_name()
                 save_time = time.time()
                 sender.send_json('save {}'.format(save_name))
 
-        if save_name and (len(glob.glob('{}*'.format(save_name))) == 4 or time.time() - save_time > IO.SYSTEM_TIME_OUT):
-            status = open('STATUS_{}'.format(save_name), 'w')
-            call(['ps', 'aux'], stdout=status)
-            call(['df', '-h'], stdout=status)
-            status.close()
-            call(['shutdown', '-r', 'now'])
-        
+        if save_name and (len(glob.glob('{}*'.format(save_name))) == NUMBER_OF_BRAINS or time.time() - save_time > IO.SYSTEM_TIME_OUT):
+            reboot()
                 
 class AliveNotifier(threading.Thread):
     def __init__(self, me, host='localhost'):
@@ -545,10 +584,47 @@ class MyProcess(mp.Process):
         
         mp.Process.run(self)
 
+def brain_name():
+    return 'BRAIN_{}'.format(time.strftime('%Y_%m_%d_%H_%M_%S'))
+        
+def find_last_valid_brain():
+    files = glob.glob('BRAIN_*')
+    files.sort(key=os.path.getmtime, reverse=True)
+    for f in files:
+        stem = f[:f.find('.')] # We know the filename is BRAIN_XXXX.FACE RESPONDER etc
+        if len(glob.glob('{}*'.format(stem))) == NUMBER_OF_BRAINS:
+            return stem
+    return []
+
+def daily_routine(host):
+    scheduler = sched.scheduler(time.time, time.sleep)
+    context = zmq.Context()
+
+    sender = context.socket(zmq.PUSH)
+    sender.connect('tcp://{}:{}'.format(host, IO.EXTERNAL))
+
+    dream_time = datetime.datetime.combine(datetime.datetime.now(), datetime.time(DREAM_HOUR))
+    scheduler.enterabs(time.mktime(dream_time.timetuple()), 1,
+                       sender.send_json, ('dream',))
+
+    evolve_time = datetime.datetime.combine(datetime.datetime.now() + datetime.timedelta(days=1), datetime.time(EVOLVE_HOUR))
+    scheduler.enterabs(time.mktime(dream_time.timetuple()), 1,
+                       sender.send_json, ('evolve',))
+
+    save_time = datetime.datetime.combine(datetime.datetime.now() + datetime.timedelta(days=1), datetime.time(SAVE_HOUR))
+    scheduler.enterabs(time.mktime(dream_time.timetuple()), 1,
+                       sender.send_json, ('save',))
+    
+    reboot_time = datetime.datetime.combine(datetime.datetime.now() + datetime.timedelta(days=1), datetime.time(REBOOT_HOUR))
+    scheduler.enterabs(time.mktime(dream_time.timetuple()), 1,
+                       sender.send_json, ('reboot',))
+
+    scheduler.run()
+        
 def load_esn(filename):
     import Oger
     import mdp
-    numpies = [ np.load(open('{}_{}'.format(filename, i))) for i in range(6) ]
+    numpies = [ np.load(open(f)) for f in glob.glob('{}_*'.format(filename)) ]
 
     _reservoir, _linear = json.load(open(filename,'r'))
     _reservoir['_dtype'] = np.dtype('float64')
