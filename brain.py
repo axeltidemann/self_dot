@@ -408,9 +408,7 @@ def _recognize_audio_id(audio_recognizer, NAP):
 
 def _project(audio_id, sound_to_face, NAP, video_producer):
     face_id = np.random.choice(sound_to_face[audio_id])
-    t0 = time.time()
     tarantino = utils.load_esn(video_producer[(audio_id, face_id)])
-    print 'Video ESN unpickling time {} seconds'.format(time.time() - t0)
     stride = IO.VIDEO_SAMPLE_TIME / (IO.NAP_RATE/IO.NAP_STRIDE)
     return tarantino(NAP[::stride])
 
@@ -953,10 +951,10 @@ def learn_audio(host, debug=False):
                     
                     for segment, new_sound in enumerate([ utils.trim_right(new_sentence[norm_segments[i]:norm_segments[i+1]]) for i in range(len(norm_segments)-1) ]):
                         # We filter out short, abrupt sounds with lots of noise.
-                        #if np.mean(new_sound) < .2 or new_sound.shape[0] == 0:
-                        #   black_list.write('{} {}\n'.format(filename, segment))
-                        #   print 'BLACKLIST: {} {}'.format(filename, segment))
-                        #   continue
+                        if np.mean(new_sound) < .2 or new_sound.shape[0] == 0:
+                          black_list.write('{} {}\n'.format(filename, segment))
+                          print 'BLACKLIST: {} {}'.format(filename, segment))
+                          continue
 
                         if debug:
                             utils.plot_NAP_and_energy(new_sound, plt)
@@ -1002,9 +1000,9 @@ def learn_audio(host, debug=False):
                             most_significant_audio_id = audio_id
                             most_significant_value = amps[segment]
 
-                    counterQ.send_pyobj(['audio_ids_counter', None])
-                    sorted_freqs = counterQ.recv_pyobj()
-                    print 'AUDIO FREQS', sorted_freqs
+                    # counterQ.send_pyobj(['audio_ids_counter', None])
+                    # sorted_freqs = counterQ.recv_pyobj()
+                    # print 'AUDIO FREQS', sorted_freqs
                     
                     maxlen = max([ m.shape[0] for memory in NAPs for m in memory ])
                     memories = [ np.ndarray.flatten(utils.zero_pad(m, maxlen)) for memory in NAPs for m in memory ]
@@ -1185,9 +1183,9 @@ def learn_faces(host, debug=False):
                         if len(face_history) > FACE_MEMORY_SIZE:
                             face_history[-FACE_MEMORY_SIZE-1] = [[]]
 
-                        counterQ.send_pyobj(['face_ids_counter', None])
-                        sorted_freqs = counterQ.recv_pyobj()
-                        print 'FACE FREQS', sorted_freqs
+                        # counterQ.send_pyobj(['face_ids_counter', None])
+                        # sorted_freqs = counterQ.recv_pyobj()
+                        # print 'FACE FREQS', sorted_freqs
                             
                         x_train = [ np.ndarray.flatten(f) for cluster in face_history for f in cluster if len(f) ]
                         targets = [ i for i,cluster in enumerate(face_history) for f in cluster if len(f) ]
