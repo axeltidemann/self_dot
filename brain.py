@@ -953,7 +953,6 @@ def learn_audio(host, debug=False):
                         # We filter out short, abrupt sounds with lots of noise.
                         if np.mean(new_sound) < .2 or new_sound.shape[0] == 0:
                           black_list.write('{} {}\n'.format(filename, segment))
-                          print 'BLACKLIST: {} {}'.format(filename, segment))
                           continue
 
                         if debug:
@@ -1096,9 +1095,7 @@ def learn_video(host, debug=False):
 
                     esn_name = '{}video_esn_{}'.format(myCsoundAudioOptions.memRecPath, uuid4())
 
-                    tz = time.time()
                     utils.dump_esn(tarantino, esn_name)
-                    print 'Video ESN pickle time {} seconds'.format(time.time() - tz)
                     
                     t1 = time.time()
                     #brainQ.send_pyobj([ 'video_learn', filename, tarantino ])
