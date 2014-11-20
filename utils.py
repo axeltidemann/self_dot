@@ -15,6 +15,8 @@ import multiprocessing as mp
 import threading
 import glob
 from subprocess import call
+import fcntl
+import json
 
 import numpy as np
 import zmq
@@ -71,19 +73,20 @@ def bytes2human(n, format="%(value)i%(symbol)s"):
 
 
 def csv_to_array(filename, delimiter=' '):
-    with open(filename, 'rb') as csvfile:
+    with open(filename, 'r') as csvfile:
         reader = csv.reader(csvfile, delimiter=delimiter)
         return np.array([ [ float(r) for r in row ] for row in reader ])
 
 
 def array_to_csv(filename, data, delimiter=' '):
-    with open(filename, 'wb') as csvfile: #b
+    with open(filename, 'w') as csvfile:
+        fcntl.flock(csvfile, fcntl.LOCK_EX)
         writer = csv.writer(csvfile, delimiter=delimiter)
         if len(data.shape) == 1:
             data.shape = (data.shape[0],1)
         for row in data:
             writer.writerow(row)
-
+        fcntl.flock(csvfile, fcntl.LOCK_UN)
 
 def wait_for_wav(filename):
     # Super ugly hack! Since Csound might not be finished writing to the file, we try to read it, and upon fail (i.e. it was not closed) we wait .05 seconds.
@@ -311,12 +314,13 @@ def get_segments(wavfile):
     segmentTimes.append(totalDur) 
     #print 'utils.get_segments', segmentTimes
     return np.array(segmentTimes)
-    
-def get_most_significant_word(wavfile):
-    #print 'HERE BE DRAGONS!!! get_most_significant_word'
-    #return 0
-    _,_,_,segmentData = getSoundInfo(wavfile)
-    amps = [ item[2] for item in segmentData ]
+
+def get_amps(filename):
+    _,_,_,segmentData = getSoundInfo(filename)
+    return [ item[2] for item in segmentData ]
+
+def get_most_significant_word(filename):
+    amps = get_amps(filename)
     return amps.index(max(amps))
      
 
@@ -523,7 +527,7 @@ def log_sink():
         output.flush()
                         
 class LoggerProcess(mp.Process):
-    ''' File to write log over ØMQ socket. '''
+    ''' File to write log over ZMQ socket. '''
     def run(self):
         my_logger = Logger() # Must be in run, not __init__
         sys.stdout = my_logger
@@ -540,3 +544,64 @@ class MyProcess(mp.Process):
         AliveNotifier(mp.current_process())
         
         mp.Process.run(self)
+
+def load_esn(filename):
+    import Oger
+    import mdp
+    numpies = [ np.load(open('{}_{}'.format(filename, i))) for i in range(6) ]
+
+    _reservoir, _linear = json.load(open(filename,'r'))
+    _reservoir['_dtype'] = np.dtype('float64')
+    _reservoir['nonlin_func'] = Oger.utils.TanhFunction
+    _reservoir['initial_state'] = 0
+    _reservoir['states'] = numpies[0]
+    _reservoir['w'] = numpies[1]
+    _reservoir['w_in'] = numpies[2]
+    _reservoir['w_bias'] = numpies[3]
+        
+    reservoir = Oger.nodes.LeakyReservoirNode(leak_rate=.0)
+    reservoir.__dict__ = _reservoir
+
+    linear = readout = mdp.nodes.LinearRegressionNode()
+
+    _linear['_dtype'] = np.dtype('float64')
+    _linear['_xTx'] = numpies[4]
+    _linear['_xTy'] = numpies[5]
+    
+    linear.__dict__ = _linear
+
+    flow = mdp.hinet.FlowNode(reservoir + linear)
+    flow._train_phase_started = True
+    
+    return flow
+        
+def dump_esn(net, filename):
+    ''' Stores what does not go into JSON as numpy arrays. Much faster than pickle. '''
+    reservoir = net[0]
+    linear = net[1]
+
+    numpies = []
+    _reservoir = reservoir.__dict__.copy()
+    del _reservoir['_dtype']
+    del _reservoir['initial_state']
+    del _reservoir['nonlin_func']
+    numpies.append(reservoir.states)
+    del _reservoir['states']
+    numpies.append(reservoir.w)
+    del _reservoir['w']
+    numpies.append(reservoir.w_in)
+    del _reservoir['w_in']
+    numpies.append(reservoir.w_bias)
+    del _reservoir['w_bias']
+
+    _linear = linear.__dict__.copy()
+    del _linear['_dtype']
+    numpies.append(linear._xTx)
+    del _linear['_xTx']
+    numpies.append(linear._xTy)
+    del _linear['_xTy']
+
+    json.dump([_reservoir, _linear], open(filename,'w'))
+
+    for i,N in enumerate(numpies):
+        np.save(open('{}_{}'.format(filename, i),'w'), N)
