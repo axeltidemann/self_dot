@@ -257,12 +257,12 @@ def audio():
                 skip_file = 0
                 for i in range(len(segmentlist)):
                     segmentlist[i] = segmentlist[i].split(' ')
-                print 'markertablist', markertablist
-                print 'segmentlist',segmentlist
+                #print 'markertablist', markertablist
+                #print 'segmentlist',segmentlist
                 
                 for i in range(len(segmentlist)):
                     if markertablist[i] < 0 :
-                        print 'SKIPPING \n  SEGMENT \n    {}'.format(segmentlist[i])
+                        #print 'SKIPPING \n  SEGMENT \n    {}'.format(segmentlist[i])
                         skip_count += 1
                         if skip_count >= len(segmentlist): skip_file = 1
                         if i<len(segmentlist)-1:
@@ -279,7 +279,7 @@ def audio():
                             total_segment_time = float(segmentlist[i+1][0])-skip_time
                         else:
                             total_segment_time = memRecTimeMarker-skip_time
-                print 'segmentstring\n', segmentstring
+                #print 'segmentstring\n', segmentstring
                 cs.InputMessage('i -%f 0 1'%instrNum)
                 markerfile.write(segmentstring)
                 markerfile.write('Total duration: %f\n'%total_segment_time)
@@ -314,12 +314,12 @@ def audio():
             skip_file = 0
             for i in range(len(segmentlist)):
                 segmentlist[i] = segmentlist[i].split(' ')
-            print 'markertablist', markertablist
-            print 'segmentlist',segmentlist
+            #print 'markertablist', markertablist
+            #print 'segmentlist',segmentlist
             
             for i in range(len(segmentlist)):
                 if markertablist[i] < 0 :
-                    print 'SKIPPING \n  SEGMENT \n    {}'.format(segmentlist[i])
+                    #print 'SKIPPING \n  SEGMENT \n    {}'.format(segmentlist[i])
                     skip_count += 1
                     if skip_count >= len(segmentlist): skip_file = 1
                     if i<len(segmentlist)-1:

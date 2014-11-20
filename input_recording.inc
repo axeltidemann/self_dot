@@ -48,11 +48,11 @@
         ktimer          init 0
         kskiptimer      init 0
         ktransient      chnget "transient"
-        Stransient      sprintfk "*** Transient %i at time %f", ktransient, krunning_time
-        puts Stransient, ktransient+1
+        ;Stransient      sprintfk "*** Transient %i at time %f", ktransient, krunning_time
+        ;puts Stransient, ktransient+1
         ktest           =  (kFollowdb1 > krec_floor ? 1:0)
-        Stest           sprintfk "* Envelope over rec floor %i at time %f", ktest, krunning_time
-        puts Stest, ktest+1
+        ;Stest           sprintfk "* Envelope over rec floor %i at time %f", ktest, krunning_time
+        ;puts Stest, ktest+1
 if ktransient > 0 then
 reinit startgate        
 endif
@@ -60,20 +60,20 @@ endif
 startgate:
         kinit           linseg 1, irecdelay+(4/kr), 1, 0, 0, 1, 0
 rireturn
-        Sinit           sprintfk "* Initial gate open %i at time %f", kinit, krunning_time
-        puts Sinit, kinit+1
+        ;Sinit           sprintfk "* Initial gate open %i at time %f", kinit, krunning_time
+        ;puts Sinit, kinit+1
         ktest2          = (kinit == 1 ? 1 : ktest)
         kgate           init 1
         kgate           = (kinit == 1 ? 1 : kgate)
         kgate           = (ktransient == 1 ? 1 : kgate)
         kgate           = (ktest2 < 1 ? 0 : kgate)
-        Sgate           sprintfk "* Gate %i at time %f", kgate, krunning_time
-        puts Sgate, kgate+1
+        ;Sgate           sprintfk "* Gate %i at time %f", kgate, krunning_time
+        ;puts Sgate, kgate+1
 
         kgatetrig       trigger kgate, 0.5, 0
         kgatetrig_off   trigger kgate, 0.5, 1
-        Sgatetrig       sprintfk "* Gate trigger on %i at time %f", kgatetrig, krunning_time
-        puts Sgatetrig, kgatetrig+1
+        ;Sgatetrig       sprintfk "* Gate trigger on %i at time %f", kgatetrig, krunning_time
+        ;puts Sgatetrig, kgatetrig+1
         
 if kgatetrig > 0 then
         kresetindex     = krunning_time
@@ -104,20 +104,20 @@ record:
         ;kFollowFilt     tonek kFollowdb1, 2 ; we want to integrate the max level over the whole segment, so we can lowpass filter the envelope a bit to get rid of weak spurious blips
         krms_rec        = kFollowdb1
         krms_rec_max    max, krms_rec_max, krms_rec
-        Srecmax         sprintfk "* Recording max amp %f at time %f", krms_rec_max, krunning_time
-        puts Srecmax, krms_rec_max
+        ;Srecmax         sprintfk "* Recording max amp %f at time %f", krms_rec_max, krunning_time
+        ;puts Srecmax, krms_rec_max
 record_done:
 
-        Sgateoff        sprintfk "* Gate trigger off %i at time %f", kgatetrig_off, krunning_time
-        puts Sgateoff, kgatetrig_off+1
+        ;Sgateoff        sprintfk "* Gate trigger off %i at time %f", kgatetrig_off, krunning_time
+        ;puts Sgateoff, kgatetrig_off+1
 
 if kgatetrig_off > 0 then
         krms_rec_max_prev = krms_rec_max
         krms_rec_max    = -96
 
         kcheck  = (krms_rec_max_prev > knoiseFloor_dB+ikeep_thresh ? 1 : 0)
-        Scheck  sprintfk "* Check if rec max for segment is over floor+thresh %i at time %f", kcheck, krunning_time
-        puts Scheck, kcheck+1
+        ;Scheck  sprintfk "* Check if rec max for segment is over floor+thresh %i at time %f", kcheck, krunning_time
+        ;puts Scheck, kcheck+1
 
         kstart_transfer = 0
         kmarker_index   += 1
@@ -134,8 +134,8 @@ writeFile:
         kgoto writeFile
     endif
   else
-    Sskipwrite          sprintfk "Writing skipsegment indicator at time %f", krunning_time
-    puts Sskipwrite, krunning_time
+    ;Sskipwrite          sprintfk "Writing skipsegment indicator at time %f", krunning_time
+    ;puts Sskipwrite, krunning_time
                         tablew -1, kmarker_index-1, iMarkerTemp ; handle this in python, if zero, delete segment
   endif
 endif
