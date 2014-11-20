@@ -26,7 +26,7 @@ print p1,p2,p3,p5,p6,p7,p8,p9,p10,p11
         irvb2           = ampdbfs(p11)                          ; send to reverb (2)
         ispeed          = p12                                   ; playback speed
 
-; start and end not fully implemented yet, read segment info from sound/markerfile to get start and end points 
+; start and end for segment
         istart          = p5                                    ; segment start
         iend            = p6                                    ; segment end
         if iend == 0 then
@@ -72,7 +72,7 @@ print p1,p2,p3,p5,p6,p7,p8,p9,p10,p11
         irvb2           = ampdbfs(p11)                          ; send to reverb (2)
         ispeed          = p12                                   ; playback speed
 
-; start and end not fully implemented yet, read segment info from sound/markerfile to get start and end points 
+; start and end for segment
         istart          = p5                                    ; segment start
         iend            = p6                                    ; segment end
         if iend == 0 then
@@ -144,7 +144,7 @@ print p1,p2,p3,p5,p6,p7,p8,p9,p10,p11
         irvb2           = ampdbfs(p11)                          ; send to reverb (2)
         ispeed          = p12                                   ; playback speed
 
-; start and end not fully implemented yet, read segment info from sound/markerfile to get start and end points 
+; start and end for segment
         istart          = p5                                    ; segment start
         iend            = p6                                    ; segment end
         if iend == 0 then
@@ -212,7 +212,7 @@ print p1,p2,p3,p5,p6,p7,p8,p9,p10,p11
         irvb2           = ampdbfs(p11)                          ; send to reverb (2)
         ispeed          = p12                                   ; playback speed
 
-; start and end not fully implemented yet, read segment info from sound/markerfile to get start and end points 
+; start and end for segment
         istart          = p5                                    ; segment start
         iend            = p6                                    ; segment end
         if iend == 0 then
@@ -289,7 +289,7 @@ print p1,p2,p3,p5,p6,p7,p8,p9,p10,p11
         irvb2           = ampdbfs(p11)                          ; send to reverb (2)
         ispeed          = p12                                   ; playback speed
 
-; start and end not fully implemented yet, read segment info from sound/markerfile to get start and end points 
+; start and end for segment
         istart          = p5                                    ; segment start
         iend            = p6                                    ; segment end
         if iend == 0 then
@@ -372,7 +372,7 @@ contin:
         irvb2           = ampdbfs(p11)                          ; send to reverb (2)
         ispeed          = p12                                   ; playback speed
 
-; start and end not fully implemented yet, read segment info from sound/markerfile to get start and end points 
+; start and end for segment
         istart          = p5                                    ; segment start
         iend            = p6                                    ; segment end
         if iend == 0 then
@@ -468,7 +468,7 @@ contin:
         irvb2           = ampdbfs(p11)                          ; send to reverb (2)
         ispeed          = p12*0.5                                   ; playback speed
 
-; start and end not fully implemented yet, read segment info from sound/markerfile to get start and end points 
+; start and end for segment
         istart          = p5                                    ; segment start
         iend            = p6                                    ; segment end
         if iend == 0 then
@@ -530,7 +530,7 @@ contin:
         irvb2           = ampdbfs(p11)                          ; send to reverb (2)
         ispeed          = p12                                   ; playback speed
 
-; start and end not fully implemented yet, read segment info from sound/markerfile to get start and end points 
+; start and end for segment
         istart          = p5                                    ; segment start
         iend            = p6                                    ; segment end
         if iend == 0 then

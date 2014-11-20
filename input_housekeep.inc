@@ -144,10 +144,16 @@ print p1, p2, p3
 ; set audio input noise gate
         instr 16
         irms_dB         chnget "inputNoisefloor"
-        irms            = ampdbfs(irms_dB)*0.9
+        irms1           = ampdbfs(irms_dB)
+        irms2           = ampdbfs(irms_dB+8)
+        irms2           limit irms2, 0, 1
+        iknee           = irms2-irms1
+        print irms1, iknee, irms2
         isize           = 8192
-        iknee           = isize*0.2
-        giNoiseFloor    ftgen 0, 0, isize, 7, 0, (isize*irms), 0, iknee, 1, (isize*(1-irms))-iknee, 1, 2, 1
+        izero_seg       = int(isize*irms1) 
+        iknee_seg       = int(isize*iknee)
+        iopen_seg       = isize-iknee_seg-izero_seg
+        giNoiseFloor    ftgen 0, 0, isize, 7, 0, izero_seg, 0, iknee_seg, 1, iopen_seg, 1
         endin
 
 ;******************************
@@ -155,7 +161,8 @@ print p1, p2, p3
         instr 17
         a1          chnget "in1"
         krms        rms a1
-        krms        = krms * 1.7
+        krms        = krms * 1.2
+        ;printk2 krms
         kgate       tablei krms, giNoiseFloor, 1
         agate       interp kgate
         agatef      follow2 agate, 0.04, 0.2

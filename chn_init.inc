@@ -17,7 +17,7 @@
         chnset 9, "statusThresh"            ; release thresh for audio status
         chnset 0.8, "statusRel"               ; status release time, hold status=1 for this long after signal has dropped below
 
-        chnset 2.0, "selfSpectralSuppress"        ; amount of FFT analysis of self output subtracted from input, if instr 16 is active
+        chnset 1.0, "selfSpectralSuppress"        ; amount of FFT analysis of self output subtracted from input, if instr 16 is active
 
         ; these three are active only for the "secondary synth" voices, and for send between effects (i.e. only the send from delay to reverb)
         chnset -1, "SecondaryDryLevel"          ; in dB

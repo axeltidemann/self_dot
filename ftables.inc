@@ -22,6 +22,11 @@
 	gifnaEqProfile  ftgen   0 ,0 ,giFftTabSize, 7, 0, giFftTabSize, 0   	; init audio system Eq profile
 	gifnaEq         ftgen   0 ,0 ,giFftTabSize, 7, 0, giFftTabSize, 0   	; for audio system Eq application
 
+    giAudioTemp     ftgen   0, 0, 2097152, 2, 0 ; 47 second temporary buffer for recording segments before writing to file
+    ;giMarkerTemp    ftgen   0, 0, 32, 2, 0     ; for writing valid segment start times (in one sentence)
+    ;                chnset giMarkerTemp, "giMarkerTemp"
+    giPitchTemp     ftgen   0, 0, 32768, 2, 0   ; for writing temporary pitch data, just as for audio recording
+
 ; classic waveforms
 	giSine		ftgen	0, 0, 65536, 10, 1					; sine wave
 	giCosine	ftgen	0, 0, 8192, 9, 1, 1, 90					; cosine wave
@@ -59,6 +64,7 @@
 	giPanalyzeTempRef	ftgen	0, 0, 1024, 2, 0	; empty buffer
 
 	gkPanalyzeArr[]		init 11
+	
 
 ; secondary synth, keep track of tables currently in use
         giTablesInUseSecondary  ftgen   0, 0, 1024, 2, 0        ; init empty
