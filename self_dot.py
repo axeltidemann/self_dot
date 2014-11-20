@@ -134,6 +134,10 @@ class Controller:
 
             if message == 'reboot':
                 utils.reboot()
+
+            if message == 'appendCurrentSettings' or message == 'popCurrentSettings':
+                self.association.send_pyobj([message])
+                self.association.recv_pyobj()
                 
             if 'i_am_speaking' in message:
                 _, value = message.split()
@@ -161,6 +165,13 @@ class Controller:
                 print 'Calculating cochlear neural activation patterns took {} seconds'.format(time.time() - t0)
             
             if message == 'evolve':
+                self.state['memoryRecording'] = False
+                self.state['autorespond_sentence'] = False
+                self.state['autolearn'] = False
+                self.state['autorespond_single'] = False
+                self.state['_audioLearningStatus'] = False
+                self.publisher.send_json(self.state)
+                
                 self.association.send_pyobj(['evolve'])
                 self.association.recv_pyobj()
 

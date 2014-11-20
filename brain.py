@@ -491,7 +491,7 @@ def respond(control_host, learn_host, debug=False):
                 amp = -3
                 maxamp = 1
                 start = 0
-                voice1 = 'playfile {} {} {} {} {} {} {} {} {}'.format(1, 6, start, soundfile, speed, segstart, segend, amp, maxamp)
+                voice1 = 'playfile {} {} {} {} {} {} {} {} {}'.format(1, 6, np.random.rand()/3, soundfile, speed, segstart, segend, amp, maxamp)
                 projection = _project(audio_id, sound_to_face, NAP, video_producer)
                 voice2 = 'playfile {} {} {} {} {} {} {} {} {}'.format(2, 6, np.random.randint(3,6), soundfile, speed, segstart, segend, amp, maxamp)
                 play_events.append([ dur, voice1, voice2, projection, FRAME_SIZE ])
@@ -950,7 +950,7 @@ def learn_audio(host, debug=False):
                     
                     for segment, new_sound in enumerate([ utils.trim_right(new_sentence[norm_segments[i]:norm_segments[i+1]]) for i in range(len(norm_segments)-1) ]):
                         # We filter out short, abrupt sounds with lots of noise.
-                        if np.mean(new_sound) < .2 or new_sound.shape[0] == 0:
+                        if np.mean(new_sound) < 2 or new_sound.shape[0] == 0: # Heavy lifting.
                           black_list.write('{} {}\n'.format(filename, segment))
                           continue
 
@@ -1097,9 +1097,7 @@ def learn_video(host, debug=False):
                     utils.dump_esn(tarantino, esn_name)
                     
                     t1 = time.time()
-                    #brainQ.send_pyobj([ 'video_learn', filename, tarantino ])
                     brainQ.send_pyobj([ 'video_learn', filename, esn_name ])
-
                     print 'Video learned in {} seconds, ZMQ time {} seconds'.format(t1 - t0, time.time() - t1)
                 except:
                     utils.print_exception('Video learning aborted.')
