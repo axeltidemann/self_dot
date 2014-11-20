@@ -12,7 +12,7 @@
 	;fsouts 		pvsmooth fsout, 0.5, 0.5		
 	kflag   	pvsftw	fsin,gifnaIn  	        	; export  amps  and freqs to table
 	kflag1   	pvsftw	fsout,gifnaOut	        	; export  amps  and freqs to table
-	iNPscale	= p5
+	iNPscale	= ampdbfs(-3)
 			vmult_i  gifnaNoise, iNPscale, giFftTabSize-1
 	if kflag == 0 kgoto contin		   		; only proc when frame is ready
 			vsubv  gifnaIn, gifnaOut, giFftTabSize-1	; subtract my own output 

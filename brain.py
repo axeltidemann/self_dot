@@ -919,9 +919,10 @@ def learn_audio(host, debug=False):
                     new_audio_hash = []
                     for segment, new_sound in enumerate([ utils.trim_right(new_sentence[norm_segments[i]:norm_segments[i+1]]) for i in range(len(norm_segments)-1) ]):
                         # We filter out short, abrupt sounds with lots of noise.
-                        if np.mean(new_sound) < .2 or new_sound.shape[0] == 0:
-                           black_list.write('{} {}\n'.format(filename, segment))
-                           continue
+                        #if np.mean(new_sound) < .2 or new_sound.shape[0] == 0:
+                        #   black_list.write('{} {}\n'.format(filename, segment))
+                        #   print 'BLACKLIST: {} {}'.format(filename, segment))
+                        #   continue
 
                         if debug:
                             utils.plot_NAP_and_energy(new_sound, plt)

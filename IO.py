@@ -157,7 +157,7 @@ def audio():
         memRecMaxAmp = cGet("memRecMaxAmp")             # max amplitude for each recorded file
         statusRel = cGet("statusRel")                   # audio status release time 
         noiseFloor = cGet("inputNoisefloor")            # measured noise floor in dB
-
+        
         
         i_am_speaking = cGet("i_am_speaking")           # signals cognition that I'm currently speaking
         cSet("i_am_speaking", 0)                        # reset channel, any playing voice instr will overwrite
@@ -166,10 +166,11 @@ def audio():
         prev_i_am_speaking = i_am_speaking
         
         panposition = cs.GetChannel("panalyzer_pan")
-        in_amp = cs.GetChannel("in_amp")
+        in_amp = cs.GetChannel("followdb") #rather use envelope follower in dB than pure rms channel "in_amp")
         in_pitch = cs.GetChannel("in_pitch")
         in_centroid = cs.GetChannel("in_centroid")
-
+        skip_file = 0
+        
         if state['roboActive'] > 0:
             if (panposition < 0.48) or (panposition > 0.52):
                 print 'panposition', panposition
@@ -189,14 +190,16 @@ def audio():
             if ambientActive == 1:
                 cs.InputMessage('i -92 0 1')
                 ambientActive = 0
-
+        
         if state['memoryRecording']:
             if audioStatusTrig > 0:
                 timestr = time.strftime('%Y_%m_%d_%H_%M_%S')
                 print 'starting memoryRec', timestr
                 tim_time = time.time()
                 filename = memRecPath+timestr+'.wav'
-                cs.InputMessage('i 34 0 -1 "%s"'%filename)
+                time_frac = tim_time-int(tim_time)
+                instrNum = 34+time_frac
+                cs.InputMessage('i %f 0 -1 "%s"'%(instrNum,filename))
                 markerfileName = memRecPath+timestr+'.txt'
                 markerfile = open(markerfileName, 'w')
                 markerfile.write('Self. audio clip perceived at %s\n'%tim_time)
@@ -237,9 +240,46 @@ def audio():
                 ampPitchCentroid = [[],[],[]]
                 segmentstring += '%.3f %.3f %.3f %.3f %.3f\n'%(segStart,memRecSkiptime-statusRel,ampMean,pitchMean,centroidMean) #normal termination of recording, we should subtract statusRel from last skiptime
                 #segmentstring += '%.3f %.3f %.3f %.3f %.3f\n'%(segStart,memRecSkiptime,ampMean,pitchMean,centroidMean) 
-                cs.InputMessage('i -34 0 1')
+                segmentlist = segmentstring.split('\n')
+                segmentlist.pop() # ditch the empty list item at the end
+                markertablist = []
+                markerTempTab = cGet("giMarkerTemp")
+                for i in range(32):
+                    markertime = tGet(int(markerTempTab), i)
+                    markertablist.append(markertime)
+                segmentstring = '{}\n'.format(segmentlist.pop(0))
+                total_segment_time = 0.0
+                skip_time = 0.0
+                skip_count = 0
+                skip_file = 0
+                for i in range(len(segmentlist)):
+                    segmentlist[i] = segmentlist[i].split(' ')
+                print 'markertablist', markertablist
+                print 'segmentlist',segmentlist
+                
+                for i in range(len(segmentlist)):
+                    if markertablist[i] < 0 :
+                        print 'SKIPPING \n  SEGMENT \n    {}'.format(segmentlist[i])
+                        skip_count += 1
+                        if skip_count >= len(segmentlist): skip_file = 1
+                        if i<len(segmentlist)-1:
+                            skip_time += float(segmentlist[i+1][0])-float(segmentlist[i][0])
+                        else:
+                            skip_time += memRecTimeMarker-float(segmentlist[i][0])
+                    else:
+                        segmentlist[i][0] = '%.3f'%total_segment_time
+                        segment_n = ''
+                        for item in segmentlist[i]: segment_n += str(item) + ' '
+                        segment_n = segment_n.rstrip(' ')
+                        segmentstring += segment_n+'\n'
+                        if i<len(segmentlist)-1:
+                            total_segment_time = float(segmentlist[i+1][0])-skip_time
+                        else:
+                            total_segment_time = memRecTimeMarker-skip_time
+                print 'segmentstring\n', segmentstring
+                cs.InputMessage('i -%f 0 1'%instrNum)
                 markerfile.write(segmentstring)
-                markerfile.write('Total duration: %f\n'%memRecTimeMarker)
+                markerfile.write('Total duration: %f\n'%total_segment_time)
                 markerfile.write('\nMax amp for file: %f'%memRecMaxAmp)
                 markerfile.close()
                 print 'stopping memoryRec'
@@ -256,16 +296,54 @@ def audio():
             l = ampPitchCentroid[2]
             centroidMean = np.mean(l[int(len(l)*0.25):int(len(l)*0.9)])
             ampPitchCentroid = [[],[],[]]
-            segmentstring += '%.3f %.3f %.3f %.3f %.3f\n'%(segStart,memRecSkiptime,ampMean,pitchMean,centroidMean) # do not subract statusRel here, as we have probably interrupted recording in this case
-            cs.InputMessage('i -34 0 1')
+            segmentstring += '%.3f %.3f %.3f %.3f %.3f\n'%(segStart,memRecSkiptime-statusRel,ampMean,pitchMean,centroidMean) #normal termination of recording, we should subtract statusRel from last skiptime
+            #segmentstring += '%.3f %.3f %.3f %.3f %.3f\n'%(segStart,memRecSkiptime,ampMean,pitchMean,centroidMean) 
+            segmentlist = segmentstring.split('\n')
+            segmentlist.pop() # ditch the empty list item at the end
+            markertablist = []
+            for i in range(32):
+                markertime = tGet(int(markerTempTab), i)
+                markertablist.append(markertime)
+            segmentstring = '{}\n'.format(segmentlist.pop(0))
+            total_segment_time = 0.0
+            skip_time = 0.0
+            skip_count = 0
+            skip_file = 0
+            for i in range(len(segmentlist)):
+                segmentlist[i] = segmentlist[i].split(' ')
+            print 'markertablist', markertablist
+            print 'segmentlist',segmentlist
+            
+            for i in range(len(segmentlist)):
+                if markertablist[i] < 0 :
+                    print 'SKIPPING \n  SEGMENT \n    {}'.format(segmentlist[i])
+                    skip_count += 1
+                    if skip_count >= len(segmentlist): skip_file = 1
+                    if i<len(segmentlist)-1:
+                        skip_time += float(segmentlist[i+1][0])-float(segmentlist[i][0])
+                    else:
+                        skip_time += memRecTimeMarker-float(segmentlist[i][0])
+                else:
+                    segmentlist[i][0] = '%.3f'%total_segment_time
+                    segment_n = ''
+                    for item in segmentlist[i]: segment_n += str(item) + ' '
+                    segment_n = segment_n.rstrip(' ')
+                    segmentstring += segment_n+'\n'
+                    if i<len(segmentlist)-1:
+                        total_segment_time = float(segmentlist[i+1][0])-skip_time
+                    else:
+                        total_segment_time = memRecTimeMarker-skip_time
+            print 'segmentstring\n', segmentstring
+            cs.InputMessage('i -%f 0 1'%instrNum)
             markerfile.write(segmentstring)
-            markerfile.write('Total duration: %f'%memRecTimeMarker)
+            markerfile.write('Total duration: %f\n'%total_segment_time)
+            markerfile.write('\nMax amp for file: %f'%memRecMaxAmp)
             markerfile.close()
             print 'stopping memoryRec'
 
         interaction = []
                                                     
-        if state['autolearn'] or state['autorespond_single'] or state['autorespond_sentence']:
+        if (state['autolearn'] or state['autorespond_single'] or state['autorespond_sentence']) and not skip_file:
             if audioStatusTrig > 0:
                 sender.send_json('startrec')
                 sender.send_json('_audioLearningStatus 1')
@@ -312,10 +390,19 @@ def audio():
                 cs.InputMessage('i -17 0 1') # turn off old noise gate
                 cs.InputMessage('i 12 0 4') # measure roundtrip latency
                 cs.InputMessage('i 13 4 1.9') # get audio input noise print
-                cs.InputMessage('i 14 6 -1 1.0 1.0') # enable noiseprint and self-output suppression
+                cs.InputMessage('i 14 6 -1') # enable noiseprint and self-output suppression
                 cs.InputMessage('i 15 6.2 2') # get noise floor level 
                 cs.InputMessage('i 16 8.3 0.1') # set noise gate shape
                 cs.InputMessage('i 17 8.5 -1') # turn on new noise gate
+
+            if 'resetNoiseFloor' in pushbutton:
+                cs.InputMessage('i -17 0 .1') # turn off old noise gate
+                cs.InputMessage('i -14 0 .1') # turn off noiseprint and self-output suppression
+                cs.InputMessage('i 13 .3 1.5') # get audio input noise print
+                cs.InputMessage('i 14 2 -1') # enable noiseprint and self-output suppression
+                cs.InputMessage('i 15 2.2 1.5') # get noise floor level 
+                cs.InputMessage('i 16 3.9 0.1') # set noise gate shape
+                cs.InputMessage('i 17 4 -1') # turn on new noise gate
 
             if 'csinstr' in pushbutton:
                 # generic csound instr message
