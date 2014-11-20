@@ -126,6 +126,11 @@ class Controller:
         try:
             if message == 'dream':
                 self.event.send_json({'dream': True})
+                self.state['memoryRecording'] = False
+                self.state['autorespond_sentence'] = False
+                self.state['autolearn'] = False
+                self.state['autorespond_single'] = False
+                self.state['_audioLearningStatus'] = False
 
             if message == 'reboot':
                 utils.reboot()

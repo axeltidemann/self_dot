@@ -315,12 +315,12 @@ def audio():
             skip_file = 0
             for i in range(len(segmentlist)):
                 segmentlist[i] = segmentlist[i].split(' ')
-            #print 'markertablist', markertablist
-            #print 'segmentlist',segmentlist
+            print 'markertablist', markertablist
+            print 'segmentlist',segmentlist
             
             for i in range(len(segmentlist)):
                 if markertablist[i] < 0 :
-                    #print 'SKIPPING \n  SEGMENT \n    {}'.format(segmentlist[i])
+                    print 'SKIPPING \n  SEGMENT \n    {}'.format(segmentlist[i])
                     skip_count += 1
                     if skip_count >= len(segmentlist): skip_file = 1
                     if i<len(segmentlist)-1:

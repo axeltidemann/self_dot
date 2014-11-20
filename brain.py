@@ -353,9 +353,9 @@ def dream(wavs, wav_audio_ids, NAPs, NAP_hashes, dreamQ):
         clusters = 24
         sparse_codes = mysai.experiment(mega_filenames_and_indexes, high_resolution_k)
         sparse_codes = np.array(sparse_codes)
-        plt.matshow(sparse_codes, aspect='auto')
-        plt.colorbar()
-        plt.draw()
+        # plt.matshow(sparse_codes, aspect='auto')
+        # plt.colorbar()
+        # plt.draw()
 
         codebook,_ = kmeans(sparse_codes, clusters)
         instances = [ vq(np.atleast_2d(s), codebook)[0] for s in sparse_codes ]
@@ -418,7 +418,6 @@ def _extract_NAP(segstart, segend, soundfile, suffix='cochlear'):
     segstart_norm = int(np.rint(new_sentence.shape[0]*segstart/audio_segments[-1]))
     segend_norm = int(np.rint(new_sentence.shape[0]*segend/audio_segments[-1]))
     return utils.trim_right(new_sentence[segstart_norm:segend_norm])
-
 
 def respond(control_host, learn_host, debug=False):
     context = zmq.Context()
@@ -492,9 +491,9 @@ def respond(control_host, learn_host, debug=False):
                 amp = -3
                 maxamp = 1
                 start = 0
-                voice1 = 'playfile {} {} {} {} {} {} {} {} {}'.format(1, voiceType1, start, soundfile, speed, segstart, segend, amp, maxamp)
+                voice1 = 'playfile {} {} {} {} {} {} {} {} {}'.format(1, 6, start, soundfile, speed, segstart, segend, amp, maxamp)
                 projection = _project(audio_id, sound_to_face, NAP, video_producer)
-                voice2 = ''
+                voice2 = 'playfile {} {} {} {} {} {} {} {} {}'.format(2, 6, np.random.randint(3,6), soundfile, speed, segstart, segend, amp, maxamp)
                 play_events.append([ dur, voice1, voice2, projection, FRAME_SIZE ])
             scheduler.send_pyobj(play_events)
 

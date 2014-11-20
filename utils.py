@@ -34,9 +34,9 @@ import IO
 findfloat=re.compile(r"[0-9.]*")
 
 DREAM_HOUR = 23
-EVOLVE_HOUR = 03
-SAVE_HOUR = 04
-REBOOT_HOUR = 05
+EVOLVE_HOUR = 02
+SAVE_HOUR = 03
+REBOOT_HOUR = 04
 
 def save(filename, data):
     pickle.dump(data, file(filename, 'w'))
@@ -624,7 +624,7 @@ def daily_routine(host):
 def load_esn(filename):
     import Oger
     import mdp
-    numpies = [ np.load(open(f)) for f in glob.glob('{}_*'.format(filename)) ]
+    numpies = [ np.load(open('{}_{}'.format(filename, i), 'r')) for i in range(6) ]
 
     _reservoir, _linear = json.load(open(filename,'r'))
     _reservoir['_dtype'] = np.dtype('float64')
