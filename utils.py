@@ -460,28 +460,48 @@ def counter(host):
     counterQ = context.socket(zmq.ROUTER)
     counterQ.bind('tcp://*:{}'.format(IO.COUNTER))
 
+    eventQ = context.socket(zmq.SUB)
+    eventQ.connect('tcp://{}:{}'.format(host, IO.EVENT))
+    eventQ.setsockopt(zmq.SUBSCRIBE, b'') 
+
+    poller = zmq.Poller()
+    poller.register(counterQ, zmq.POLLIN)
+    poller.register(eventQ, zmq.POLLIN)
+    
     audio_ids_counter = []
     face_ids_counter = []
 
     while True:
-        address, _, message = counterQ.recv_multipart()
-        request, value = pickle.loads(message)
-        sorted_freqs = False
-        if request == 'audio_id':
-            audio_ids_counter.append(value)
-        if request == 'face_id':
-            face_ids_counter.append(value)
-        if request == 'audio_ids_counter':
-            freqs = itemfreq(audio_ids_counter)
-            sorted_freqs = sorted(freqs, key=lambda x: x[1])
-        if request == 'face_ids_counter':
-            freqs = itemfreq(audio_ids_counter)
-            sorted_freqs = sorted(freqs, key=lambda x: x[1])
+        events = dict(poller.poll())
 
-        counterQ.send_multipart([ address,
-                                b'',
-                                pickle.dumps(sorted_freqs) ])
+        if counterQ in events:
+            address, _, message = counterQ.recv_multipart()
+            request, value = pickle.loads(message)
+            sorted_freqs = False
+            if request == 'audio_id':
+                audio_ids_counter.append(value)
+            if request == 'face_id':
+                face_ids_counter.append(value)
+            if request == 'audio_ids_counter':
+                freqs = itemfreq(audio_ids_counter)
+                sorted_freqs = sorted(freqs, key=lambda x: x[1])
+            if request == 'face_ids_counter':
+                freqs = itemfreq(audio_ids_counter)
+                sorted_freqs = sorted(freqs, key=lambda x: x[1])
 
+            counterQ.send_multipart([ address,
+                                    b'',
+                                    pickle.dumps(sorted_freqs) ])
+
+        if eventQ in events:
+            pushbutton = eventQ.recv_json()
+            if 'save' in pushbutton:
+                save('{}.{}'.format(pushbutton['save'], mp.current_process().name), [ audio_ids_counter, face_ids_counter ])
+
+            if 'load' in pushbutton:
+                audio_ids_counter, face_ids_counter = load('{}.{}'.format(pushbutton['load'], mp.current_process().name))
+
+            
 def delete_loner(counterQ, data, query, protect, deleted_ids):
     counterQ.send_pyobj([query, None])
     sorted_freqs = counterQ.recv_pyobj()
@@ -491,13 +511,12 @@ def delete_loner(counterQ, data, query, protect, deleted_ids):
         histogram[index] = value
 
     histogram[deleted_ids] = np.inf
-    histogram[-protect:] = np.inf # We protect the new ones
-    print histogram
+    histogram[-protect:] = np.inf
     loner = np.where(histogram == min(histogram))[0][0]
     data[loner] = [[]]
     deleted_ids.append(loner)
     
-    print '{} frequencies {}, delete_id = {}'.format(query, sorted_freqs, loner)
+    print '{} {} delete_id = {}'.format(query, sorted_freqs, loner)
     
 def sentinel(host):
     context = zmq.Context()
@@ -625,15 +644,15 @@ def daily_routine(host):
                        sender.send_json, ('dream',))
 
     evolve_time = datetime.datetime.combine(datetime.datetime.now() + datetime.timedelta(days=1), datetime.time(EVOLVE_HOUR))
-    scheduler.enterabs(time.mktime(dream_time.timetuple()), 1,
+    scheduler.enterabs(time.mktime(evolve_time.timetuple()), 1,
                        sender.send_json, ('evolve',))
 
     save_time = datetime.datetime.combine(datetime.datetime.now() + datetime.timedelta(days=1), datetime.time(SAVE_HOUR))
-    scheduler.enterabs(time.mktime(dream_time.timetuple()), 1,
+    scheduler.enterabs(time.mktime(save_time.timetuple()), 1,
                        sender.send_json, ('save',))
     
     reboot_time = datetime.datetime.combine(datetime.datetime.now() + datetime.timedelta(days=1), datetime.time(REBOOT_HOUR))
-    scheduler.enterabs(time.mktime(dream_time.timetuple()), 1,
+    scheduler.enterabs(time.mktime(reboot_time.timetuple()), 1,
                        sender.send_json, ('reboot',))
 
     scheduler.run()
@@ -641,7 +660,7 @@ def daily_routine(host):
 def load_esn(filename):
     import Oger
     import mdp
-    numpies = [ np.load(open('{}_{}'.format(filename, i), 'r')) for i in range(6) ]
+    numpies = [ np.load('{}_{}.npy'.format(filename, i)) for i in range(6) ]
 
     _reservoir, _linear = json.load(open(filename,'r'))
     _reservoir['_dtype'] = np.dtype('float64')
@@ -697,4 +716,4 @@ def dump_esn(net, filename):
     json.dump([_reservoir, _linear], open(filename,'w'))
 
     for i,N in enumerate(numpies):
-        np.save(open('{}_{}'.format(filename, i),'w'), N)
+        np.save('{}_{}'.format(filename, i), N)

@@ -47,12 +47,12 @@ AUDIO_HAMMERTIME = 9
 RHYME_HAMMERTIME = 11
 FACE_HAMMERTIME = 15
 FRAME_SIZE = (160,120) # Neural network image size, 1/4 of full frame size.
-FACE_MEMORY_SIZE = 3#100
-AUDIO_MEMORY_SIZE = 3#1000
-MAX_CATEGORY_SIZE = 0
+FACE_MEMORY_SIZE = 100
+AUDIO_MEMORY_SIZE = 100
+MAX_CATEGORY_SIZE = 10
 PROTECT_PERCENTAGE = .1
 
-NUMBER_OF_BRAINS = 4
+NUMBER_OF_BRAINS = 5
 
 def cognition(host):
     context = zmq.Context()
@@ -962,8 +962,6 @@ def learn_audio(host, debug=False):
                         if debug:
                             utils.plot_NAP_and_energy(new_sound, plt)
 
-                
-                                                    
                         hammings = [ np.inf ]
                         new_hash = utils.d_hash(new_sound, hash_size=8)
                         new_audio_hash.append(new_hash)
@@ -1012,7 +1010,7 @@ def learn_audio(host, debug=False):
                             most_significant_value = amps[segment]
 
                     while len(NAPs) - len(deleted_ids) > AUDIO_MEMORY_SIZE:
-                        utils.delete_loner(counterQ, NAPs, 'audio_ids_counter', 1, deleted_ids) #int(AUDIO_MEMORY_SIZE*PROTECT_PERCENTAGE)
+                        utils.delete_loner(counterQ, NAPs, 'audio_ids_counter', int(AUDIO_MEMORY_SIZE*PROTECT_PERCENTAGE), deleted_ids)
 
                     maxlen = max([ m.shape[0] for memory in NAPs for m in memory if len(m) ])
                     memories = [ np.ndarray.flatten(utils.zero_pad(m, maxlen)) for memory in NAPs for m in memory if len(m) ]
@@ -1045,10 +1043,10 @@ def learn_audio(host, debug=False):
                 dream(wavs, wav_audio_ids, NAPs, NAP_hashes, dreamQ) 
                 
             if 'save' in pushbutton:
-                utils.save('{}.{}'.format(pushbutton['save'], mp.current_process().name), [ NAPs, wavs, wav_audio_ids, NAP_hashes, audio_classifier, maxlen ])
+                utils.save('{}.{}'.format(pushbutton['save'], mp.current_process().name), [ deleted_ids, NAPs, wavs, wav_audio_ids, NAP_hashes, audio_classifier, maxlen ])
 
             if 'load' in pushbutton:
-                NAPs, wavs, wav_audio_ids, NAP_hashes, audio_classifier, maxlen = utils.load('{}.{}'.format(pushbutton['load'], mp.current_process().name))
+                deleted_ids, NAPs, wavs, wav_audio_ids, NAP_hashes, audio_classifier, maxlen = utils.load('{}.{}'.format(pushbutton['load'], mp.current_process().name))
 
                 
 def learn_video(host, debug=False):
@@ -1192,7 +1190,7 @@ def learn_faces(host, debug=False):
                             face_id = len(face_history) - 1
 
                         if len(face_history) - len(deleted_ids) > FACE_MEMORY_SIZE:
-                            utils.delete_loner(counterQ, face_history, 'face_ids_counter', 1, deleted_ids) #int(FACE_MEMORY_SIZE*PROTECT_PERCENTAGE)
+                            utils.delete_loner(counterQ, face_history, 'face_ids_counter', int(FACE_MEMORY_SIZE*PROTECT_PERCENTAGE), deleted_ids)
 
                         x_train = [ np.ndarray.flatten(f) for cluster in face_history for f in cluster if len(f) ]
                         targets = [ i for i,cluster in enumerate(face_history) for f in cluster if len(f) ]
