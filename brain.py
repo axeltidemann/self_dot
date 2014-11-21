@@ -47,7 +47,10 @@ AUDIO_HAMMERTIME = 9
 RHYME_HAMMERTIME = 11
 FACE_HAMMERTIME = 15
 FRAME_SIZE = (160,120) # Neural network image size, 1/4 of full frame size.
-FACE_MEMORY_SIZE = 100
+FACE_MEMORY_SIZE = 3#100
+AUDIO_MEMORY_SIZE = 3#1000
+MAX_CATEGORY_SIZE = 0
+PROTECT_PERCENTAGE = .1
 
 NUMBER_OF_BRAINS = 4
 
@@ -909,6 +912,8 @@ def learn_audio(host, debug=False):
     mixture_audio_recognizer = []
     maxlen = []
 
+    deleted_ids = []
+    
     state = stateQ.recv_json()
     
     black_list = open('black_list.txt', 'a')
@@ -956,7 +961,9 @@ def learn_audio(host, debug=False):
 
                         if debug:
                             utils.plot_NAP_and_energy(new_sound, plt)
-                        
+
+                
+                                                    
                         hammings = [ np.inf ]
                         new_hash = utils.d_hash(new_sound, hash_size=8)
                         new_audio_hash.append(new_hash)
@@ -969,6 +976,12 @@ def learn_audio(host, debug=False):
                             hammings = [ utils.hamming_distance(new_audio_hash[-1], h) for h in NAP_hashes[audio_id] ]
 
                         if np.mean(hammings) < AUDIO_HAMMERTIME:
+
+                            if len(NAPs[audio_id]) > MAX_CATEGORY_SIZE:
+                                NAPs[audio_id].pop(0)
+                                NAP_hashes[audio_id].pop(0)
+                                wavs[audio_id].pop(0)
+                            
                             NAPs[audio_id].append(new_sound)
                             NAP_hashes[audio_id].append(new_audio_hash[-1])
                             wavs[audio_id].append(filename)
@@ -998,14 +1011,13 @@ def learn_audio(host, debug=False):
                             most_significant_audio_id = audio_id
                             most_significant_value = amps[segment]
 
-                    # counterQ.send_pyobj(['audio_ids_counter', None])
-                    # sorted_freqs = counterQ.recv_pyobj()
-                    # print 'AUDIO FREQS', sorted_freqs
-                    
-                    maxlen = max([ m.shape[0] for memory in NAPs for m in memory ])
-                    memories = [ np.ndarray.flatten(utils.zero_pad(m, maxlen)) for memory in NAPs for m in memory ]
+                    while len(NAPs) - len(deleted_ids) > AUDIO_MEMORY_SIZE:
+                        utils.delete_loner(counterQ, NAPs, 'audio_ids_counter', 1, deleted_ids) #int(AUDIO_MEMORY_SIZE*PROTECT_PERCENTAGE)
 
-                    targets = [ i for i,f in enumerate(NAPs) for _ in f ]
+                    maxlen = max([ m.shape[0] for memory in NAPs for m in memory if len(m) ])
+                    memories = [ np.ndarray.flatten(utils.zero_pad(m, maxlen)) for memory in NAPs for m in memory if len(m) ]
+
+                    targets = [ i for i,f in enumerate(NAPs) for k in f if len(k) ]
                     audio_classifier = train_rPCA_SVM(memories, targets)
 
                     all_hammings = [ utils.hamming_distance(new_audio_hash[i], new_audio_hash[j])
@@ -1128,6 +1140,8 @@ def learn_faces(host, debug=False):
     face_recognizer = []
 
     state = stateQ.recv_json()
+
+    deleted_ids = []
     
     while True:
         events = dict(poller.poll())
@@ -1164,8 +1178,12 @@ def learn_faces(host, debug=False):
                             hammings = [ utils.hamming_distance(f, m) for f in new_faces_hashes for m in face_hashes[face_id] ]
 
                         if np.mean(hammings) < FACE_HAMMERTIME:
-                            face_history[face_id].extend([new_faces[-1]]) # An attempt to limit the memory usage of faces
-                            face_hashes[face_id].extend([new_faces_hashes[-1]])
+                            if len(face_history[face_id]) > MAX_CATEGORY_SIZE:
+                                face_history[face_id].pop(0)
+                                face_hashes[face_id].pop(0)
+    
+                            face_history[face_id].append(new_faces[-1]) 
+                            face_hashes[face_id].append(new_faces_hashes[-1])
                             print 'Face is similar to face {}, hamming mean {}'.format(face_id, np.mean(hammings))
                         else:
                             print 'New face, hamming mean {} from face {}'.format(np.mean(hammings), face_id)
@@ -1173,14 +1191,9 @@ def learn_faces(host, debug=False):
                             face_hashes.append([new_faces_hashes[-1]])
                             face_id = len(face_history) - 1
 
-                        # We erase old faces.
-                        if len(face_history) > FACE_MEMORY_SIZE:
-                            face_history[-FACE_MEMORY_SIZE-1] = [[]]
+                        if len(face_history) - len(deleted_ids) > FACE_MEMORY_SIZE:
+                            utils.delete_loner(counterQ, face_history, 'face_ids_counter', 1, deleted_ids) #int(FACE_MEMORY_SIZE*PROTECT_PERCENTAGE)
 
-                        # counterQ.send_pyobj(['face_ids_counter', None])
-                        # sorted_freqs = counterQ.recv_pyobj()
-                        # print 'FACE FREQS', sorted_freqs
-                            
                         x_train = [ np.ndarray.flatten(f) for cluster in face_history for f in cluster if len(f) ]
                         targets = [ i for i,cluster in enumerate(face_history) for f in cluster if len(f) ]
 

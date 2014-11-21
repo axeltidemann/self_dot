@@ -481,6 +481,23 @@ def counter(host):
         counterQ.send_multipart([ address,
                                 b'',
                                 pickle.dumps(sorted_freqs) ])
+
+def delete_loner(counterQ, data, query, protect, deleted_ids):
+    counterQ.send_pyobj([query, None])
+    sorted_freqs = counterQ.recv_pyobj()
+    
+    histogram = np.zeros(len(data))
+    for index, value in sorted_freqs:
+        histogram[index] = value
+
+    histogram[deleted_ids] = np.inf
+    histogram[-protect:] = np.inf # We protect the new ones
+    print histogram
+    loner = np.where(histogram == min(histogram))[0][0]
+    data[loner] = [[]]
+    deleted_ids.append(loner)
+    
+    print '{} frequencies {}, delete_id = {}'.format(query, sorted_freqs, loner)
     
 def sentinel(host):
     context = zmq.Context()
