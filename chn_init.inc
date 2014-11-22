@@ -45,11 +45,11 @@
 
 
 	chnset  6000, "Master1HiShelfFq" ; 9000
-	chnset  -2, "Master1HiShelfGain" ; 1
+	chnset  0, "Master1HiShelfGain" ; 1
 	chnset  180, "Master1LoShelfFq"
 	chnset  -2, "Master1LoShelfGain" 
 	chnset  3000, "Master1Band1Fq" ;2000
-	chnset  -4, "Master1Band1Gain" ; -2
+	chnset  -3, "Master1Band1Gain" ; -2
 	chnset  0.6, "Master1Band1Q"
 	
 	chnset  7000, "Master2HiShelfFq" ;8000

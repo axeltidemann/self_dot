@@ -123,7 +123,15 @@ class Controller:
     def parse(self, message):
         print '[self.] received: {}'.format(message)
 
+        black_list = []
+
         try:
+            if 'learnwav' in message or 'respondwav_single' in message or 'respondwav_sentence' in message:
+                _, filename = message.split()
+                if filename in black_list:
+                    print 'SKIPPING BAD FILE {}'.format(filename)
+                    return
+
             if message == 'dream':
                 self.event.send_json({'dream': True})
                 self.state['memoryRecording'] = False
@@ -161,7 +169,11 @@ class Controller:
             if 'calculate_cochlear' in message:
                 _, wav_file = message.split()
                 t0 = time.time()
-                brain.cochlear(utils.wait_for_wav(wav_file), stride=IO.NAP_STRIDE, rate=IO.NAP_RATE)
+                try:
+                    brain.cochlear(utils.wait_for_wav(wav_file), stride=IO.NAP_STRIDE, rate=IO.NAP_RATE)
+                except:
+                    print 'BAD FILE {} BLACKLISTED'.format(wav_file)
+                    black_list.append(wav_file)
                 print 'Calculating cochlear neural activation patterns took {} seconds'.format(time.time() - t0)
             
             if message == 'evolve':

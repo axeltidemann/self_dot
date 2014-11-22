@@ -87,7 +87,9 @@ def robocontrol(host):
                 # send til position to head (eg. 'p 60')
                 #tilt1 += int((value-0.5)*3)
                 tilt1 += int((value)*50)
-                tilt1 = np.clip(tilt1, 10, 70)
+                #tilt1 = np.clip(tilt1, 20, 90)
+                if tilt1 > 90: tilt1 = 90-(tilt1-90)                
+                if tilt1 < 20: tilt1 = 20-(tilt1-20)                
                 #print 'head 1 tiltposition', tilt1
                 ser.write('t %03dn'%tilt1)
             

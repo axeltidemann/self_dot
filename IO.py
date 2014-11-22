@@ -9,6 +9,7 @@ import utils
 import cv2
 import numpy as np
 import zmq
+from scipy.io import wavfile
 
 from utils import send_array, recv_array
 import myCsoundAudioOptions

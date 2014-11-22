@@ -292,8 +292,8 @@ def exact(signal, length):
 def scale(image):
     return (image - np.min(image))/(np.max(image) - np.min(image))
 
-def getSoundInfo(wavfile):
-    f = open(wavfile[:-4]+'.txt', 'r')
+def getSoundInfo(filename):
+    f = open(filename[:-4]+'.txt', 'r')
     segments = []
     enable = 0
     startTime = 0
@@ -314,9 +314,9 @@ def getSoundInfo(wavfile):
     return startTime, totalDur, maxAmp, segments
 
 
-def get_segments(wavfile):
+def get_segments(filename):
     ''' Find segments in audio descriptor file'''
-    _, totalDur, _, segments = getSoundInfo(wavfile)
+    _, totalDur, _, segments = getSoundInfo(filename)
     segmentTimes = []
     for item in segments:
         segmentTimes.append(item[0])    
@@ -615,9 +615,9 @@ def daily_routine(host):
     scheduler.enterabs(time.mktime(dream_time.timetuple()), 1,
                        sender.send_json, ('save',))
     
-    reboot_time = datetime.datetime.combine(datetime.datetime.now() + datetime.timedelta(days=1), datetime.time(REBOOT_HOUR))
-    scheduler.enterabs(time.mktime(dream_time.timetuple()), 1,
-                       sender.send_json, ('reboot',))
+    # reboot_time = datetime.datetime.combine(datetime.datetime.now() + datetime.timedelta(days=1), datetime.time(REBOOT_HOUR))
+    # scheduler.enterabs(time.mktime(dream_time.timetuple()), 1,
+    #                    sender.send_json, ('reboot',))
 
     scheduler.run()
         
