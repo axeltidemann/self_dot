@@ -123,11 +123,34 @@ class Controller:
     def parse(self, message):
         print '[self.] received: {}'.format(message)
 
+        black_list = []
+
         try:
-        
+            if 'learnwav' in message or 'respondwav_single' in message or 'respondwav_sentence' in message:
+                _, filename = message.split()
+                if filename in black_list:
+                    print 'SKIPPING BAD FILE {}'.format(filename)
+                    return
+
             if message == 'dream':
+                self.state['memoryRecording'] = False
+                self.state['autorespond_sentence'] = False
+                self.state['ambientSound'] = False
+                self.state['autolearn'] = False
+                self.state['autorespond_single'] = False
+                self.state['_audioLearningStatus'] = False
+                self.state['record'] = False
+                self.publisher.send_json(self.state)
+
                 self.event.send_json({'dream': True})
-            
+
+            if message == 'reboot':
+                utils.reboot()
+
+            if message == 'appendCurrentSettings' or message == 'popCurrentSettings':
+                self.association.send_pyobj([message])
+                self.association.recv_pyobj()
+                
             if 'i_am_speaking' in message:
                 _, value = message.split()
                 self.state['i_am_speaking'] = value in ['True', '1']
@@ -150,10 +173,22 @@ class Controller:
             if 'calculate_cochlear' in message:
                 _, wav_file = message.split()
                 t0 = time.time()
-                brain.cochlear(utils.wait_for_wav(wav_file), stride=IO.NAP_STRIDE, rate=IO.NAP_RATE)
+                try:
+                    brain.cochlear(utils.wait_for_wav(wav_file), stride=IO.NAP_STRIDE, rate=IO.NAP_RATE)
+                except:
+                    print 'BAD FILE {} BLACKLISTED'.format(wav_file)
+                    black_list.append(wav_file)
                 print 'Calculating cochlear neural activation patterns took {} seconds'.format(time.time() - t0)
             
             if message == 'evolve':
+                self.state['memoryRecording'] = False
+                self.state['autorespond_sentence'] = False
+                self.state['autolearn'] = False
+                self.state['autorespond_single'] = False
+                self.state['_audioLearningStatus'] = False
+                self.state['record'] = False
+                self.publisher.send_json(self.state)
+                
                 self.association.send_pyobj(['evolve'])
                 self.association.recv_pyobj()
 
@@ -280,10 +315,15 @@ class Controller:
                 self.event.send_json({ 'selfvoice': message[10:] })
 
             if 'save' in message:
-                self.event.send_json({ 'save': 'cns' if len(message) == 4 else message[5:] })
+                self.event.send_json({ 'save': utils.brain_name() if len(message) == 4 else message[5:] })
 
             if 'load' in message:
-                self.event.send_json({ 'load': 'cns' if len(message) == 4 else message[5:] })
+                if len(message) == 4:
+                    brain_name = utils.find_last_valid_brain()
+                else:
+                    _, brain_name = message.split()
+                if brain_name:
+                    self.event.send_json({ 'load': brain_name })
 
             self.publisher.send_json(self.state)
 
@@ -323,4 +363,6 @@ if __name__ == '__main__':
     utils.MyProcess(target=utils.scheduler, args=('localhost',), name='SCHEDULER').start()
     utils.MyProcess(target=Controller, args=(persistent_states,'localhost',), name='CONTROLLER').start()
     utils.MyProcess(target=idle, args=('localhost',), name='IDLER').start()
+    utils.MyProcess(target=utils.counter, args=('localhost',), name='COUNTER').start()
     utils.MyProcess(target=utils.sentinel, args=('localhost',), name='SENTINEL').start()
+    utils.daily_routine('localhost')

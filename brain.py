@@ -48,6 +48,11 @@ RHYME_HAMMERTIME = 11
 FACE_HAMMERTIME = 15
 FRAME_SIZE = (160,120) # Neural network image size, 1/4 of full frame size.
 FACE_MEMORY_SIZE = 100
+AUDIO_MEMORY_SIZE = 250
+MAX_CATEGORY_SIZE = 5
+PROTECT_PERCENTAGE = .1
+
+NUMBER_OF_BRAINS = 5
 
 def cognition(host):
     context = zmq.Context()
@@ -67,6 +72,9 @@ def cognition(host):
 
     association = context.socket(zmq.REQ)
     association.connect('tcp://{}:{}'.format(host, IO.ASSOCIATION))
+
+    counterQ = context.socket(zmq.REQ)
+    counterQ.connect('tcp://{}:{}'.format(host, IO.COUNTER))
 
     cognitionQ = context.socket(zmq.PULL)
     cognitionQ.bind('tcp://*:{}'.format(IO.COGNITION))
@@ -111,8 +119,7 @@ def cognition(host):
         if face in events:
             new_face = utils.recv_array(face)
             if face_recognizer:
-                x_test = face_recognizer.rPCA.transform(np.ndarray.flatten(new_face))
-                this_face_id = face_recognizer.predict(x_test)
+                this_face_id = [_predict_id(face_recognizer, new_face, counterQ, 'face_id')]
                 if this_face_id != last_face_id:
                     print 'FACE ID', last_face_id
                     if time.time() - face_timer > minimum_face_interval:
@@ -287,21 +294,24 @@ def dream(wavs, wav_audio_ids, NAPs, NAP_hashes, dreamQ):
     plt.ion()
 
     try:
-        dream_list=[ [ soundfile, wav_audio_ids[(soundfile, audio_id)], audio_id ] for audio_id, wav_files in enumerate(wavs) for soundfile in wav_files ]
+        dream_list=[ [ soundfile, wav_audio_ids[(soundfile, audio_id)], audio_id ] for audio_id, wav_files in enumerate(wavs) for soundfile in wav_files if (soundfile, audio_id) in wav_audio_ids ]
+        print 'LENGTH OF DREAM LIST', len(dream_list)
         dreamQ.send_pyobj(dream_list)
 
         print 'Removing wrongly binned filenames'
         mega_filenames_and_indexes = []
         for audio_id, wav_files in enumerate(wavs):
+
             NAP_detail = 'low'
             filenames_and_indexes = []
 
             for soundfile in wav_files:
-                segstart, segend = wav_audio_ids[(soundfile, audio_id)]
-                audio_segments = utils.get_segments(soundfile)
-                norm_segstart = segstart/audio_segments[-1]
-                norm_segend = segend/audio_segments[-1]
-                filenames_and_indexes.append([ soundfile, norm_segstart, norm_segend, audio_id, NAP_detail ])
+                if (soundfile, audio_id) in wav_audio_ids:
+                    segstart, segend = wav_audio_ids[(soundfile, audio_id)]
+                    audio_segments = utils.get_segments(soundfile)
+                    norm_segstart = segstart/audio_segments[-1]
+                    norm_segend = segend/audio_segments[-1]
+                    filenames_and_indexes.append([ soundfile, norm_segstart, norm_segend, audio_id, NAP_detail ])
 
             mega_filenames_and_indexes.extend(filenames_and_indexes)
 
@@ -338,7 +348,8 @@ def dream(wavs, wav_audio_ids, NAPs, NAP_hashes, dreamQ):
                 wav_files.pop(index)
                 NAPs[audio_id].pop(index)
                 NAP_hashes[audio_id].pop(index)
-                del wav_audio_ids[(delete_file, audio_id)]
+                if (delete_file, audio_id) in wav_audio_ids:
+                    del wav_audio_ids[(delete_file, audio_id)]
 
         print 'Creating mega super self-organized class'
 
@@ -349,9 +360,9 @@ def dream(wavs, wav_audio_ids, NAPs, NAP_hashes, dreamQ):
         clusters = 24
         sparse_codes = mysai.experiment(mega_filenames_and_indexes, high_resolution_k)
         sparse_codes = np.array(sparse_codes)
-        plt.matshow(sparse_codes, aspect='auto')
-        plt.colorbar()
-        plt.draw()
+        # plt.matshow(sparse_codes, aspect='auto')
+        # plt.colorbar()
+        # plt.draw()
 
         codebook,_ = kmeans(sparse_codes, clusters)
         instances = [ vq(np.atleast_2d(s), codebook)[0] for s in sparse_codes ]
@@ -378,9 +389,13 @@ def cochlear(filename, stride, rate, db=-40, ears=1, a_1=-0.995, apply_filter=1,
     return np.sqrt(np.maximum(0, naps)/np.max(naps))
 
 
-def _predict_audio_id(audio_classifier, NAP):
-    x_test = audio_classifier.rPCA.transform(np.ndarray.flatten(NAP))
-    return audio_classifier.predict(x_test)[0]
+def _predict_id(classifier, M, counterQ = False, modality = None):
+    x_test = classifier.rPCA.transform(np.ndarray.flatten(M))
+    _id = classifier.predict(x_test)[0]
+    if counterQ: # This happens insanely fast.
+        counterQ.send_pyobj([modality, _id])
+        counterQ.recv_pyobj()
+    return _id
 
 def _hamming_distance_predictor(audio_classifier, NAP, maxlen, NAP_hashes):
     NAP_hash = utils.d_hash(NAP, hash_size=8)
@@ -388,7 +403,7 @@ def _hamming_distance_predictor(audio_classifier, NAP, maxlen, NAP_hashes):
                    utils.exact(resample(NAP, .5, 'sinc_best'), maxlen), 
                    utils.exact(resample(NAP, min(2, float(maxlen)/NAP.shape[0]), 'sinc_best'), maxlen) ]
 
-    audio_id_candidates = [ _predict_audio_id(audio_classifier, NAP_s) for NAP_s in NAP_scales ]
+    audio_id_candidates = [ _predict_id(audio_classifier, NAP_s) for NAP_s in NAP_scales ]
     hamming_warped = [ np.mean([ utils.hamming_distance(NAP_hash, h) for h in NAP_hashes[audio_id] ]) for audio_id in audio_id_candidates ]
     print 'HAMMING WARPED', zip(audio_id_candidates, hamming_warped)
     winner = np.argsort(hamming_warped)[0]
@@ -399,10 +414,13 @@ def _recognize_audio_id(audio_recognizer, NAP):
         print 'AUDIO ID: {} OUTPUT MEAN: {}'.format(audio_id, np.mean(net(NAP)))
 
 def _project(audio_id, sound_to_face, NAP, video_producer):
-    face_id = np.random.choice(sound_to_face[audio_id])
-    t0 = time.time()
-    tarantino = utils.load_esn(video_producer[(audio_id, face_id)])
-    print 'Video ESN unpickling time {} seconds'.format(time.time() - t0)
+    if audio_id < len(sound_to_face):
+        face_id = np.random.choice(sound_to_face[audio_id])
+        tarantino = utils.load_esn(video_producer[(audio_id, face_id)])
+    else:
+        import random
+        tarantino = utils.load_esn(video_producer[random.choice(video_producer.keys())])
+
     stride = IO.VIDEO_SAMPLE_TIME / (IO.NAP_RATE/IO.NAP_STRIDE)
     return tarantino(NAP[::stride])
 
@@ -412,7 +430,6 @@ def _extract_NAP(segstart, segend, soundfile, suffix='cochlear'):
     segstart_norm = int(np.rint(new_sentence.shape[0]*segstart/audio_segments[-1]))
     segend_norm = int(np.rint(new_sentence.shape[0]*segend/audio_segments[-1]))
     return utils.trim_right(new_sentence[segstart_norm:segend_norm])
-
 
 def respond(control_host, learn_host, debug=False):
     context = zmq.Context()
@@ -429,6 +446,9 @@ def respond(control_host, learn_host, debug=False):
 
     brainQ = context.socket(zmq.PULL)
     brainQ.bind('tcp://*:{}'.format(IO.BRAIN))
+
+    counterQ = context.socket(zmq.REQ)
+    counterQ.connect('tcp://{}:{}'.format(control_host, IO.COUNTER))
     
     cognitionQ = context.socket(zmq.PUSH)
     cognitionQ.connect('tcp://{}:{}'.format(control_host, IO.COGNITION))
@@ -483,9 +503,9 @@ def respond(control_host, learn_host, debug=False):
                 amp = -3
                 maxamp = 1
                 start = 0
-                voice1 = 'playfile {} {} {} {} {} {} {} {} {}'.format(1, voiceType1, start, soundfile, speed, segstart, segend, amp, maxamp)
+                voice1 = 'playfile {} {} {} {} {} {} {} {} {}'.format(1, 6, np.random.rand()/3, soundfile, speed, segstart, segend, amp, maxamp)
                 projection = _project(audio_id, sound_to_face, NAP, video_producer)
-                voice2 = ''
+                voice2 = 'playfile {} {} {} {} {} {} {} {} {}'.format(2, 6, np.random.randint(3,6), soundfile, speed, segstart, segend, amp, maxamp)
                 play_events.append([ dur, voice1, voice2, projection, FRAME_SIZE ])
             scheduler.send_pyobj(play_events)
 
@@ -516,7 +536,6 @@ def respond(control_host, learn_host, debug=False):
 
                 for audio_id in audio_ids: # If audio_ids is empty, none of this will happen
                     video_producer[(audio_id, face_id)] = tarantino 
-                    # By eliminating the last logical sentence, you can effectively get a statistical storage of audio_id.
                     if audio_id < len(sound_to_face) and not face_id in sound_to_face[audio_id]: # sound heard before, but not said by this face 
                         sound_to_face[audio_id].append(face_id)
                     if audio_id == len(sound_to_face):
@@ -588,12 +607,7 @@ def respond(control_host, learn_host, debug=False):
                     #     plt.title('respond NAP: {} to {}'.format(NAP.shape[0], maxlen))
                     #     plt.draw()
                     
-                    try:
-                        audio_id = _predict_audio_id(audio_classifier, NAP_exact)
-                        #audio_id, _ = _hamming_distance_predictor(audio_classifier, NAP, maxlen, NAP_hashes)
-                    except:
-                        audio_id = 0
-                        print 'Responding having only heard 1 sound.'
+                    audio_id = _predict_id(audio_classifier, NAP_exact, counterQ, 'audio_id')
 
                     soundfile = np.random.choice(wavs[audio_id])
                     segstart, segend = wav_audio_ids[(soundfile, audio_id)]
@@ -670,11 +684,7 @@ def respond(control_host, learn_host, debug=False):
                         plt.imshow(NAP_exact.T, aspect='auto')
                         plt.draw()
                     
-                    try:
-                        audio_id = _predict_audio_id(audio_classifier, NAP_exact)
-                    except:
-                        audio_id = 0
-                        print 'Responding having only heard 1 sound.'
+                    audio_id = _predict_id(audio_classifier, NAP_exact, counterQ, 'audio_id')
 
                     numWords = len(audio_segments)-1
                     print numWords
@@ -805,10 +815,10 @@ def respond(control_host, learn_host, debug=False):
                     print e, 'showme print failed.'
 
             if 'save' in pushbutton:
-                utils.save('{}.{}'.format(pushbutton['save'], mp.current_process().name), [ sound_to_face, wordFace, face_to_sound, faceWord, video_producer, segment_ids, wavs, wav_audio_ids, audio_classifier, maxlen, NAP_hashes, face_id, face_recognizer ])
+                utils.save('{}.{}'.format(pushbutton['save'], mp.current_process().name), [ sound_to_face, wordFace, face_to_sound, faceWord, video_producer, wavs, wav_audio_ids, audio_classifier, maxlen, NAP_hashes, face_id, face_recognizer ])
 
             if 'load' in pushbutton:
-                sound_to_face, wordFace, face_to_sound, faceWord, video_producer, segment_ids, wavs, wav_audio_ids, audio_classifier, maxlen, NAP_hashes, face_id, face_recognizer = utils.load('{}.{}'.format(pushbutton['load'], mp.current_process().name))
+                sound_to_face, wordFace, face_to_sound, faceWord, video_producer, wavs, wav_audio_ids, audio_classifier, maxlen, NAP_hashes, face_id, face_recognizer = utils.load('{}.{}'.format(pushbutton['load'], mp.current_process().name))
                     
 def _train_audio_recognizer(signal):
     noise = np.random.rand(signal.shape[0], signal.shape[1])
@@ -890,6 +900,9 @@ def learn_audio(host, debug=False):
 
     sender = context.socket(zmq.PUSH)
     sender.connect('tcp://{}:{}'.format(host, IO.EXTERNAL))
+
+    counterQ = context.socket(zmq.REQ)
+    counterQ.connect('tcp://{}:{}'.format(host, IO.COUNTER))
     
     poller = zmq.Poller()
     poller.register(mic, zmq.POLLIN)
@@ -908,6 +921,8 @@ def learn_audio(host, debug=False):
     mixture_audio_recognizer = []
     maxlen = []
 
+    deleted_ids = []
+    
     state = stateQ.recv_json()
     
     black_list = open('black_list.txt', 'a')
@@ -949,14 +964,14 @@ def learn_audio(host, debug=False):
                     
                     for segment, new_sound in enumerate([ utils.trim_right(new_sentence[norm_segments[i]:norm_segments[i+1]]) for i in range(len(norm_segments)-1) ]):
                         # We filter out short, abrupt sounds with lots of noise.
-                        #if np.mean(new_sound) < .2 or new_sound.shape[0] == 0:
-                        #   black_list.write('{} {}\n'.format(filename, segment))
-                        #   print 'BLACKLIST: {} {}'.format(filename, segment))
-                        #   continue
+                        if np.mean(new_sound) < 2 or new_sound.shape[0] == 0: # Heavy lifting.
+                          black_list.write('{} {}\n'.format(filename, segment))
+                          print 'BLACKLISTED segment {} in file {}'.format(segment, filename)
+                          continue
 
                         if debug:
                             utils.plot_NAP_and_energy(new_sound, plt)
-                        
+
                         hammings = [ np.inf ]
                         new_hash = utils.d_hash(new_sound, hash_size=8)
                         new_audio_hash.append(new_hash)
@@ -965,10 +980,16 @@ def learn_audio(host, debug=False):
                         
                         if audio_classifier:
                             new_sound_exact = utils.exact(new_sound, maxlen)
-                            audio_id = _predict_audio_id(audio_classifier, new_sound_exact)
+                            audio_id = _predict_id(audio_classifier, new_sound_exact)
                             hammings = [ utils.hamming_distance(new_audio_hash[-1], h) for h in NAP_hashes[audio_id] ]
 
                         if np.mean(hammings) < AUDIO_HAMMERTIME:
+
+                            while len(NAPs[audio_id]) > MAX_CATEGORY_SIZE:
+                                NAPs[audio_id].pop(0)
+                                NAP_hashes[audio_id].pop(0)
+                                wavs[audio_id].pop(0)
+                            
                             NAPs[audio_id].append(new_sound)
                             NAP_hashes[audio_id].append(new_audio_hash[-1])
                             wavs[audio_id].append(filename)
@@ -997,25 +1018,32 @@ def learn_audio(host, debug=False):
                         if amps[segment] > most_significant_value:
                             most_significant_audio_id = audio_id
                             most_significant_value = amps[segment]
-                        
-                    maxlen = max([ m.shape[0] for memory in NAPs for m in memory ])
-                    memories = [ np.ndarray.flatten(utils.zero_pad(m, maxlen)) for memory in NAPs for m in memory ]
 
-                    targets = [ i for i,f in enumerate(NAPs) for _ in f ]
-                    audio_classifier = train_rPCA_SVM(memories, targets)
-
-                    all_hammings = [ utils.hamming_distance(new_audio_hash[i], new_audio_hash[j])
-                                                            for i in range(len(new_audio_hash)) for j in range(len(new_audio_hash)) if i > j ]
-                    
                     black_list.flush()
-                    print 'RHYME VALUE', np.mean(sorted(all_hammings)[int(len(all_hammings)/2):])
-                    rhyme = np.mean(sorted(all_hammings)[int(len(all_hammings)/2):]) < RHYME_HAMMERTIME
+                    print 'AUDIO IDs after blacklisting {}'. format(audio_ids)
+                    if len(audio_ids):
+                        while len(NAPs) - len(deleted_ids) > AUDIO_MEMORY_SIZE:
+                            utils.delete_loner(counterQ, NAPs, 'audio_ids_counter', int(AUDIO_MEMORY_SIZE*PROTECT_PERCENTAGE), deleted_ids)
 
-                    sender.send_json('rhyme {}'.format(rhyme))
+                        maxlen = max([ m.shape[0] for memory in NAPs for m in memory if len(m) ])
+                        memories = [ np.ndarray.flatten(utils.zero_pad(m, maxlen)) for memory in NAPs for m in memory if len(m) ]
 
-                    t1 = time.time()
-                    brainQ.send_pyobj(['audio_learn', filename, audio_ids, wavs, wav_audio_ids, audio_classifier, audio_recognizer, global_audio_recognizer, mixture_audio_recognizer,  maxlen, NAP_hashes, most_significant_audio_id])
-                    print 'Audio learned from {} in {} seconds, ZMQ time {} seconds'.format(filename, t1 - t0, time.time() - t1)
+                        targets = [ i for i,f in enumerate(NAPs) for k in f if len(k) ]
+                        audio_classifier = train_rPCA_SVM(memories, targets)
+
+                        all_hammings = [ utils.hamming_distance(new_audio_hash[i], new_audio_hash[j])
+                                                                for i in range(len(new_audio_hash)) for j in range(len(new_audio_hash)) if i > j ]
+                    
+                        print 'RHYME VALUE', np.mean(sorted(all_hammings)[int(len(all_hammings)/2):])
+                        rhyme = np.mean(sorted(all_hammings)[int(len(all_hammings)/2):]) < RHYME_HAMMERTIME
+
+                        sender.send_json('rhyme {}'.format(rhyme))
+
+                        t1 = time.time()
+                        brainQ.send_pyobj(['audio_learn', filename, audio_ids, wavs, wav_audio_ids, audio_classifier, audio_recognizer, global_audio_recognizer, mixture_audio_recognizer,  maxlen, NAP_hashes, most_significant_audio_id])
+                        print 'Audio learned from {} in {} seconds, ZMQ time {} seconds'.format(filename, t1 - t0, time.time() - t1)
+                    else:
+                        print 'SKIPPING fully blacklisted file {}'.format(filename)
                 except:
                     utils.print_exception('Audio learning aborted.')
 
@@ -1029,10 +1057,10 @@ def learn_audio(host, debug=False):
                 dream(wavs, wav_audio_ids, NAPs, NAP_hashes, dreamQ) 
                 
             if 'save' in pushbutton:
-                utils.save('{}.{}'.format(pushbutton['save'], mp.current_process().name), [ NAPs, wavs, wav_audio_ids, NAP_hashes, audio_classifier, maxlen ])
+                utils.save('{}.{}'.format(pushbutton['save'], mp.current_process().name), [ deleted_ids, NAPs, wavs, wav_audio_ids, NAP_hashes, audio_classifier, maxlen ])
 
             if 'load' in pushbutton:
-                NAPs, wavs, wav_audio_ids, NAP_hashes, audio_classifier, maxlen = utils.load('{}.{}'.format(pushbutton['load'], mp.current_process().name))
+                deleted_ids, NAPs, wavs, wav_audio_ids, NAP_hashes, audio_classifier, maxlen = utils.load('{}.{}'.format(pushbutton['load'], mp.current_process().name))
 
                 
 def learn_video(host, debug=False):
@@ -1090,14 +1118,10 @@ def learn_video(host, debug=False):
 
                     esn_name = '{}video_esn_{}'.format(myCsoundAudioOptions.memRecPath, uuid4())
 
-                    tz = time.time()
                     utils.dump_esn(tarantino, esn_name)
-                    print 'Video ESN pickle time {} seconds'.format(time.time() - tz)
                     
                     t1 = time.time()
-                    #brainQ.send_pyobj([ 'video_learn', filename, tarantino ])
                     brainQ.send_pyobj([ 'video_learn', filename, esn_name ])
-
                     print 'Video learned in {} seconds, ZMQ time {} seconds'.format(t1 - t0, time.time() - t1)
                 except:
                     utils.print_exception('Video learning aborted.')
@@ -1113,6 +1137,9 @@ def learn_faces(host, debug=False):
     face.setsockopt(zmq.SUBSCRIBE, b'')
 
     stateQ, eventQ, brainQ = _three_amigos(context, host)
+
+    counterQ = context.socket(zmq.REQ)
+    counterQ.connect('tcp://{}:{}'.format(host, IO.COUNTER))
     
     poller = zmq.Poller()
     poller.register(face, zmq.POLLIN)
@@ -1125,6 +1152,8 @@ def learn_faces(host, debug=False):
     face_recognizer = []
 
     state = stateQ.recv_json()
+
+    deleted_ids = []
     
     while True:
         events = dict(poller.poll())
@@ -1155,15 +1184,18 @@ def learn_faces(host, debug=False):
                         face_id = 0
                         
                         if face_recognizer:
-                            x_test = [ face_recognizer.rPCA.transform(np.ndarray.flatten(f)) for f in new_faces ]
-                            predicted_faces = [ face_recognizer.predict(x)[0] for x in x_test ]
+                            predicted_faces = [ _predict_id(face_recognizer, f) for f in new_faces ]
                             uniq = np.unique(predicted_faces)
                             face_id = uniq[np.argsort([ sum(predicted_faces == u) for u in uniq ])[-1]]
                             hammings = [ utils.hamming_distance(f, m) for f in new_faces_hashes for m in face_hashes[face_id] ]
 
                         if np.mean(hammings) < FACE_HAMMERTIME:
-                            face_history[face_id].extend([new_faces[-1]]) # An attempt to limit the memory usage of faces
-                            face_hashes[face_id].extend([new_faces_hashes[-1]])
+                            while len(face_history[face_id]) > MAX_CATEGORY_SIZE:
+                                face_history[face_id].pop(0)
+                                face_hashes[face_id].pop(0)
+    
+                            face_history[face_id].append(new_faces[-1]) 
+                            face_hashes[face_id].append(new_faces_hashes[-1])
                             print 'Face is similar to face {}, hamming mean {}'.format(face_id, np.mean(hammings))
                         else:
                             print 'New face, hamming mean {} from face {}'.format(np.mean(hammings), face_id)
@@ -1171,9 +1203,8 @@ def learn_faces(host, debug=False):
                             face_hashes.append([new_faces_hashes[-1]])
                             face_id = len(face_history) - 1
 
-                        # We erase old faces.
-                        if len(face_history) > FACE_MEMORY_SIZE:
-                            face_history[-FACE_MEMORY_SIZE-1] = [[]]
+                        while len(face_history) - len(deleted_ids) > FACE_MEMORY_SIZE:
+                            utils.delete_loner(counterQ, face_history, 'face_ids_counter', int(FACE_MEMORY_SIZE*PROTECT_PERCENTAGE), deleted_ids)
 
                         x_train = [ np.ndarray.flatten(f) for cluster in face_history for f in cluster if len(f) ]
                         targets = [ i for i,cluster in enumerate(face_history) for f in cluster if len(f) ]
@@ -1191,10 +1222,10 @@ def learn_faces(host, debug=False):
                 faces.clear()
 
             if 'save' in pushbutton:
-                utils.save('{}.{}'.format(pushbutton['save'], mp.current_process().name), [ face_history, face_hashes, face_recognizer ])
+                utils.save('{}.{}'.format(pushbutton['save'], mp.current_process().name), [ deleted_ids, face_history, face_hashes, face_recognizer ])
 
             if 'load' in pushbutton:
-                face_history, face_hashes, face_recognizer = utils.load('{}.{}'.format(pushbutton['load'], mp.current_process().name))
+                deleted_ids, face_history, face_hashes, face_recognizer = utils.load('{}.{}'.format(pushbutton['load'], mp.current_process().name))
 
 
 def _three_amigos(context, host):

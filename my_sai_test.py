@@ -3,6 +3,7 @@ import glob
 import itertools
 import multiprocessing as mp
 import cPickle as pickle
+import os
 
 import numpy as np
 from scipy.io import wavfile
@@ -86,6 +87,9 @@ def _valid_file(filename, threshold=.1):
 def _cochlear_trim_sai_marginals(filename_and_indexes):
     try:
         filename, norm_segstart, norm_segend, audio_id, NAP_detail = filename_and_indexes
+        sai_video_filename = '{}_sai_video_{}'.format(filename, NAP_detail)
+        if os.path.isfile('{}.npy'.format(sai_video_filename)):
+          return sai_video_filename
 
         if NAP_detail == 'high':
             try: 
@@ -109,21 +113,22 @@ def _cochlear_trim_sai_marginals(filename_and_indexes):
 
         NAP = utils.trim_right(NAP[ np.int(np.rint(NAP.shape[0]*norm_segstart)) : np.int(np.rint(NAP.shape[0]*norm_segend)) ], threshold=.05)
         sai_video = [ np.copy(sai.RunSegment(input_segment.T)) for input_segment in utils.chunks(NAP, input_segment_width) ]
-        return [ [ filename, audio_id, [ sai_rectangles(frame) for frame in sai_video ]] ]
+        del NAP        
+        np.save(sai_video_filename, np.array([ sai_rectangles(frame) for frame in sai_video ]))
+        return sai_video_filename
 
     except:
         print utils.print_exception('Calculation SAI video failed for file {}, NAP detail {}'.format(filename, NAP_detail))
-        return [[filename, audio_id, None]]
+        return False
 
 def experiment(filenames, k):
     t0 = time.time()
     pool = mp.Pool() 
     sai_video_marginals = pool.map(_cochlear_trim_sai_marginals, filenames)
-    sai_video_marginals = list(itertools.chain.from_iterable(sai_video_marginals))
     pool.close()
     t1 = time.time()
     print 'Cochlear SAI marginals calculated in {} seconds'.format(t1 - t0)
-    sparse_codes = sai_sparse_codes([ marginals for _,_,marginals in sai_video_marginals if marginals is not None ], k)
+    sparse_codes = sai_sparse_codes([ np.load('{}.npy'.format(filename)) for filename in sai_video_marginals if filename ], k)
     print 'Sparse codes calculated in {} seconds'.format(time.time() - t1)
     return sparse_codes
     

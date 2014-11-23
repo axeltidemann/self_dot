@@ -98,8 +98,6 @@ def association(host):
     poller.register(eventQ, zmq.POLLIN)
     
     while True:
-        #print 'assoc is running %i', time.time()
-        #time.sleep(.1)
         events = dict(poller.poll())
         if association in events:
             t0 = time.time()
@@ -118,15 +116,18 @@ def association(host):
                     _,param,value = thing
                     setParam(param,value)                    
                 if func == 'evolve':
+                    appendCurrentSettings()
                     evolve_sentence_parameters()
+                    appendCurrentSettings()
+                    popCurrentSettings()
                 if func == 'getSimilarWords':
                     _,predicate, distance = thing
                     answer = getSimilarWords(predicate, distance)
                 if func == 'getFaceResponse':
                     _,face, = thing
                     answer = getFaceResponse(face)
-                if func == 'pushCurrentSettings':
-                    pushCurrentSettings()
+                if func == 'appendCurrentSettings':
+                    appendCurrentSettings()
                 if func == 'popCurrentSettings':
                     popCurrentSettings()
 
@@ -142,7 +143,7 @@ def association(host):
             print 'ASSOCIATION.ANALYZE {} seconds'.format(time.time() - t0)
 
         if eventQ in events:
-            global wordTime, time_word, duration_word, similarWords, neighbors, neighborAfter, \
+            global currentSettings, wordTime, time_word, duration_word, similarWords, neighbors, neighborAfter, \
                    wordFace, faceWord, sentencePosition_item, wordsInSentence, numWords,\
                    method, neighborsWeight, wordsInSentenceWeight, similarWordsWeight, wordFaceWeight, faceWordWeight, \
                    timeShortBeforeWeight, timeShortAfterWeight, timeShortDistance, timeLongBeforeWeight, timeLongAfterWeight, timeLongDistance, \
@@ -152,7 +153,7 @@ def association(host):
                    durationWeight2, posInSentenceWeight2
             pushbutton = eventQ.recv_json()
             if 'save' in pushbutton:
-                utils.save('{}.{}'.format(pushbutton['save'], mp.current_process().name), [ wordTime, time_word, duration_word, similarWords, neighbors, neighborAfter, \
+                utils.save('{}.{}'.format(pushbutton['save'], mp.current_process().name), [ currentSettings, wordTime, time_word, duration_word, similarWords, neighbors, neighborAfter, \
                         wordFace, faceWord, sentencePosition_item, wordsInSentence, numWords, \
                         method, neighborsWeight, wordsInSentenceWeight, similarWordsWeight, wordFaceWeight, faceWordWeight, \
                         timeShortBeforeWeight, timeShortAfterWeight, timeShortDistance, timeLongBeforeWeight, timeLongAfterWeight, timeLongDistance, \
@@ -162,7 +163,7 @@ def association(host):
                         durationWeight2, posInSentenceWeight2 ])
 
             if 'load' in pushbutton:
-                wordTime, time_word, duration_word, similarWords, neighbors, neighborAfter, \
+                currentSettings, wordTime, time_word, duration_word, similarWords, neighbors, neighborAfter, \
                 wordFace, faceWord, sentencePosition_item, wordsInSentence, numWords, \
                 method, neighborsWeight, wordsInSentenceWeight, similarWordsWeight, wordFaceWeight, faceWordWeight, \
                 timeShortBeforeWeight, timeShortAfterWeight, timeShortDistance, timeLongBeforeWeight, timeLongAfterWeight, timeLongDistance, \
@@ -290,7 +291,7 @@ def sentence_fitness(genome):
     global neighborsWeight, wordsInSentenceWeight, similarWordsWeight, wordFaceWeight, faceWordWeight, timeShortBeforeWeight, timeShortAfterWeight, timeLongBeforeWeight, timeLongAfterWeight, posInSentenceWeight
     neighborsWeight, wordsInSentenceWeight, similarWordsWeight, wordFaceWeight, faceWordWeight, timeShortBeforeWeight, timeShortAfterWeight, timeLongBeforeWeight, timeLongAfterWeight, posInSentenceWeight = genome
     fitness = 0
-    for predicate in [10]:#range(len(wordTime.keys())):
+    for predicate in [min(len(wordTime.keys())-1,10)]:#range(len(wordTime.keys())):
         if debug: print 'PREDICATE', predicate, '/', len(wordTime.keys())
         sentence = simple_make_sentence(predicate)
 
@@ -400,6 +401,7 @@ def generate(predicate, method,
     # get the lists we need
     if debug: print '***get lists for predicate', predicate
     _neighbors = normalizeItemScore(copy.copy(neighbors[predicate]))
+            
     #print '\n_neighbors', _neighbors
     _wordsInSentence = normalizeItemScore(copy.copy(wordsInSentence[predicate]))
     #print '\n_wordsInSentence', _wordsInSentence
@@ -770,26 +772,38 @@ def select(items, method):
     else:
         random.choice(words)
 
-def pushCurrentSettings():
+def appendCurrentSettings():
+
     global numWords,neighborsWeight,wordsInSentenceWeight,similarWordsWeight,wordFaceWeight,faceWordWeight
     global timeShortBeforeWeight,timeShortAfterWeight,timeShortDistance,timeLongBeforeWeight,timeLongAfterWeight,timeLongDistance,durationWeight,posInSentenceWeight
     global neighborsWeight2,wordsInSentenceWeight2,similarWordsWeight2,wordFaceWeight2,faceWordWeight2
-    global timeShortBeforeWeight2,timeShortAfterWeight2,timeShortDistance2,timeLongBeforeWeight2,timeLongAfterWeight2,timeLongDistance2,durationWeight2,posInSentenceWeight2   
+    global timeShortBeforeWeight2,timeShortAfterWeight2,timeShortDistance2,timeLongBeforeWeight2,timeLongAfterWeight2,timeLongDistance2,durationWeight2,posInSentenceWeight2
+    global currentSettings
+
     currentSettings.append([numWords,neighborsWeight,wordsInSentenceWeight,similarWordsWeight,wordFaceWeight,faceWordWeight,\
     timeShortBeforeWeight,timeShortAfterWeight,timeShortDistance,timeLongBeforeWeight,timeLongAfterWeight,timeLongDistance,durationWeight,posInSentenceWeight,\
     neighborsWeight2,wordsInSentenceWeight2,similarWordsWeight2,wordFaceWeight2,faceWordWeight2,\
     timeShortBeforeWeight2,timeShortAfterWeight2,timeShortDistance2,timeLongBeforeWeight2,timeLongAfterWeight2,timeLongDistance2,durationWeight2,posInSentenceWeight2])
 
+    print 'Appending current association settings, size of list after append: {}'.format(len(currentSettings))
+    
 def popCurrentSettings():
     global numWords,neighborsWeight,wordsInSentenceWeight,similarWordsWeight,wordFaceWeight,faceWordWeight
     global timeShortBeforeWeight,timeShortAfterWeight,timeShortDistance,timeLongBeforeWeight,timeLongAfterWeight,timeLongDistance,durationWeight,posInSentenceWeight
     global neighborsWeight2,wordsInSentenceWeight2,similarWordsWeight2,wordFaceWeight2,faceWordWeight2
-    global timeShortBeforeWeight2,timeShortAfterWeight2,timeShortDistance2,timeLongBeforeWeight2,timeLongAfterWeight2,timeLongDistance2,durationWeight2,posInSentenceWeight2   
-    numWords,neighborsWeight,wordsInSentenceWeight,similarWordsWeight,wordFaceWeight,faceWordWeight,\
-    timeShortBeforeWeight,timeShortAfterWeight,timeShortDistance,timeLongBeforeWeight,timeLongAfterWeight,timeLongDistance,durationWeight,posInSentenceWeight,\
-    neighborsWeight2,wordsInSentenceWeight2,similarWordsWeight2,wordFaceWeight2,faceWordWeight2,\
-    timeShortBeforeWeight2,timeShortAfterWeight2,timeShortDistance2,timeLongBeforeWeight2,timeLongAfterWeight2,timeLongDistance2,durationWeight2,posInSentenceWeight2 = currentSettings.pop(0)
+    global timeShortBeforeWeight2,timeShortAfterWeight2,timeShortDistance2,timeLongBeforeWeight2,timeLongAfterWeight2,timeLongDistance2,durationWeight2,posInSentenceWeight2
+    global currentSettings
 
+    if len(currentSettings):
+        numWords,neighborsWeight,wordsInSentenceWeight,similarWordsWeight,wordFaceWeight,faceWordWeight,\
+        timeShortBeforeWeight,timeShortAfterWeight,timeShortDistance,timeLongBeforeWeight,timeLongAfterWeight,timeLongDistance,durationWeight,posInSentenceWeight,\
+        neighborsWeight2,wordsInSentenceWeight2,similarWordsWeight2,wordFaceWeight2,faceWordWeight2,\
+        timeShortBeforeWeight2,timeShortAfterWeight2,timeShortDistance2,timeLongBeforeWeight2,timeLongAfterWeight2,timeLongDistance2,durationWeight2,posInSentenceWeight2 = currentSettings.pop(0)
+
+        print 'Popping current association settings, size of list after pop: {}'.format(len(currentSettings))
+    else:
+        print 'Tried to pop from an empty association settings list - this is a big no-no.'
+    
 def setParam(param,value):
     #param is a string, so we must compile the statement to set the variable
     print 'setParam:', param, value

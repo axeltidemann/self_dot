@@ -30,9 +30,9 @@
         chnset 0.91, "SecondaryReverbFeed"
         chnset 6000, "SecondaryReverbFiltFq"
 
-        chnset 300, "SecondaryMasterLoCut"       ; cut LF on master out for secondary associations synth
+        chnset 450, "SecondaryMasterLoCut"  ;300     ; cut LF on master out for secondary associations synth
         chnset -7, "SecondaryMasterLevel"       ; in dB
-        chnset -12, "SecondaryCompThresh"
+        chnset -18, "SecondaryCompThresh" ;-12
         chnset 3, "SecondaryCompRatio"
 
         chnset -2, "PrimaryMasterLevel"       ; in dB
@@ -44,20 +44,20 @@
         chnset -3, "ambientLevel"      ; set level of self's own background sound
 
 
-	chnset  9000, "Master1HiShelfFq"
-	chnset  3, "Master1HiShelfGain"
+	chnset  6000, "Master1HiShelfFq" ; 9000
+	chnset  0, "Master1HiShelfGain" ; 1
 	chnset  180, "Master1LoShelfFq"
 	chnset  -2, "Master1LoShelfGain" 
-	chnset  2000, "Master1Band1Fq"
-	chnset  -2, "Master1Band1Gain"
+	chnset  3000, "Master1Band1Fq" ;2000
+	chnset  -3, "Master1Band1Gain" ; -2
 	chnset  0.6, "Master1Band1Q"
 	
-	chnset  8000, "Master2HiShelfFq"
-	chnset  1, "Master2HiShelfGain"
+	chnset  7000, "Master2HiShelfFq" ;8000
+	chnset  -3, "Master2HiShelfGain" ;1
 	chnset  250, "Master2LoShelfFq"
 	chnset  -9, "Master2LoShelfGain" 
-	chnset  3500, "Master2Band1Fq"
-	chnset  -3, "Master2Band1Gain"
+	chnset  5500, "Master2Band1Fq" ; 3500
+	chnset  -5, "Master2Band1Gain" ;-3
 	chnset  0.6, "Master2Band1Q"
 	
 

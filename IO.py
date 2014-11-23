@@ -9,6 +9,7 @@ import utils
 import cv2
 import numpy as np
 import zmq
+from scipy.io import wavfile
 
 from utils import send_array, recv_array
 import myCsoundAudioOptions
@@ -39,6 +40,7 @@ ASSOCIATION = 5574
 SENTINEL = 5575
 LOGGER = 5576
 DREAM = 5577
+COUNTER = 5578
 
 def video():
     cv2.namedWindow('Output', cv2.WND_PROP_FULLSCREEN)
@@ -261,8 +263,8 @@ def audio():
                 skip_file = 0
                 for i in range(len(segmentlist)):
                     segmentlist[i] = segmentlist[i].split(' ')
-                #print 'markertablist', markertablist
-                #print 'segmentlist',segmentlist
+                print 'markertablist', markertablist
+                print 'segmentlist',segmentlist
                 
                 for i in range(len(segmentlist)):
                     if markertablist[i] < 0 :
@@ -336,12 +338,12 @@ def audio():
             skip_file = 0
             for i in range(len(segmentlist)):
                 segmentlist[i] = segmentlist[i].split(' ')
-            #print 'markertablist', markertablist
-            #print 'segmentlist',segmentlist
+            print 'markertablist', markertablist
+            print 'segmentlist',segmentlist
             
             for i in range(len(segmentlist)):
                 if markertablist[i] < 0 :
-                    #print 'SKIPPING \n  SEGMENT \n    {}'.format(segmentlist[i])
+                    print 'SKIPPING \n  SEGMENT \n    {}'.format(segmentlist[i])
                     skip_count += 1
                     if skip_count >= len(segmentlist): 
                         skip_file = 1

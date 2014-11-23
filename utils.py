@@ -17,6 +17,8 @@ import glob
 from subprocess import call
 import fcntl
 import json
+import sched
+import datetime
 
 import numpy as np
 import zmq
@@ -24,10 +26,19 @@ from scipy.io import wavfile
 import scipy.fftpack
 from sklearn.covariance import EmpiricalCovariance, MinCovDet
 import cv2
+from scipy.stats import itemfreq
 
 from brain import cochlear
+from brain import NUMBER_OF_BRAINS
 import IO
 findfloat=re.compile(r"[0-9.]*")
+find_filename = re.compile('[0-9]+_[0-9]+_[0-9]+_[0-9]+_[0-9]+_[0-9]+\.wav')
+
+
+DREAM_HOUR = 23
+EVOLVE_HOUR = 2
+SAVE_HOUR = 3
+REBOOT_HOUR = 4
 
 def save(filename, data):
     pickle.dump(data, file(filename, 'w'))
@@ -283,8 +294,8 @@ def exact(signal, length):
 def scale(image):
     return (image - np.min(image))/(np.max(image) - np.min(image))
 
-def getSoundInfo(wavfile):
-    f = open(wavfile[:-4]+'.txt', 'r')
+def getSoundInfo(filename):
+    f = open(filename[:-4]+'.txt', 'r')
     segments = []
     enable = 0
     startTime = 0
@@ -305,9 +316,9 @@ def getSoundInfo(wavfile):
     return startTime, totalDur, maxAmp, segments
 
 
-def get_segments(wavfile):
+def get_segments(filename):
     ''' Find segments in audio descriptor file'''
-    _, totalDur, _, segments = getSoundInfo(wavfile)
+    _, totalDur, _, segments = getSoundInfo(filename)
     segmentTimes = []
     for item in segments:
         segmentTimes.append(item[0])    
@@ -326,7 +337,7 @@ def get_most_significant_word(filename):
 
 def getLatestMemoryWavs(howmany):
     '''
-    Find the N latest recorded memory wave files
+    Find the N latest recorded memory wave files. LIMITS TO 100 latest.
     '''
     path = './memory_recordings/'
     infiles = os.listdir(path)
@@ -334,6 +345,12 @@ def getLatestMemoryWavs(howmany):
     for f in infiles:
         if f[-4:] == '.wav': wavfiles.append(path+f)
     wavfiles.sort()
+    wavfiles = wavfiles[-100:]
+    blacklist = open('black_list.txt', 'r')
+    for line in blacklist:
+        blackfile = find_filename.findall(line)
+        if len(blackfile) and blackfile[0] in wavfiles:
+            wavfiles.remove(blackfile[0])
     latefiles = wavfiles[-howmany:]        
     return latefiles
 
@@ -437,7 +454,78 @@ def scheduler(host):
 def true_wait(seconds):
     time.sleep(seconds)
     return True
-                
+
+def reboot():
+    status = open('STATUS_{}'.format(time.strftime('%Y_%m_%d_%H_%M_%S')), 'w')
+    call(['ps', 'aux'], stdout=status)
+    call(['df', '-h'], stdout=status)
+    status.close()
+    call(['shutdown', '-r', 'now'])
+    
+def counter(host):
+    context = zmq.Context()
+
+    counterQ = context.socket(zmq.ROUTER)
+    counterQ.bind('tcp://*:{}'.format(IO.COUNTER))
+
+    eventQ = context.socket(zmq.SUB)
+    eventQ.connect('tcp://{}:{}'.format(host, IO.EVENT))
+    eventQ.setsockopt(zmq.SUBSCRIBE, b'') 
+
+    poller = zmq.Poller()
+    poller.register(counterQ, zmq.POLLIN)
+    poller.register(eventQ, zmq.POLLIN)
+    
+    audio_ids_counter = []
+    face_ids_counter = []
+
+    while True:
+        events = dict(poller.poll())
+
+        if counterQ in events:
+            address, _, message = counterQ.recv_multipart()
+            request, value = pickle.loads(message)
+            sorted_freqs = False
+            if request == 'audio_id':
+                audio_ids_counter.append(value)
+            if request == 'face_id':
+                face_ids_counter.append(value)
+            if request == 'audio_ids_counter':
+                freqs = itemfreq(audio_ids_counter)
+                sorted_freqs = sorted(freqs, key=lambda x: x[1])
+            if request == 'face_ids_counter':
+                freqs = itemfreq(audio_ids_counter)
+                sorted_freqs = sorted(freqs, key=lambda x: x[1])
+
+            counterQ.send_multipart([ address,
+                                    b'',
+                                    pickle.dumps(sorted_freqs) ])
+
+        if eventQ in events:
+            pushbutton = eventQ.recv_json()
+            if 'save' in pushbutton:
+                save('{}.{}'.format(pushbutton['save'], mp.current_process().name), [ audio_ids_counter, face_ids_counter ])
+
+            if 'load' in pushbutton:
+                audio_ids_counter, face_ids_counter = load('{}.{}'.format(pushbutton['load'], mp.current_process().name))
+
+            
+def delete_loner(counterQ, data, query, protect, deleted_ids):
+    counterQ.send_pyobj([query, None])
+    sorted_freqs = counterQ.recv_pyobj()
+    
+    histogram = np.zeros(len(data))
+    for index, value in sorted_freqs:
+        histogram[index] = value
+
+    histogram[deleted_ids] = np.inf
+    histogram[-protect:] = np.inf
+    loner = np.where(histogram == min(histogram))[0][0]
+    data[loner] = [[]]
+    deleted_ids.append(loner)
+    
+    print '{} {} delete_id = {}'.format(query, sorted_freqs, loner)
+    
 def sentinel(host):
     context = zmq.Context()
     
@@ -464,17 +552,12 @@ def sentinel(host):
         for process in book.keys():
             if not save_name and time.time() - book[process] > IO.PROCESS_TIME_OUT*2:
                 print '{} HAS DIED, SAVING'.format(process)
-                save_name = 'BRAIN_{}'.format(time.strftime('%Y_%m_%d_%H_%M_%S'))
+                save_name = brain_name()
                 save_time = time.time()
                 sender.send_json('save {}'.format(save_name))
 
-        if save_name and (len(glob.glob('{}*'.format(save_name))) == 4 or time.time() - save_time > IO.SYSTEM_TIME_OUT):
-            status = open('STATUS_{}'.format(save_name), 'w')
-            call(['ps', 'aux'], stdout=status)
-            call(['df', '-h'], stdout=status)
-            status.close()
-            call(['shutdown', '-r', 'now'])
-        
+        if save_name and (len(glob.glob('{}*'.format(save_name))) == NUMBER_OF_BRAINS or time.time() - save_time > IO.SYSTEM_TIME_OUT):
+            reboot()
                 
 class AliveNotifier(threading.Thread):
     def __init__(self, me, host='localhost'):
@@ -545,12 +628,49 @@ class MyProcess(mp.Process):
         
         mp.Process.run(self)
 
+def brain_name():
+    return 'BRAIN_{}'.format(time.strftime('%Y_%m_%d_%H_%M_%S'))
+        
+def find_last_valid_brain():
+    files = glob.glob('BRAIN_*')
+    files.sort(key=os.path.getmtime, reverse=True)
+    for f in files:
+        stem = f[:f.find('.')] # We know the filename is BRAIN_XXXX.FACE RESPONDER etc
+        if len(glob.glob('{}*'.format(stem))) == NUMBER_OF_BRAINS:
+            return stem
+    return []
+
+def daily_routine(host):
+    scheduler = sched.scheduler(time.time, time.sleep)
+    context = zmq.Context()
+
+    sender = context.socket(zmq.PUSH)
+    sender.connect('tcp://{}:{}'.format(host, IO.EXTERNAL))
+
+    dream_time = datetime.datetime.combine(datetime.datetime.now(), datetime.time(DREAM_HOUR))
+    scheduler.enterabs(time.mktime(dream_time.timetuple()), 1,
+                       sender.send_json, ('dream',))
+
+    evolve_time = datetime.datetime.combine(datetime.datetime.now() + datetime.timedelta(days=1), datetime.time(EVOLVE_HOUR))
+    scheduler.enterabs(time.mktime(evolve_time.timetuple()), 1,
+                       sender.send_json, ('evolve',))
+
+    save_time = datetime.datetime.combine(datetime.datetime.now() + datetime.timedelta(days=1), datetime.time(SAVE_HOUR))
+    scheduler.enterabs(time.mktime(save_time.timetuple()), 1,
+                       sender.send_json, ('save',))
+    
+    reboot_time = datetime.datetime.combine(datetime.datetime.now() + datetime.timedelta(days=1), datetime.time(REBOOT_HOUR))
+    scheduler.enterabs(time.mktime(reboot_time.timetuple()), 1,
+                       sender.send_json, ('reboot',))
+
+    scheduler.run()
+        
 def load_esn(filename):
     import Oger
     import mdp
-    numpies = [ np.load(open('{}_{}'.format(filename, i))) for i in range(6) ]
+    numpies = [ np.load('{}_{}.npy'.format(filename, i)) for i in range(6) ]
 
-    _reservoir, _linear = json.load(open(filename,'r'))
+    _reservoir, _linear = json.load(open(filename+'.npy','r'))
     _reservoir['_dtype'] = np.dtype('float64')
     _reservoir['nonlin_func'] = Oger.utils.TanhFunction
     _reservoir['initial_state'] = 0
@@ -601,7 +721,7 @@ def dump_esn(net, filename):
     numpies.append(linear._xTy)
     del _linear['_xTy']
 
-    json.dump([_reservoir, _linear], open(filename,'w'))
+    json.dump([_reservoir, _linear], open(filename+'.npy','w')) # Ha! .npy for fun. When massive restart, you can remove this.
 
     for i,N in enumerate(numpies):
-        np.save(open('{}_{}'.format(filename, i),'w'), N)
+        np.save('{}_{}'.format(filename, i), N)
