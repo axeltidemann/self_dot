@@ -966,6 +966,7 @@ def learn_audio(host, debug=False):
                         # We filter out short, abrupt sounds with lots of noise.
                         if np.mean(new_sound) < 2 or new_sound.shape[0] == 0: # Heavy lifting.
                           black_list.write('{} {}\n'.format(filename, segment))
+                          print 'BLACKLISTED segment {} in file {}'.format(segment, filename)
                           continue
 
                         if debug:
@@ -1018,27 +1019,31 @@ def learn_audio(host, debug=False):
                             most_significant_audio_id = audio_id
                             most_significant_value = amps[segment]
 
-                    while len(NAPs) - len(deleted_ids) > AUDIO_MEMORY_SIZE:
-                        utils.delete_loner(counterQ, NAPs, 'audio_ids_counter', int(AUDIO_MEMORY_SIZE*PROTECT_PERCENTAGE), deleted_ids)
-
-                    maxlen = max([ m.shape[0] for memory in NAPs for m in memory if len(m) ])
-                    memories = [ np.ndarray.flatten(utils.zero_pad(m, maxlen)) for memory in NAPs for m in memory if len(m) ]
-
-                    targets = [ i for i,f in enumerate(NAPs) for k in f if len(k) ]
-                    audio_classifier = train_rPCA_SVM(memories, targets)
-
-                    all_hammings = [ utils.hamming_distance(new_audio_hash[i], new_audio_hash[j])
-                                                            for i in range(len(new_audio_hash)) for j in range(len(new_audio_hash)) if i > j ]
-                    
                     black_list.flush()
-                    print 'RHYME VALUE', np.mean(sorted(all_hammings)[int(len(all_hammings)/2):])
-                    rhyme = np.mean(sorted(all_hammings)[int(len(all_hammings)/2):]) < RHYME_HAMMERTIME
+                    print 'AUDIO IDs after blacklisting {}'. format(audio_ids)
+                    if len(audio_ids):
+                        while len(NAPs) - len(deleted_ids) > AUDIO_MEMORY_SIZE:
+                            utils.delete_loner(counterQ, NAPs, 'audio_ids_counter', int(AUDIO_MEMORY_SIZE*PROTECT_PERCENTAGE), deleted_ids)
 
-                    sender.send_json('rhyme {}'.format(rhyme))
+                        maxlen = max([ m.shape[0] for memory in NAPs for m in memory if len(m) ])
+                        memories = [ np.ndarray.flatten(utils.zero_pad(m, maxlen)) for memory in NAPs for m in memory if len(m) ]
 
-                    t1 = time.time()
-                    brainQ.send_pyobj(['audio_learn', filename, audio_ids, wavs, wav_audio_ids, audio_classifier, audio_recognizer, global_audio_recognizer, mixture_audio_recognizer,  maxlen, NAP_hashes, most_significant_audio_id])
-                    print 'Audio learned from {} in {} seconds, ZMQ time {} seconds'.format(filename, t1 - t0, time.time() - t1)
+                        targets = [ i for i,f in enumerate(NAPs) for k in f if len(k) ]
+                        audio_classifier = train_rPCA_SVM(memories, targets)
+
+                        all_hammings = [ utils.hamming_distance(new_audio_hash[i], new_audio_hash[j])
+                                                                for i in range(len(new_audio_hash)) for j in range(len(new_audio_hash)) if i > j ]
+                    
+                        print 'RHYME VALUE', np.mean(sorted(all_hammings)[int(len(all_hammings)/2):])
+                        rhyme = np.mean(sorted(all_hammings)[int(len(all_hammings)/2):]) < RHYME_HAMMERTIME
+
+                        sender.send_json('rhyme {}'.format(rhyme))
+
+                        t1 = time.time()
+                        brainQ.send_pyobj(['audio_learn', filename, audio_ids, wavs, wav_audio_ids, audio_classifier, audio_recognizer, global_audio_recognizer, mixture_audio_recognizer,  maxlen, NAP_hashes, most_significant_audio_id])
+                        print 'Audio learned from {} in {} seconds, ZMQ time {} seconds'.format(filename, t1 - t0, time.time() - t1)
+                    else:
+                        print 'SKIPPING fully blacklisted file {}'.format(filename)
                 except:
                     utils.print_exception('Audio learning aborted.')
 

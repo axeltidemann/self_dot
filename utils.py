@@ -32,6 +32,8 @@ from brain import cochlear
 from brain import NUMBER_OF_BRAINS
 import IO
 findfloat=re.compile(r"[0-9.]*")
+find_filename = re.compile('[0-9]+_[0-9]+_[0-9]+_[0-9]+_[0-9]+_[0-9]+\.wav')
+
 
 DREAM_HOUR = 23
 EVOLVE_HOUR = 2
@@ -335,7 +337,7 @@ def get_most_significant_word(filename):
 
 def getLatestMemoryWavs(howmany):
     '''
-    Find the N latest recorded memory wave files
+    Find the N latest recorded memory wave files. LIMITS TO 100 latest.
     '''
     path = './memory_recordings/'
     infiles = os.listdir(path)
@@ -343,6 +345,12 @@ def getLatestMemoryWavs(howmany):
     for f in infiles:
         if f[-4:] == '.wav': wavfiles.append(path+f)
     wavfiles.sort()
+    wavfiles = wavfiles[-100:]
+    blacklist = open('black_list.txt', 'r')
+    for line in blacklist:
+        blackfile = find_filename.findall(line)
+        if len(blackfile) and blackfile[0] in wavfiles:
+            wavfiles.remove(blackfile[0])
     latefiles = wavfiles[-howmany:]        
     return latefiles
 
