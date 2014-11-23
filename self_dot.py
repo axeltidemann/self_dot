@@ -124,6 +124,7 @@ class Controller:
         print '[self.] received: {}'.format(message)
 
         try:
+        
             if message == 'dream':
                 self.event.send_json({'dream': True})
             
@@ -251,7 +252,17 @@ class Controller:
                 self.event.send_json({ 'calibrateEq': True })
 
             if 'calibrateAudio' in message:
-                self.event.send_json({ 'calibrateAudio': True })
+                latency_ok = False
+                try:
+                    lat = open('roundtrip_latency.txt', 'r')
+                    latency = float(lat.readline())
+                    self.event.send_json({ 'setLatency': latency })
+                    latency_ok = True
+                except Exception, e:
+                    print 'Something went wrong when reading latency from file.', e
+                    self.event.send_json({ 'calibrateAudio': True })
+                if latency_ok:
+                    self.event.send_json({ 'calibrateNoiseFloor': True })    
 
             if 'csinstr' in message:
                 self.event.send_json({ 'csinstr': message[8:] })

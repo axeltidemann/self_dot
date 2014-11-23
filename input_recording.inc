@@ -5,6 +5,7 @@
 	endin
 
         instr 34
+                
         ; We write the sound file in Csound, and the text file in Python
         Swavname        strget p4
         a1              chnget "rec_in1"
@@ -34,8 +35,14 @@
 	    knoiseFloor_dB	chnget "inputNoisefloor"
         ikeep_thresh    = 20                ; we want to skip recorded segments with a max amplitude below this level 
                                             ; (relative to noise floor), so the effective skipping thresh is noisefloor+keep_thresh
+        i_max_segment_len   = 12
+        i_max_sentence_len  = 25
+        k_one               = 1
+        if krunning_time > i_max_sentence_len then
+                        chnset k_one, "too_long_sentence"
+                        turnoff2 p1, 0, 0
+        endif
 
-;	    kFollowdb1  chnget "envelope1"
 
 ; compress before recording
 	    kthresh         = -10
@@ -93,7 +100,10 @@ record:
         krectime        = ktimer/kr         ; time in seconds (only counting when we are recording
         aindex          = aline-kresetindex
         kindex          downsamp aindex
-        ;printk2 kndx
+        if kindex > i_max_segment_len then
+                        chnset k_one, "too_long_segment"
+                        turnoff2 p1, 0, 0
+        endif
                         tablew a1, aindex*sr, giAudioTemp
         
         kcps            chnget "pitch1_amdf"

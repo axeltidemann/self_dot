@@ -137,6 +137,9 @@ def audio():
     ambientFiles = [] # used by the ambient sound generator (instr 90 pp)
     ambientActive = 0
     prev_i_am_speaking = 0
+    skip_file = 0
+    recalibrate_timer_enable = True
+    time_last_recorded = time.time()
 
     state = stateQ.recv_json()
     
@@ -160,7 +163,8 @@ def audio():
         memRecMaxAmp = cGet("memRecMaxAmp")             # max amplitude for each recorded file
         statusRel = cGet("statusRel")                   # audio status release time 
         noiseFloor = cGet("inputNoisefloor")            # measured noise floor in dB
-        
+        too_long_segment = cGet("too_long_segment")     # signals a segment that is longer thant we like
+        too_long_sentence = cGet("too_long_sentence")     # signals a sentence that is longer thant we like
         
         i_am_speaking = cGet("i_am_speaking")           # signals cognition that I'm currently speaking
         cSet("i_am_speaking", 0)                        # reset channel, any playing voice instr will overwrite
@@ -172,7 +176,6 @@ def audio():
         in_amp = cs.GetChannel("followdb") #rather use envelope follower in dB than pure rms channel "in_amp")
         in_pitch = cs.GetChannel("in_pitch")
         in_centroid = cs.GetChannel("in_centroid")
-        skip_file = 0
         
         if state['roboActive'] > 0:
             if (panposition < 0.48) or (panposition > 0.52):
@@ -196,6 +199,7 @@ def audio():
         
         if state['memoryRecording']:
             if audioStatusTrig > 0:
+                skip_file = 0
                 timestr = time.strftime('%Y_%m_%d_%H_%M_%S')
                 print 'starting memoryRec', timestr
                 tim_time = time.time()
@@ -264,7 +268,9 @@ def audio():
                     if markertablist[i] < 0 :
                         #print 'SKIPPING \n  SEGMENT \n    {}'.format(segmentlist[i])
                         skip_count += 1
-                        if skip_count >= len(segmentlist): skip_file = 1
+                        if skip_count >= len(segmentlist): 
+                            skip_file = 1
+                            print 'SKIPPING EMPTY FILE at time {}'.format(timestr) 
                         if i<len(segmentlist)-1:
                             skip_time += float(segmentlist[i+1][0])-float(segmentlist[i][0])
                         else:
@@ -285,8 +291,24 @@ def audio():
                 markerfile.write('Total duration: %f\n'%total_segment_time)
                 markerfile.write('\nMax amp for file: %f'%memRecMaxAmp)
                 markerfile.close()
-                print 'stopping memoryRec'
-
+                print 'stopping memoryRec'            
+            
+            if too_long_segment > 0 or too_long_sentence > 0:
+                for i in range(20):
+                    print ' '*i, '*'*i
+                if too_long_segment > 0:
+                    print "TOO LONG SEGMENT"
+                else:
+                    print "TOO LONG SENTENCE"
+                cs.InputMessage('i -%f 0 1'%instrNum)
+                skip_file = 1
+                cSet("too_long_segment", 0)
+                cSet("memRecActive", 0)
+                memRecActive = 0
+                sender.send_json('_audioLearningStatus 0')
+                sender.send_json('stoprec')
+                sender.send_json('calibrateAudio')
+                
         if not state['memoryRecording'] and memRecActive:
             print '... ...turnoff rec, get final medians and update segments'
             ampPitchCentroid[0].sort()
@@ -321,7 +343,9 @@ def audio():
                 if markertablist[i] < 0 :
                     #print 'SKIPPING \n  SEGMENT \n    {}'.format(segmentlist[i])
                     skip_count += 1
-                    if skip_count >= len(segmentlist): skip_file = 1
+                    if skip_count >= len(segmentlist): 
+                        skip_file = 1
+                        print 'SKIPPING EMPTY FILE at time {}'.format(timestr) 
                     if i<len(segmentlist)-1:
                         skip_time += float(segmentlist[i+1][0])-float(segmentlist[i][0])
                     else:
@@ -345,7 +369,7 @@ def audio():
             print 'stopping memoryRec'
 
         interaction = []
-                                                    
+        
         if (state['autolearn'] or state['autorespond_single'] or state['autorespond_sentence']) and not skip_file:
             if audioStatusTrig > 0:
                 sender.send_json('startrec')
@@ -353,6 +377,8 @@ def audio():
             if audioStatusTrig < 0:
                 sender.send_json('stoprec')
                 sender.send_json('_audioLearningStatus 0')
+                time_last_recorded = time.time()
+                recalibrate_timer_enable = True
                 if filename:
                     if state['autolearn']:
                         interaction.append('learnwav {}'.format(os.path.abspath(filename)))
@@ -360,8 +386,11 @@ def audio():
                         interaction.append('respondwav_single {}'.format(os.path.abspath(filename)))
                     if state['autorespond_sentence']:
                         interaction.append('respondwav_sentence {}'.format(os.path.abspath(filename)))
+            if (time.time()-time_last_recorded > 60) and recalibrate_timer_enable:
+                sender.send_json('calibrateAudio')
+                recalibrate_timer_enable = False
 
-        if interaction:
+        if interaction and not skip_file:
             sender.send_json('calculate_cochlear {}'.format(os.path.abspath(filename)))
 
             for command in interaction:
@@ -389,16 +418,21 @@ def audio():
                 cs.InputMessage('i 19 0.5 2') # eq profiling
                 cs.InputMessage('i 99 3 -1') # turn on master out
 
+            if 'setLatency' in pushbutton:
+                value = pushbutton['setLatency']
+                cSet("audio_io_latency",value) 
+                print 'Csound roundtrip latency set to {}'.format(cGet("audio_io_latency"))
+
             if 'calibrateAudio' in pushbutton:
                 cs.InputMessage('i -17 0 1') # turn off old noise gate
-                cs.InputMessage('i 12 0 4') # measure roundtrip latency
+                cs.InputMessage('i 12 0 3.9') # measure roundtrip latency
                 cs.InputMessage('i 13 4 1.9') # get audio input noise print
                 cs.InputMessage('i 14 6 -1') # enable noiseprint and self-output suppression
                 cs.InputMessage('i 15 6.2 2') # get noise floor level 
                 cs.InputMessage('i 16 8.3 0.1') # set noise gate shape
                 cs.InputMessage('i 17 8.5 -1') # turn on new noise gate
-
-            if 'resetNoiseFloor' in pushbutton:
+                                               
+            if 'calibrateNoiseFloor' in pushbutton:
                 cs.InputMessage('i -17 0 .1') # turn off old noise gate
                 cs.InputMessage('i -14 0 .1') # turn off noiseprint and self-output suppression
                 cs.InputMessage('i 13 .3 1.5') # get audio input noise print

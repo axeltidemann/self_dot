@@ -95,6 +95,17 @@ else
                 chnmix a1, "MasterOut2"
 endif
         endin
+        
+;******************************
+; read roundtrip latency from disk
+        instr 9
+        p3  = 2/kr
+        klatency readk "roundtrip_latency.txt", 8, 0
+	    Slatency	sprintfk "roundtrip latency read from disk (previously stored system test) is %f seconds", klatency
+			        puts Slatency, klatency
+			        chnset klatency, "audio_io_latency"
+        endin
+        
 
 ;******************************
 ; find stereo position and merge mic 1 and 2
