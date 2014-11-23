@@ -133,12 +133,16 @@ class Controller:
                     return
 
             if message == 'dream':
-                self.event.send_json({'dream': True})
                 self.state['memoryRecording'] = False
                 self.state['autorespond_sentence'] = False
+                self.state['ambientSound'] = False
                 self.state['autolearn'] = False
                 self.state['autorespond_single'] = False
                 self.state['_audioLearningStatus'] = False
+                self.state['record'] = False
+                self.publisher.send_json(self.state)
+
+                self.event.send_json({'dream': True})
 
             if message == 'reboot':
                 utils.reboot()
@@ -182,6 +186,7 @@ class Controller:
                 self.state['autolearn'] = False
                 self.state['autorespond_single'] = False
                 self.state['_audioLearningStatus'] = False
+                self.state['record'] = False
                 self.publisher.send_json(self.state)
                 
                 self.association.send_pyobj(['evolve'])

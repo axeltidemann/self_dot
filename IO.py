@@ -259,8 +259,8 @@ def audio():
                 skip_file = 0
                 for i in range(len(segmentlist)):
                     segmentlist[i] = segmentlist[i].split(' ')
-                #print 'markertablist', markertablist
-                #print 'segmentlist',segmentlist
+                print 'markertablist', markertablist
+                print 'segmentlist',segmentlist
                 
                 for i in range(len(segmentlist)):
                     if markertablist[i] < 0 :
