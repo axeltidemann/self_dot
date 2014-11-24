@@ -294,13 +294,14 @@ def dream(wavs, wav_audio_ids, NAPs, NAP_hashes, dreamQ):
     plt.ion()
 
     try:
-        dream_list=[ [ soundfile, wav_audio_ids[(soundfile, audio_id)], audio_id ] for audio_id, wav_files in enumerate(wavs) for soundfile in wav_files if (soundfile, audio_id) in wav_audio_ids ]
+        valid_wavs = [ (i, wavs[i]) for i, memory in enumerate(NAPs) if len(memory[0]) ]
+        dream_list=[ [ soundfile, wav_audio_ids[(soundfile, audio_id)], audio_id ] for audio_id, wav_files in valid_wavs for soundfile in wav_files if (soundfile, audio_id) in wav_audio_ids ]
         print 'LENGTH OF DREAM LIST', len(dream_list)
         dreamQ.send_pyobj(dream_list)
 
         print 'Removing wrongly binned filenames'
         mega_filenames_and_indexes = []
-        for audio_id, wav_files in enumerate(wavs):
+        for audio_id, wav_files in valid_wavs:
 
             NAP_detail = 'low'
             filenames_and_indexes = []
@@ -414,15 +415,17 @@ def _recognize_audio_id(audio_recognizer, NAP):
         print 'AUDIO ID: {} OUTPUT MEAN: {}'.format(audio_id, np.mean(net(NAP)))
 
 def _project(audio_id, sound_to_face, NAP, video_producer):
-    if audio_id < len(sound_to_face):
+    stride = IO.VIDEO_SAMPLE_TIME / (IO.NAP_RATE/IO.NAP_STRIDE)
+    try: 
         face_id = np.random.choice(sound_to_face[audio_id])
         tarantino = utils.load_esn(video_producer[(audio_id, face_id)])
-    else:
+        return tarantino(NAP[::stride])
+    except:
         import random
         tarantino = utils.load_esn(video_producer[random.choice(video_producer.keys())])
-
-    stride = IO.VIDEO_SAMPLE_TIME / (IO.NAP_RATE/IO.NAP_STRIDE)
-    return tarantino(NAP[::stride])
+        return tarantino(NAP[::stride])
+        # utils.print_exception('Something went wrong when projecting, displaying noise.')
+        # return np.zeros((NAP.shape[0]/stride, FRAME_SIZE[0]*FRAME_SIZE[1]))
 
 def _extract_NAP(segstart, segend, soundfile, suffix='cochlear'):
     new_sentence = utils.csv_to_array(soundfile + suffix)
@@ -529,10 +532,10 @@ def respond(control_host, learn_host, debug=False):
 
             if all(register[wav_file]):
                 filetime = time.mktime(time.strptime(wav_file[wav_file.rfind('/')+1:wav_file.rfind('.wav')], '%Y_%m_%d_%H_%M_%S'))
-                print 'Audio - video - face recognizers related to {} arrived at responder, total processing time {} seconds'.format(wav_file, time.time() - filetime)
-                _, _, audio_ids, wavs, wav_audio_ids, audio_classifier, audio_recognizer, global_audio_recognizer, mixture_audio_recognizer, maxlen, NAP_hashes, most_significant_audio_id = register[wav_file][0]
+                _, _, audio_ids, wavs, wav_audio_ids, audio_classifier, audio_recognizer, global_audio_recognizer, mixture_audio_recognizer, maxlen, NAP_hashes, most_significant_audio_id, sent_time = register[wav_file][0]
                 _, _, tarantino = register[wav_file][1]
                 _, _, face_id, face_recognizer = register[wav_file][2]          
+                print 'Audio - video - face recognizers related to {} arrived at responder, total processing time {} seconds, ZMQ time {}'.format(wav_file, time.time() - filetime, time.time()-sent_time)
 
                 for audio_id in audio_ids: # If audio_ids is empty, none of this will happen
                     video_producer[(audio_id, face_id)] = tarantino 
@@ -759,9 +762,12 @@ def respond(control_host, learn_host, debug=False):
                 print '*** Test sentence', sentence, secondaryStream
             
             if 'assoc_setParam' in pushbutton:
-                parm, value = pushbutton['assoc_setParam'].split()
-                association.send_pyobj(['setParam', parm, value ])
-                association.recv_pyobj()
+                try:
+                    parm, value = pushbutton['assoc_setParam'].split()
+                    association.send_pyobj(['setParam', parm, value ])
+                    association.recv_pyobj()
+                except:
+                    utils.print_exception('Assoc set param aborted.')
 
             if 'respond_setParam' in pushbutton:
                 items = pushbutton['respond_setParam'].split()
@@ -1039,9 +1045,8 @@ def learn_audio(host, debug=False):
 
                         sender.send_json('rhyme {}'.format(rhyme))
 
-                        t1 = time.time()
-                        brainQ.send_pyobj(['audio_learn', filename, audio_ids, wavs, wav_audio_ids, audio_classifier, audio_recognizer, global_audio_recognizer, mixture_audio_recognizer,  maxlen, NAP_hashes, most_significant_audio_id])
-                        print 'Audio learned from {} in {} seconds, ZMQ time {} seconds'.format(filename, t1 - t0, time.time() - t1)
+                        brainQ.send_pyobj(['audio_learn', filename, audio_ids, wavs, wav_audio_ids, audio_classifier, audio_recognizer, global_audio_recognizer, mixture_audio_recognizer,  maxlen, NAP_hashes, most_significant_audio_id, time.time()])
+                        print 'Audio learned from {} in {} seconds'.format(filename, time.time() - t0)
                     else:
                         print 'SKIPPING fully blacklisted file {}'.format(filename)
                 except:
@@ -1058,10 +1063,9 @@ def learn_audio(host, debug=False):
                 
             if 'save' in pushbutton:
                 utils.save('{}.{}'.format(pushbutton['save'], mp.current_process().name), [ deleted_ids, NAPs, wavs, wav_audio_ids, NAP_hashes, audio_classifier, maxlen ])
-
+                
             if 'load' in pushbutton:
                 deleted_ids, NAPs, wavs, wav_audio_ids, NAP_hashes, audio_classifier, maxlen = utils.load('{}.{}'.format(pushbutton['load'], mp.current_process().name))
-
                 
 def learn_video(host, debug=False):
     context = zmq.Context()
@@ -1120,9 +1124,8 @@ def learn_video(host, debug=False):
 
                     utils.dump_esn(tarantino, esn_name)
                     
-                    t1 = time.time()
                     brainQ.send_pyobj([ 'video_learn', filename, esn_name ])
-                    print 'Video learned in {} seconds, ZMQ time {} seconds'.format(t1 - t0, time.time() - t1)
+                    print 'Video related to {} learned in {}'.format(filename, time.time() - t0)
                 except:
                     utils.print_exception('Video learning aborted.')
 
@@ -1213,9 +1216,8 @@ def learn_faces(host, debug=False):
                     else:
                         print 'Face not detected.'
 
-                    t1 = time.time()
                     brainQ.send_pyobj([ 'face_learn', filename, face_id, face_recognizer ])
-                    print 'Faces learned in {} seconds, ZMQ time {} seconds'.format(t1 - t0, time.time() - t1)
+                    print 'Faces related to {} learned in {} seconds'.format(filename, time.time() - t0)
                 except:
                     utils.print_exception('Face learning aborted.')
 

@@ -524,7 +524,7 @@ def delete_loner(counterQ, data, query, protect, deleted_ids):
     data[loner] = [[]]
     deleted_ids.append(loner)
     
-    print '{} {} delete_id = {}'.format(query, sorted_freqs, loner)
+    print '{} delete_id = {}'.format(query, loner)
     
 def sentinel(host):
     context = zmq.Context()
@@ -641,29 +641,29 @@ def find_last_valid_brain():
     return []
 
 def daily_routine(host):
-    scheduler = sched.scheduler(time.time, time.sleep)
+    grind = sched.scheduler(time.time, time.sleep)
     context = zmq.Context()
 
     sender = context.socket(zmq.PUSH)
     sender.connect('tcp://{}:{}'.format(host, IO.EXTERNAL))
 
     dream_time = datetime.datetime.combine(datetime.datetime.now(), datetime.time(DREAM_HOUR))
-    scheduler.enterabs(time.mktime(dream_time.timetuple()), 1,
+    grind.enterabs(time.mktime(dream_time.timetuple()), 1,
                        sender.send_json, ('dream',))
 
     evolve_time = datetime.datetime.combine(datetime.datetime.now() + datetime.timedelta(days=1), datetime.time(EVOLVE_HOUR))
-    scheduler.enterabs(time.mktime(evolve_time.timetuple()), 1,
+    grind.enterabs(time.mktime(evolve_time.timetuple()), 1,
                        sender.send_json, ('evolve',))
 
     save_time = datetime.datetime.combine(datetime.datetime.now() + datetime.timedelta(days=1), datetime.time(SAVE_HOUR))
-    scheduler.enterabs(time.mktime(save_time.timetuple()), 1,
+    grind.enterabs(time.mktime(save_time.timetuple()), 1,
                        sender.send_json, ('save',))
     
     reboot_time = datetime.datetime.combine(datetime.datetime.now() + datetime.timedelta(days=1), datetime.time(REBOOT_HOUR))
-    scheduler.enterabs(time.mktime(reboot_time.timetuple()), 1,
+    grind.enterabs(time.mktime(reboot_time.timetuple()), 1,
                        sender.send_json, ('reboot',))
 
-    scheduler.run()
+    grind.run()
         
 def load_esn(filename):
     import Oger

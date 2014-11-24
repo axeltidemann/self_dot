@@ -598,7 +598,7 @@ def getCandidatesFromContext(context, position, width):
 
 def getSimilarWords(predicate, distance):
     _similarWords = copy.copy(similarWords[predicate])
-    print 'getSimilarWords', predicate, distance, _similarWords 
+    #print 'getSimilarWords', predicate, distance, _similarWords 
     try:
         _similarWords = formatAsMembership(_similarWords)
         _similarWords = zeroMe(predicate, _similarWords)
@@ -614,7 +614,7 @@ def getSimilarWords(predicate, distance):
     return simIds
 
 def getFaceResponse(face):
-    print 'getFaceResponse', face, faceWord
+    #print 'getFaceResponse', face, faceWord
     words = [item[0] for item in copy.copy(faceWord[face])]
     other_faces = faceWord.keys()
     other_faces.remove(face)
@@ -622,7 +622,7 @@ def getFaceResponse(face):
         for item in faceWord[f]:
             if len(words)>1:
                 if item[0] in words: words.remove(item[0])
-    print 'words', words
+    print 'getFaceResponse on face {}, using words {}'.format(face, words)
     return random.choice(words)
 
 def weightedSum(a_, weightA_, b_, weightB_):

@@ -141,6 +141,7 @@ def audio():
     prev_i_am_speaking = 0
     skip_file = 0
     recalibrate_timer_enable = True
+    recalibrate_time = 180
     time_last_recorded = time.time()
 
     state = stateQ.recv_json()
@@ -305,6 +306,7 @@ def audio():
                 cs.InputMessage('i -%f 0 1'%instrNum)
                 skip_file = 1
                 cSet("too_long_segment", 0)
+                cSet("too_long_sentence", 0)
                 cSet("memRecActive", 0)
                 memRecActive = 0
                 sender.send_json('_audioLearningStatus 0')
@@ -376,6 +378,7 @@ def audio():
             if audioStatusTrig > 0:
                 sender.send_json('startrec')
                 sender.send_json('_audioLearningStatus 1')
+                time_last_recorded = time.time()
             if audioStatusTrig < 0:
                 sender.send_json('stoprec')
                 sender.send_json('_audioLearningStatus 0')
@@ -388,7 +391,7 @@ def audio():
                         interaction.append('respondwav_single {}'.format(os.path.abspath(filename)))
                     if state['autorespond_sentence']:
                         interaction.append('respondwav_sentence {}'.format(os.path.abspath(filename)))
-            if (time.time()-time_last_recorded > 60) and recalibrate_timer_enable:
+            if (time.time()-time_last_recorded > recalibrate_time) and recalibrate_timer_enable:
                 sender.send_json('calibrateAudio')
                 recalibrate_timer_enable = False
 

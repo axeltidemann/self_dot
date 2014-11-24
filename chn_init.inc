@@ -10,7 +10,7 @@
         chnset -60, "inputNoisefloor"
 
         ; transient detect parameters
-        chnset 1.5, "in_envelopeRelease"    ; envelope follower release
+        chnset 1.7, "in_envelopeRelease"    ; envelope follower release
         chnset 5, "transientThresh"         ; transient trig threshold 
         chnset 8, "transientDecThresh"       ; retrig threshold, how much must the level decay from its local max before allowing new transient trig
         chnset 0.7, "doubleLimit"       ; minimum duration between transients, (double trig limit)
