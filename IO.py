@@ -394,6 +394,7 @@ def audio():
             if (time.time()-time_last_recorded > recalibrate_time) and recalibrate_timer_enable:
                 sender.send_json('calibrateAudio')
                 recalibrate_timer_enable = False
+                sender.send_json('memoryRecording 1') # re-enable, as it has probably been turned off by *too_long_sentence/segment*
 
         if interaction and not skip_file:
             sender.send_json('calculate_cochlear {}'.format(os.path.abspath(filename)))

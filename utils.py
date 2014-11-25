@@ -339,18 +339,20 @@ def getLatestMemoryWavs(howmany):
     '''
     Find the N latest recorded memory wave files. LIMITS TO 100 latest.
     '''
-    path = './memory_recordings/'
+    path = '/media/scrooge/' #'./memory_recordings/'
     infiles = os.listdir(path)
     wavfiles = []
     for f in infiles:
-        if f[-4:] == '.wav': wavfiles.append(path+f)
+        if (f[-4:] == '.wav') and ('wavALL' not in f): 
+            if os.path.getsize(path+f) > 500:
+                wavfiles.append(path+f)
     wavfiles.sort()
-    wavfiles = wavfiles[-100:]
-    blacklist = open('black_list.txt', 'r')
-    for line in blacklist:
-        blackfile = find_filename.findall(line)
-        if len(blackfile) and blackfile[0] in wavfiles:
-            wavfiles.remove(blackfile[0])
+    #wavfiles = wavfiles[-100:]
+    #blacklist = open('black_list.txt', 'r')
+    #for line in blacklist:
+    #    blackfile = find_filename.findall(line)
+    #    if len(blackfile) and blackfile[0] in wavfiles:
+    #        wavfiles.remove(blackfile[0])
     latefiles = wavfiles[-howmany:]        
     return latefiles
 
