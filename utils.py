@@ -478,8 +478,8 @@ def counter(host):
     poller.register(counterQ, zmq.POLLIN)
     poller.register(eventQ, zmq.POLLIN)
     
-    audio_ids_counter = []
-    face_ids_counter = []
+    audio_ids_counter = {}
+    face_ids_counter = {}
 
     while True:
         events = dict(poller.poll())
@@ -487,21 +487,19 @@ def counter(host):
         if counterQ in events:
             address, _, message = counterQ.recv_multipart()
             request, value = pickle.loads(message)
-            sorted_freqs = False
+            freqs = False
             if request == 'audio_id':
-                audio_ids_counter.append(value)
+                audio_ids_counter[value] = audio_ids_counter[value] + 1 if value in audio_ids_counter else 1
             if request == 'face_id':
-                face_ids_counter.append(value)
+                face_ids_counter[value] = face_ids_counter[value] + 1 if value in face_ids_counter else 1
             if request == 'audio_ids_counter':
-                freqs = itemfreq(audio_ids_counter)
-                sorted_freqs = sorted(freqs, key=lambda x: x[1])
+                freqs = audio_ids_counter
             if request == 'face_ids_counter':
-                freqs = itemfreq(audio_ids_counter)
-                sorted_freqs = sorted(freqs, key=lambda x: x[1])
+                freqs = face_ids_counter
 
             counterQ.send_multipart([ address,
                                     b'',
-                                    pickle.dumps(sorted_freqs) ])
+                                    pickle.dumps(freqs) ])
 
         if eventQ in events:
             pushbutton = eventQ.recv_json()
@@ -514,11 +512,11 @@ def counter(host):
             
 def delete_loner(counterQ, data, query, protect, deleted_ids):
     counterQ.send_pyobj([query, None])
-    sorted_freqs = counterQ.recv_pyobj()
+    freqs = counterQ.recv_pyobj()
     
     histogram = np.zeros(len(data))
-    for index, value in sorted_freqs:
-        histogram[index] = value
+    for index in freqs.keys():
+        histogram[index] = freqs[index]
 
     histogram[deleted_ids] = np.inf
     histogram[-protect:] = np.inf
