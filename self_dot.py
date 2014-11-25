@@ -214,8 +214,8 @@ class Controller:
                 _, value = message.split()
                 self.state['facerecognition'] = value in ['True', '1']
 
-            if 'showme' in message:
-                self.event.send_json({ 'showme': message[7:] })
+            if 'print_me' in message:
+                self.event.send_json({ 'print_me': message[7:] })
 
             if 'play_id' in message:
                 self.event.send_json({ 'play_id': message[8:] })
@@ -297,7 +297,9 @@ class Controller:
                     print 'Something went wrong when reading latency from file.', e
                     self.event.send_json({ 'calibrateAudio': True })
                 if latency_ok:
-                    self.event.send_json({ 'calibrateNoiseFloor': True })    
+                    self.event.send_json({ 'calibrateNoiseFloor': True }) 
+                if 'calibrateAudio memoryRecording' in message:
+                    self.state['memoryRecording'] = True
 
             if 'csinstr' in message:
                 self.event.send_json({ 'csinstr': message[8:] })

@@ -141,7 +141,7 @@ def audio():
     prev_i_am_speaking = 0
     skip_file = 0
     recalibrate_timer_enable = True
-    recalibrate_time = 180
+    recalibrate_time = 120
     time_last_recorded = time.time()
 
     state = stateQ.recv_json()
@@ -379,6 +379,7 @@ def audio():
                 sender.send_json('startrec')
                 sender.send_json('_audioLearningStatus 1')
                 time_last_recorded = time.time()
+                recalibrate_timer_enable = True
             if audioStatusTrig < 0:
                 sender.send_json('stoprec')
                 sender.send_json('_audioLearningStatus 0')
@@ -391,10 +392,12 @@ def audio():
                         interaction.append('respondwav_single {}'.format(os.path.abspath(filename)))
                     if state['autorespond_sentence']:
                         interaction.append('respondwav_sentence {}'.format(os.path.abspath(filename)))
-            if (time.time()-time_last_recorded > recalibrate_time) and recalibrate_timer_enable:
-                sender.send_json('calibrateAudio')
-                recalibrate_timer_enable = False
-                sender.send_json('memoryRecording 1') # re-enable, as it has probably been turned off by *too_long_sentence/segment*
+        if (time.time()-time_last_recorded > recalibrate_time) and recalibrate_timer_enable:
+            for i in range(20):
+                print ' '*(20-i), '*'*(20-i)
+            sender.send_json('calibrateAudio')
+            recalibrate_timer_enable = False
+                
 
         if interaction and not skip_file:
             sender.send_json('calculate_cochlear {}'.format(os.path.abspath(filename)))

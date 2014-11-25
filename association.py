@@ -130,6 +130,9 @@ def association(host):
                     appendCurrentSettings()
                 if func == 'popCurrentSettings':
                     popCurrentSettings()
+                if func == 'print_me':
+                    _,variable_to_print = thing
+                    print_me(variable_to_print)
 
                 association.send_multipart([ address,
                                              b'',
@@ -349,6 +352,10 @@ def sentence_fitness(genome):
 
     return fitness
     
+def print_me(variable_to_print):
+    print 'association print: {}'.format(variable_to_print)
+    print eval(variable_to_print)
+
 def evolve_sentence_parameters():
     print 'Using artificial evolution to find associations weights'
     genome = G1DList.G1DList(10)

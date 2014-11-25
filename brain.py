@@ -811,15 +811,18 @@ def respond(control_host, learn_host, debug=False):
                 except:
                     utils.print_exception('play_id aborted.')
 
-            if 'showme' in pushbutton:
+            if 'print_me' in pushbutton:
                 # just for inspecting the contents of objects while running 
-                print 'printing '+pushbutton['showme']
-                try:
-                    o = compile('print '+pushbutton['showme'], '<string>','exec')
-                    eval(o)
-                except Exception, e:
-                    print e, 'showme print failed.'
-
+                print 'printing '+pushbutton['print_me']
+                if 'brain ' in pushbutton['print_me']: 
+                    print_variable = pushbutton['print_me'].split('brain ')[-1]
+                    try:
+                        print eval(print_variable)
+                    except Exception, e:
+                        print e, 'print_me in brain failed.'
+                elif 'association ' in pushbutton['print_me']: 
+                    print_variable = pushbutton['print_me'].split('association ')[-1]
+                    association.send_pyobj(['print_me',print_variable])
             if 'save' in pushbutton:
                 utils.save('{}.{}'.format(pushbutton['save'], mp.current_process().name), [ sound_to_face, wordFace, face_to_sound, faceWord, video_producer, wavs, wav_audio_ids, audio_classifier, maxlen, NAP_hashes, face_id, face_recognizer ])
 
