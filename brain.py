@@ -416,14 +416,16 @@ def _recognize_audio_id(audio_recognizer, NAP):
 
 def _project(audio_id, sound_to_face, NAP, video_producer):
     stride = IO.VIDEO_SAMPLE_TIME / (IO.NAP_RATE/IO.NAP_STRIDE)
+    length = np.floor(NAP.shape[0]*.8)
+    NAP = NAP[:length:stride]
     try: 
         face_id = np.random.choice(sound_to_face[audio_id])
         tarantino = utils.load_esn(video_producer[(audio_id, face_id)])
-        return tarantino(NAP[::stride])
+        return tarantino(NAP)
     except:
         import random
         tarantino = utils.load_esn(video_producer[random.choice(video_producer.keys())])
-        return tarantino(NAP[::stride])
+        return tarantino(NAP)
         # utils.print_exception('Something went wrong when projecting, displaying noise.')
         # return np.zeros((NAP.shape[0]/stride, FRAME_SIZE[0]*FRAME_SIZE[1]))
 
