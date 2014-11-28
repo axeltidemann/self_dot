@@ -223,6 +223,9 @@ class Controller:
             if 'testSentence' in message:
                 self.event.send_json({ 'testSentence': message[13:] })
 
+            if 'assoc_setPlotting' in message:
+                self.event.send_json({ 'assoc_setPlotting': message[18:] in ['True', '1'] })
+
             if 'assoc_setParam' in message:
                 self.event.send_json({ 'assoc_setParam': message[15:] })
 

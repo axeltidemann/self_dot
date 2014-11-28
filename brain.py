@@ -761,6 +761,13 @@ def respond(control_host, learn_host, debug=False):
                 sentence, secondaryStream = association.recv_pyobj()
                 print '*** Test sentence', sentence, secondaryStream
             
+            if 'assoc_setPlotting' in pushbutton:
+                try:
+                    association.send_pyobj(['plotting', pushbutton['assoc_setPlotting'] ])
+                    association.recv_pyobj()
+                except:
+                    utils.print_exception('Assoc set plotting aborted.')
+
             if 'assoc_setParam' in pushbutton:
                 try:
                     parm, value = pushbutton['assoc_setParam'].split()

@@ -31,6 +31,7 @@ import math
 import utils
 import time
 import cPickle as pickle
+import matplotlib.pyplot as plt
 
 from pyevolve import G1DList, GSimpleGA, Mutators, Selectors, Initializators, Mutators
 
@@ -49,6 +50,7 @@ faceWord ={}            # [face1:[id1,numtimes],[id2,numtimes],[...], face2:[...
 sentencePosition_item = [] # give each word a score for how much it belongs in the beginning of a sentence or in the end of a sentence   
 wordsInSentence = {}    # list ids that has occured in the same sentence {id:[[id1,numtimes],[id2,numtimes],[id3,nt]], idN:[...]}
 
+plotting = False
 numWords = 4
 method = 'boundedAdd'
 neighborsWeight = 0.0
@@ -111,7 +113,10 @@ def association(host):
                     analyze(wav_file,wav_segments,segment_ids,wavs,similar_ids,wordFace,faceWord)
                 if func == 'makeSentence':
                     _,audio_id = thing
-                    answer = makeSentence(audio_id)                    
+                    answer = makeSentence(audio_id) 
+                if func == 'simple_make_sentence':
+                    _,audio_id = thing
+                    answer = simple_make_sentence(audio_id) 
                 if func == 'setParam':
                     _,param,value = thing
                     setParam(param,value)                    
@@ -133,6 +138,10 @@ def association(host):
                 if func == 'print_me':
                     _,variable_to_print = thing
                     print_me(variable_to_print)
+                if func == 'plotting':
+                    global plotting
+                    _,plotting = thing
+                    print 'association plotting set to {}'.format(plotting)
 
                 association.send_multipart([ address,
                                              b'',
@@ -457,6 +466,29 @@ def generate(predicate, method,
     temp = method(_neighbors, neighborsWeight, _wordsInSentence, wordsInSentenceWeight)
     #temp = method(temp, 1.0, _wordFace, wordFaceWeight)
     #print 'temp1', temp
+    if plotting: 
+        print '_similarWords', _similarWords
+        sim_index = np.array(range(len(_similarWords)))
+        sim_scores = np.array( [ item[1] for item in _similarWords ] )*similarWordsWeight
+        n_ids = len(_similarWords)
+        maxval = 8
+        fig, ax = plt.subplots()
+        bar_width = 0.35
+        opacity = 0.8
+        print 'sim_index', sim_index
+        print 'sim_scores', sim_scores
+        bars2 = plt.bar(sim_index+(bar_width*0.2), sim_scores, bar_width,
+                         alpha=opacity,
+                         color='r',
+                         label='sim score')
+        plt.axis([0, n_ids, -maxval, maxval])
+        plt.xlabel('audio ids')
+        plt.ylabel('Scores')
+        plt.title('Association scores')
+        plt.legend()
+        plt.tight_layout()
+        plt.show()
+
     temp = method(temp, 1.0, _faceWord, faceWordWeight)
     temp = weightedSum(temp, 1.0, _similarWords, similarWordsWeight)
     temp = weightedSum(temp, 1.0, timeShortContextBefore, timeShortBeforeWeight)
