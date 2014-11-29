@@ -278,7 +278,7 @@ def makeSentence(predicate):
                             timeShortBeforeWeight, timeShortAfterWeight, timeShortDistance, 
                             timeLongBeforeWeight, timeLongAfterWeight, timeLongDistance, 
                             posInSentence, posInSentenceWidth, posInSentenceWeight, 
-                            preferredDuration, preferredDurationWidth, durationWeight)
+                            preferredDuration, preferredDurationWidth, durationWeight,plotenable=True)
         sentence.append(predicate)
         
         # secondary association for the same predicate
@@ -411,7 +411,7 @@ def generate(predicate, method,
             timeShortBeforeWeight, timeShortAfterWeight, timeShortDistance, 
             timeLongBeforeWeight, timeLongAfterWeight, timeLongDistance, 
             posInSentence, posInSentenceWidth, posInSentenceWeight, 
-             preferredDuration, preferredDurationWidth, durationWeight):
+             preferredDuration, preferredDurationWidth, durationWeight, plotenable=False):
 
     debug = False
     # get the lists we need
@@ -435,8 +435,8 @@ def generate(predicate, method,
     except:_faceWord = [] # if for some reason we can't find any faces
     if debug: print '\n_faceWord', _faceWord
     _similarWords = copy.copy(similarWords[predicate])
-    _similarWords = list(np.add(scale(_similarWords, -1), 1.0)) # invert scores (keeping in 0 to 1 range)
     _similarWords = normalizeItemScore(formatAsMembership(_similarWords))
+    _similarWords = invertItemScore(_similarWords) # invert scores (keeping in 0 to 1 range)
     _similarWords = zeroMe(predicate, _similarWords)
     if debug: print '\n_similarWords', _similarWords
     #print '\*similarWords*'
@@ -466,29 +466,88 @@ def generate(predicate, method,
     temp = method(_neighbors, neighborsWeight, _wordsInSentence, wordsInSentenceWeight)
     #temp = method(temp, 1.0, _wordFace, wordFaceWeight)
     #print 'temp1', temp
-    if plotting: 
-        print '_similarWords', _similarWords
-        sim_index = np.array(range(len(_similarWords)))
-        sim_scores = np.array( [ item[1] for item in _similarWords ] )*similarWordsWeight
+    if plotting and plotenable: 
         n_ids = len(_similarWords)
-        maxval = 8
+        maxval = 1
         fig, ax = plt.subplots()
-        bar_width = 0.35
+        #fig.subplots_adjust(left=0.08, bottom=0.10, right=0.72, top=0.94, wspace=0.2, hspace=0.2)
+        bar_width = 0.4
         opacity = 0.8
-        print 'sim_index', sim_index
-        print 'sim_scores', sim_scores
-        bars2 = plt.bar(sim_index+(bar_width*0.2), sim_scores, bar_width,
+        print '_faceWord',_faceWord, 'faceWordWeight', faceWordWeight
+        face_index = np.array([ item[0] for item in _faceWord ])
+        face_scores = np.array( [ item[1] for item in _faceWord ] )*faceWordWeight
+        face_bars = plt.bar(face_index+(bar_width*0.0), face_scores, bar_width,
                          alpha=opacity,
                          color='r',
+                         label='face score')
+        
+        print '_similarWords', _similarWords, 'similarWordsWeight', similarWordsWeight
+        sim_index = np.array([ item[0] for item in _similarWords ])
+        sim_scores = np.array( [ item[1] for item in _similarWords ] )*similarWordsWeight
+        print 'sim_index', sim_index
+        print 'sim_scores', sim_scores
+        sim_bars = plt.bar(sim_index+(bar_width*0.1), sim_scores, bar_width,
+                         alpha=opacity,
+                         color='g',
                          label='sim score')
-        plt.axis([0, n_ids, -maxval, maxval])
+
+        print 'timeShortContextBefore',timeShortContextBefore, 'timeShortBeforeWeight', timeShortBeforeWeight
+        tsb_index = np.array([ item[0] for item in timeShortContextBefore ])
+        tsb_scores = np.array( [ item[1] for item in timeShortContextBefore ] )*timeShortBeforeWeight
+        tsb_bars = plt.bar(tsb_index+(bar_width*0.2), tsb_scores, bar_width,
+                         alpha=opacity,
+                         color='b',
+                         label='time sb score')
+
+        print 'timeShortContextAfter',timeShortContextAfter, 'timeShortAfterWeight', timeShortAfterWeight
+        tsa_index = np.array([ item[0] for item in timeShortContextAfter ])
+        tsa_scores = np.array( [ item[1] for item in timeShortContextAfter ] )*timeShortAfterWeight
+        tsa_bars = plt.bar(tsa_index+(bar_width*0.3), tsa_scores, bar_width,
+                         alpha=opacity,
+                         color='c',
+                         label='time sa score')
+
+        print 'timeLongContextBefore',timeLongContextBefore, 'timeLongBeforeWeight', timeLongBeforeWeight
+        tlb_index = np.array([ item[0] for item in timeLongContextBefore ])
+        tlb_scores = np.array( [ item[1] for item in timeLongContextBefore ] )*timeLongBeforeWeight
+        tlb_bars = plt.bar(tlb_index+(bar_width*0.4), tlb_scores, bar_width,
+                         alpha=opacity,
+                         color='m',
+                         label='time lb score')
+
+        print 'timeLongContextAfter',timeLongContextAfter, 'timeLongAfterWeight', timeLongAfterWeight
+        tla_index = np.array([ item[0] for item in timeLongContextAfter ])
+        tla_scores = np.array( [ item[1] for item in timeLongContextAfter ] )*timeLongAfterWeight
+        tla_bars = plt.bar(tla_index+(bar_width*0.5), tla_scores, bar_width,
+                         alpha=opacity,
+                         color='y',
+                         label='time la score')
+        
+        print 'posInSentenceContext',posInSentenceContext, 'posInSentenceWeight', posInSentenceWeight
+        pis_index = np.array([ item[0] for item in posInSentenceContext ])
+        pis_scores = np.array( [ item[1] for item in posInSentenceContext ] )*posInSentenceWeight
+        pis_bars = plt.bar(pis_index+(bar_width*0.6), pis_scores, bar_width,
+                         alpha=opacity,
+                         color='k',
+                         label='pos in s score')
+
+        print 'durationContext',durationContext, 'durationWeight', durationWeight
+        dur_index = np.array([ item[0] for item in durationContext ])
+        dur_scores = np.array( [ item[1] for item in durationContext ] )*durationWeight
+        dur_bars = plt.bar(dur_index+(bar_width*0.7), dur_scores, bar_width,
+                         alpha=opacity,
+                         color='w',
+                         label='dur score')
+        
+        plt.axis([0, n_ids, 0, maxval])
         plt.xlabel('audio ids')
         plt.ylabel('Scores')
-        plt.title('Association scores')
-        plt.legend()
-        plt.tight_layout()
-        plt.show()
-
+        plt.title('Association scores for predicate {}'.format(predicate))
+        #plt.legend()#bbox_to_anchor=(1.02, 1), loc=2, borderaxespad=0.)
+        
+        #plt.tight_layout()
+        plt.show(block=False)
+        
     temp = method(temp, 1.0, _faceWord, faceWordWeight)
     temp = weightedSum(temp, 1.0, _similarWords, similarWordsWeight)
     temp = weightedSum(temp, 1.0, timeShortContextBefore, timeShortBeforeWeight)
@@ -763,6 +822,12 @@ def normalizeItemScore(a):
         if highest != 0:
             for i in range(len(a)):
                 a[i][1] /= highest
+    return a
+
+def invertItemScore(a):
+    if a != []:
+        for i in range(len(a)):
+            a[i][1] = 1.0-a[i][1]
     return a
 
 def scale(a, scale):
@@ -1052,6 +1117,34 @@ def setParam(param,value):
         durationWeight2 = 0.0
         posInSentenceWeight2 = 0.0
 
+    if param == 'test':
+        numWords = 3
+        neighborsWeight = 0.0
+        wordsInSentenceWeight = 0.3
+        similarWordsWeight = 0.8
+        wordFaceWeight = 0.0
+        faceWordWeight = 0.5
+        timeShortBeforeWeight = 0.5
+        timeShortAfterWeight = 0.5
+        timeShortDistance = 15.0
+        timeLongBeforeWeight = 0.3
+        timeLongAfterWeight = 0.3
+        timeLongDistance = 120.0
+        durationWeight = 0.3
+        posInSentenceWeight = 0.3
+        neighborsWeight2 = 0.0
+        wordsInSentenceWeight2 = 0.0
+        similarWordsWeight2 = -0.9
+        wordFaceWeight2 = 0.3
+        faceWordWeight2 = 0.5
+        timeShortBeforeWeight2 = 0.0
+        timeShortAfterWeight2 = 0.0
+        timeShortDistance2 = 15.0
+        timeLongBeforeWeight2 = 0.0
+        timeLongAfterWeight2 = 0.0
+        timeLongDistance2 = 120.0
+        durationWeight2 = 0.0
+        posInSentenceWeight2 = 0.0
 
 if __name__ == '__main__':
     print 'run as main'
