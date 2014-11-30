@@ -35,6 +35,10 @@ def find_last_valid_brain():
             return stem
     return []
 
+def save(filename, data):
+    pickle.dump(data, file(filename, 'w'))
+    print '{} saved ({})'.format(filename, filesize(filename))
+
 def load(filename):
     data = pickle.load(file(filename, 'r'))
     print 'Part of brain loaded from file {} ({})'.format(filename, filesize(filename))
@@ -60,5 +64,64 @@ durationWeight2, posInSentenceWeight2 = load('{}.{}'.format(brain_name,'ASSOCIAT
 
 al_deleted_ids, al_NAPs, al_wavs, al_wav_audio_ids, al_NAP_hashes, al_audio_classifier, al_maxlen = load('{}.{}'.format(brain_name, 'AUDIO LEARN'))
 
-  
+def remove_duplicates_tuple(l):
+    l = list(set(l))
+    for i in range(len(l)):
+        l[i] = list(l[i])
+    for item in l: item.reverse()
+    l.sort()
+    for item in l: item.reverse()
+    for i in range(len(l)):
+        l[i] = tuple(l[i])
+    return l
+    
+def remove_duplicates_dict(d):
+    for k in d.iterkeys():
+        d[k] = list(set(d[k]))
+    return d
+    
+duration_word = remove_duplicates_tuple(duration_word)
+wordTime = remove_duplicates_dict(wordTime)
+#save('{}.{}'.format(brain_name,'ASSOCIATION'))
+
+def insertZeroMembers(l,size):
+    outlist = []
+    for i in range(size):
+        outlist.append([i,0])
+    for item in l:
+        outlist[item[0]] = item
+    return outlist
+    
+# inspiser de lister hvor du har flere kandidater med samme audio_id men forskjellig membership
+# se om du kan beholde kun den kandidaten som har høyest membership
+# insertZeroMembers
+# forenkle weightedSum og boundedSum til ren array arithmetic
+# alle lister har membership_format [[id1,score],[id2,score],[id3,sc]] etter prosessering i generate
+
+## sjekk at wordsInSentence har format [id,numtimes] og ingen duplicates
+
+## get...Context kan ha duplicates, "hei du er dum du" med predicate "hei", [du,1] [er,0.8] [dum,0.6] [du,0.4] ...
+# func for remove_duplicates_from_context (select='highest')
+# for each: if item[0] in otheritem[0] and item[1] < otheritem[1]: remove item
+
+testContext = [[1,0.9],[2,0.2],[3,0.7],[1,0.6],[2,0.8],[1,0.1],[3,0.1],[2,0.5]]
+
+def remove_duplicates_from_context(context):
+    remove_list = []
+    for item in context:
+        print 'item', item
+        without_me = copy.copy(context)
+        without_me.remove(item)
+        print 'without_me', without_me
+        for otheritem in without_me:
+            print 'test', item, otheritem
+            if item[0] == otheritem[0] and item[1] < otheritem[1]:
+                print 'remove', item
+                remove_list.append(item)
+                break
+    for duplicate in remove_list:
+        context.remove(duplicate)
+
+
+            
 

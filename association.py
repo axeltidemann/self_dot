@@ -214,8 +214,8 @@ def analyze(wav_file,wav_segments,segment_ids,wavs,similar_ids,_wordFace,_faceWo
         wordTime.setdefault(audio_id, []).append(segmentStart)
         duration_word.append((segmentDur, audio_id))   
         
-        wordTime.setdefault(audio_id, []).append(segmentStart)
-        duration_word.append((segmentDur, audio_id))   
+        #wordTime.setdefault(audio_id, []).append(segmentStart)
+        #duration_word.append((segmentDur, audio_id))   
         
         similar_ids_this = similar_ids[i]
         #if max(similar_ids_this) == 0:
@@ -426,7 +426,7 @@ def generate(predicate, method,
     #print '\n_wordFace', _wordFace
     # temporary solution to using faces
     faces = [item[0] for item in _wordFace]
-    if -1 in faces: faces.remove(-1)
+    while -1 in faces: faces.remove(-1)
     if faces == []: face = 0
     else: face = random.choice(faces)
     #print 'using face', face, 'we might want to update face/word selection', # USE WORDFACEWEIGHT TO SELECT FACE
@@ -634,9 +634,9 @@ def getTimeContext(predicate, distance):
     * Look up the time(s) when predicate has been used (wordTime),
     * Look up these times (time_word), generating a list of words
     appearing within a desired distance in time from each of these time points.
-    * Make a new list of [word, distance], with the distance inverted (use maxDistance - distance) and normalized.
+    * Make a new list of [word, distance], with the distance inverted (use maxDistance - distance) 
     Invert items [distance,word] and sort, invert items again.
-    This list will have items (words) sorted from close in time to far in time, retaining a normalized score 
+    This list will have items (words) sorted from close in time to far in time, giving a score 
     for how far in time from the predicate each word has occured.
     '''
     #print 'getTimeContext wordTime', wordTime
