@@ -332,7 +332,7 @@ def audio():
             markertablist = []
             for i in range(32):
                 markertime = tGet(int(markerTempTab), i)
-                markertablist.append(markertime)
+                markertablist.append(-1) #hard and dirty, skip all if we turn off memory recording while recording a sentence
             segmentstring = '{}\n'.format(segmentlist.pop(0))
             total_segment_time = 0.0
             skip_time = 0.0
