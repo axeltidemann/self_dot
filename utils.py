@@ -634,10 +634,13 @@ def brain_name():
 def find_last_valid_brain():
     files = glob.glob('BRAIN_*')
     files.sort(key=os.path.getmtime, reverse=True)
-    for f in files:
+    for f in files[::NUMBER_OF_BRAINS]:
         stem = f[:f.find('.')] # We know the filename is BRAIN_XXXX.FACE RESPONDER etc
-        if len(glob.glob('{}*'.format(stem))) == NUMBER_OF_BRAINS:
-            return stem
+        try: 
+            if len([ load(candidate) for candidate in glob.glob('{}*'.format(stem)) ]) == NUMBER_OF_BRAINS:
+                return stem
+        except:
+            print 'Corrupt brain {}, continuing backwards'.format(stem)
     return []
 
 def daily_routine(host):

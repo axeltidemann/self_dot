@@ -63,24 +63,44 @@ def robocontrol(host):
     robo = context.socket(zmq.PULL)
     robo.bind('tcp://*:{}'.format(IO.ROBO))
 
+    sender = context.socket(zmq.PUSH)
+    sender.connect('tcp://{}:{}'.format(host, IO.EXTERNAL))
+
     #roboback = context.socket(zmq.PUB)
     #roboback.bind('tcp://*:{}'.format(IO.ROBOBACK))
 
     timeStamp = time.time()
     global pan1, tilt1, pan2, tilt2
     #print 'robocontrol entering loop %i', time.time()-timeStamp
+    time_reset_memrec = time.time()
+    memrec_turnon = False
+    memrec_turnoff = False
     while True:
     	#print 'robocontrol is running %i', time.time()-timeStamp
     	time.sleep(.05)
         robohead,axis,value = robo.recv_json()
+        if memrec_turnon and (time.time()-time_reset_memrec > 1.7):
+            sender.send_json('memoryRecording 1')
+            memrec_turnon = False
+            print 'ROBONCTROL TURN ON MEMREC AFTER HEAD SPIN'
         if robohead == 1:
             if axis == 'pan':
                 #dprint 'head 1 panposition', value
                 # send pan position to head (eg. 'p 60')
                 pan1 += int((value)*120)
                 #pan1 += int((value)*80)
-                if pan1 < 5: pan1 += 180
-                if pan1 > 205: pan1 -= 180
+                if pan1 < 5: 
+                    pan1 += 180
+                    memrec_turnoff = True
+                if pan1 > 205: 
+                    pan1 -= 180
+                    memrec_turnoff = True
+                if memrec_turnoff:
+                    sender.send_json('memoryRecording 0')
+                    time_reset_memrec = time.time()
+                    memrec_turnon = True
+                    memrec_turnoff = False
+                    print 'ROBONCTROL TURN OFF MEMREC BEFORE HEAD SPIN'
                 ser.write('p %03dn'%pan1)
             if axis == 'tilt':
                 #print 'head 1 tiltposition', value
