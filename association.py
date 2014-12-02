@@ -215,8 +215,8 @@ def analyze(wav_file,wav_segments,segment_ids,wavs,similar_ids,_wordFace,_faceWo
         wordTime.setdefault(audio_id, []).append(segmentStart)
         duration_word.append((segmentDur, audio_id))   
         
-        #wordTime.setdefault(audio_id, []).append(segmentStart)
-        #duration_word.append((segmentDur, audio_id))   
+        wordTime.setdefault(audio_id, []).append(segmentStart)
+        duration_word.append((segmentDur, audio_id))   
         
         similar_ids_this = similar_ids[i]
         #if max(similar_ids_this) == 0:
@@ -468,10 +468,10 @@ def generate(predicate, method,
 
     if plotting and plotenable: 
         
-        fig = plt.figure()
+        plt.clf()
         n_ids = len(wordTime.keys())
         maxval = 1
-        ax1 = fig.add_subplot(211)
+        plt.subplot(211)
         bar_width = 0.5
         opacity = 0.8
 
@@ -494,8 +494,7 @@ def generate(predicate, method,
         face_scores = np.array( [ item[1] for item in _faceWord ] )*faceWordWeight
         face_bars = plt.bar(face_index+(bar_width*0.2), face_scores, bar_width,
                          alpha=opacity,
-                         color='r',edgecolor='r',
-                         label='face')
+                         color='r',edgecolor='r')
         
         #print '_similarWords', _similarWords, 'similarWordsWeight', similarWordsWeight
         sim_index = np.array([ item[0] for item in _similarWords ])
@@ -504,16 +503,14 @@ def generate(predicate, method,
         #print 'sim_scores', sim_scores
         sim_bars = plt.bar(sim_index+(bar_width*0.3), sim_scores, bar_width,
                          alpha=opacity,
-                         color='g',edgecolor='g',
-                         label='sim')
+                         color='g',edgecolor='g')
 
         #print 'timeShortContextBefore',timeShortContextBefore, 'timeShortBeforeWeight', timeShortBeforeWeight
         tsb_index = np.array([ item[0] for item in timeShortContextBefore ])
         tsb_scores = np.array( [ item[1] for item in timeShortContextBefore ] )*timeShortBeforeWeight
         tsb_bars = plt.bar(tsb_index+(bar_width*0.4), tsb_scores, bar_width,
                          alpha=opacity,
-                         color='b',edgecolor='b',
-                         label='tsb')
+                         color='b',edgecolor='b')
 
         #print 'timeShortContextAfter',timeShortContextAfter, 'timeShortAfterWeight', timeShortAfterWeight
         tsa_index = np.array([ item[0] for item in timeShortContextAfter ])
@@ -548,13 +545,12 @@ def generate(predicate, method,
         dur_scores = np.array( [ item[1] for item in durationContext ] )*durationWeight
         dur_bars = plt.bar(dur_index+(bar_width*0.9), dur_scores, bar_width,
                          alpha=opacity,
-                         color='w',edgecolor='b',
-                         label='dur')
+                         color='w',edgecolor='b')
         
         plt.axis([0, n_ids, 0, maxval])
         plt.ylabel('Scores')
         plt.title('Scaled association scores for predicate {}'.format(predicate))
-        plt.legend(bbox_to_anchor=(1.02, 1), loc=2, borderaxespad=0.)
+        #plt.legend(bbox_to_anchor=(1.02, 1), loc=2, borderaxespad=0.)
                        
 
     # remove duplicates
@@ -605,8 +601,8 @@ def generate(predicate, method,
     
     if plotting and plotenable: 
         
-        ax2 = fig.add_subplot(212)
-        fig.subplots_adjust(left=0.08, bottom=0.10, right=0.83, top=0.94, wspace=0.2, hspace=0.2)
+        plt.subplot(212)
+        plt.gcf().subplots_adjust(left=0.08, bottom=0.10, right=0.83, top=0.94, wspace=0.2, hspace=0.2)
         bar_width = 0.85
         indices = np.array(range(len(wordTime.keys())))
         bottomline = None
@@ -673,6 +669,7 @@ def generate(predicate, method,
         plt.xlabel('audio ids')
         plt.ylabel('Scores')
         plt.title('Stacked (bounded/scaled) scores for predicate {}'.format(predicate))
+        plt.legend(['neighbor', 'wordsInSen', 'face', 'sim', 'tsb', 'tsa', 'tlb', 'tla', 'posInSen', 'dur'], bbox_to_anchor=(1.02, 2), loc=2, borderaxespad=0.)
         plt.draw()
 
     #SUM!
