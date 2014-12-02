@@ -105,22 +105,32 @@ def insertZeroMembers(l,size):
 # for each: if item[0] in otheritem[0] and item[1] < otheritem[1]: remove item
 
 testContext = [[1,0.9],[2,0.2],[3,0.7],[1,0.6],[2,0.8],[1,0.1],[3,0.1],[2,0.5]]
-
+import copy
 def remove_duplicates_from_context(context):
     remove_list = []
     for item in context:
-        print 'item', item
+        #print 'item', item
         without_me = copy.copy(context)
         without_me.remove(item)
-        print 'without_me', without_me
+        #print 'without_me', without_me
         for otheritem in without_me:
-            print 'test', item, otheritem
+            #print 'test', item, otheritem
             if item[0] == otheritem[0] and item[1] < otheritem[1]:
-                print 'remove', item
+                #print 'remove', item
                 remove_list.append(item)
                 break
     for duplicate in remove_list:
         context.remove(duplicate)
+    context.sort()
+    return context
+
+def make_scorelist(context):
+    '''take a list of [[id,score],[id,score]...], return a list of scores'''
+    outlist = []
+    for item in context:
+        outlist.append(item[1])
+    return outlist
+    
 
 
             
