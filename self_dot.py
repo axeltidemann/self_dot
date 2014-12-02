@@ -147,10 +147,15 @@ class Controller:
             if message == 'reboot':
                 utils.reboot()
 
-            if message == 'appendCurrentSettings' or message == 'popCurrentSettings':
+            if message == 'appendCurrentSettings':
                 self.association.send_pyobj([message])
                 self.association.recv_pyobj()
-                
+            
+            if 'getCurrentSettings' in message:
+                msg, value = message.split()
+                self.association.send_pyobj([msg, value])
+                self.association.recv_pyobj()
+
             if 'i_am_speaking' in message:
                 _, value = message.split()
                 self.state['i_am_speaking'] = value in ['True', '1']
