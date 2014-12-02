@@ -462,92 +462,104 @@ def generate(predicate, method,
         
     #print 'generate lengths:', len(timeContextBefore), len(timeContextAfter), len(durationContext)
     # merge them
-    if method == 'add': method = weightedSum
-    if method == 'boundedAdd': method = boundedSum
-    temp = method(_neighbors, neighborsWeight, _wordsInSentence, wordsInSentenceWeight)
-    #temp = method(temp, 1.0, _wordFace, wordFaceWeight)
-    #print 'temp1', temp
+    #if method == 'add': method = weightedSum
+    #if method == 'boundedAdd': method = boundedSum
+    #temp = method(_neighbors, neighborsWeight, _wordsInSentence, wordsInSentenceWeight)
+
     if plotting and plotenable: 
-        plt.clf()
+        
         fig = plt.figure()
-        n_ids = len(time_word)
+        n_ids = len(wordTime.keys())
         maxval = 1
-        #plt.subplot(111)
-        fig.subplots_adjust(left=0.08, bottom=0.10, right=0.83, top=0.94, wspace=0.2, hspace=0.2)
-        bar_width = 0.4
+        ax1 = fig.add_subplot(211)
+        bar_width = 0.5
         opacity = 0.8
-        print '_faceWord',_faceWord, 'faceWordWeight', faceWordWeight
+
+        #print '_neighbors',_neighbors, 'neighborsWeight', neighborsWeight
+        neighbors_index = np.array([ item[0] for item in _neighbors ])
+        neighbors_scores = np.array( [ item[1] for item in _neighbors ] )*neighborsWeight
+        neighbors_bars = plt.bar(neighbors_index+(bar_width*0.0), neighbors_scores, bar_width,
+                         alpha=opacity,
+                         color='purple',edgecolor='purple')
+        
+        #print '_wordsInSentence',_wordsInSentence, 'wordsInSentenceWeight', wordsInSentenceWeight
+        wordsInSentence_index = np.array([ item[0] for item in _wordsInSentence ])
+        wordsInSentence_scores = np.array( [ item[1] for item in _wordsInSentence ] )*wordsInSentenceWeight
+        wordsInSentence_bars = plt.bar(wordsInSentence_index+(bar_width*0.1), wordsInSentence_scores, bar_width,
+                         alpha=opacity,
+                         color='gray',edgecolor='gray')
+        
+        #print '_faceWord',_faceWord, 'faceWordWeight', faceWordWeight
         face_index = np.array([ item[0] for item in _faceWord ])
         face_scores = np.array( [ item[1] for item in _faceWord ] )*faceWordWeight
-        face_bars = plt.bar(face_index+(bar_width*0.0), face_scores, bar_width,
+        face_bars = plt.bar(face_index+(bar_width*0.2), face_scores, bar_width,
                          alpha=opacity,
                          color='r',edgecolor='r',
                          label='face')
         
-        print '_similarWords', _similarWords, 'similarWordsWeight', similarWordsWeight
+        #print '_similarWords', _similarWords, 'similarWordsWeight', similarWordsWeight
         sim_index = np.array([ item[0] for item in _similarWords ])
         sim_scores = np.array( [ item[1] for item in _similarWords ] )*similarWordsWeight
-        print 'sim_index', sim_index
-        print 'sim_scores', sim_scores
-        sim_bars = plt.bar(sim_index+(bar_width*0.12), sim_scores, bar_width,
+        #print 'sim_index', sim_index
+        #print 'sim_scores', sim_scores
+        sim_bars = plt.bar(sim_index+(bar_width*0.3), sim_scores, bar_width,
                          alpha=opacity,
                          color='g',edgecolor='g',
                          label='sim')
 
-        print 'timeShortContextBefore',timeShortContextBefore, 'timeShortBeforeWeight', timeShortBeforeWeight
+        #print 'timeShortContextBefore',timeShortContextBefore, 'timeShortBeforeWeight', timeShortBeforeWeight
         tsb_index = np.array([ item[0] for item in timeShortContextBefore ])
         tsb_scores = np.array( [ item[1] for item in timeShortContextBefore ] )*timeShortBeforeWeight
-        tsb_bars = plt.bar(tsb_index+(bar_width*0.24), tsb_scores, bar_width,
+        tsb_bars = plt.bar(tsb_index+(bar_width*0.4), tsb_scores, bar_width,
                          alpha=opacity,
                          color='b',edgecolor='b',
                          label='tsb')
 
-        print 'timeShortContextAfter',timeShortContextAfter, 'timeShortAfterWeight', timeShortAfterWeight
+        #print 'timeShortContextAfter',timeShortContextAfter, 'timeShortAfterWeight', timeShortAfterWeight
         tsa_index = np.array([ item[0] for item in timeShortContextAfter ])
         tsa_scores = np.array( [ item[1] for item in timeShortContextAfter ] )*timeShortAfterWeight
-        tsa_bars = plt.bar(tsa_index+(bar_width*0.36), tsa_scores, bar_width,
+        tsa_bars = plt.bar(tsa_index+(bar_width*0.5), tsa_scores, bar_width,
                          alpha=opacity,
                          color='c',edgecolor='c')
                          
-        print 'timeLongContextBefore',timeLongContextBefore, 'timeLongBeforeWeight', timeLongBeforeWeight
+        #print 'timeLongContextBefore',timeLongContextBefore, 'timeLongBeforeWeight', timeLongBeforeWeight
         tlb_index = np.array([ item[0] for item in timeLongContextBefore ])
         tlb_scores = np.array( [ item[1] for item in timeLongContextBefore ] )*timeLongBeforeWeight
-        tlb_bars = plt.bar(tlb_index+(bar_width*0.48), tlb_scores, bar_width,
+        tlb_bars = plt.bar(tlb_index+(bar_width*0.6), tlb_scores, bar_width,
                          alpha=opacity,
                          color='m',edgecolor='m')
                          
-        print 'timeLongContextAfter',timeLongContextAfter, 'timeLongAfterWeight', timeLongAfterWeight
+        #print 'timeLongContextAfter',timeLongContextAfter, 'timeLongAfterWeight', timeLongAfterWeight
         tla_index = np.array([ item[0] for item in timeLongContextAfter ])
         tla_scores = np.array( [ item[1] for item in timeLongContextAfter ] )*timeLongAfterWeight
-        tla_bars = plt.bar(tla_index+(bar_width*0.60), tla_scores, bar_width,
+        tla_bars = plt.bar(tla_index+(bar_width*0.7), tla_scores, bar_width,
                          alpha=opacity,
                          color='y',edgecolor='y')
                          
-        print 'posInSentenceContext',posInSentenceContext, 'posInSentenceWeight', posInSentenceWeight
+        #print 'posInSentenceContext',posInSentenceContext, 'posInSentenceWeight', posInSentenceWeight
         pis_index = np.array([ item[0] for item in posInSentenceContext ])
         pis_scores = np.array( [ item[1] for item in posInSentenceContext ] )*posInSentenceWeight
-        pis_bars = plt.bar(pis_index+(bar_width*0.72), pis_scores, bar_width,
+        pis_bars = plt.bar(pis_index+(bar_width*0.8), pis_scores, bar_width,
                          alpha=opacity,
                          color='k',edgecolor='k')
 
-        print 'durationContext',durationContext, 'durationWeight', durationWeight
+        #print 'durationContext',durationContext, 'durationWeight', durationWeight
         dur_index = np.array([ item[0] for item in durationContext ])
         dur_scores = np.array( [ item[1] for item in durationContext ] )*durationWeight
-        dur_bars = plt.bar(dur_index+(bar_width*0.84), dur_scores, bar_width,
+        dur_bars = plt.bar(dur_index+(bar_width*0.9), dur_scores, bar_width,
                          alpha=opacity,
                          color='w',edgecolor='b',
                          label='dur')
         
         plt.axis([0, n_ids, 0, maxval])
-        plt.xlabel('audio ids')
         plt.ylabel('Scores')
-        plt.title('Association scores for predicate {}'.format(predicate))
+        plt.title('Scaled association scores for predicate {}'.format(predicate))
         plt.legend(bbox_to_anchor=(1.02, 1), loc=2, borderaxespad=0.)
+                       
 
-        #plt.tight_layout()
-        plt.draw()
-        
     # remove duplicates
+    neighbors_context = remove_duplicates_from_context(_neighbors)
+    words_sentence_context = remove_duplicates_from_context(_wordsInSentence)
     ts_context_before = remove_duplicates_from_context(timeShortContextBefore)
     ts_context_after = remove_duplicates_from_context(timeShortContextAfter)
     tl_context_before = remove_duplicates_from_context(timeLongContextBefore)
@@ -556,16 +568,20 @@ def generate(predicate, method,
     duration_context = remove_duplicates_from_context(durationContext)
 
     # insert zero members
-    _faceWord = insertZeroMembers(_faceWord, len(time_word))
-    _similarWords = insertZeroMembers(_similarWords, len(time_word))
-    ts_context_before = insertZeroMembers(ts_context_before, len(time_word))
-    ts_context_after = insertZeroMembers(ts_context_after, len(time_word))
-    tl_context_before = insertZeroMembers(tl_context_before, len(time_word))
-    tl_context_after = insertZeroMembers(tl_context_after, len(time_word))
-    pos_in_sentence_context = insertZeroMembers(pos_in_sentence_context, len(time_word))
-    duration_context = insertZeroMembers(duration_context, len(time_word))
+    neighbors_context = insertZeroMembers(neighbors_context, len(wordTime.keys()))
+    words_sentence_context = insertZeroMembers(words_sentence_context, len(wordTime.keys()))
+    _faceWord = insertZeroMembers(_faceWord, len(wordTime.keys()))
+    _similarWords = insertZeroMembers(_similarWords, len(wordTime.keys()))
+    ts_context_before = insertZeroMembers(ts_context_before, len(wordTime.keys()))
+    ts_context_after = insertZeroMembers(ts_context_after, len(wordTime.keys()))
+    tl_context_before = insertZeroMembers(tl_context_before, len(wordTime.keys()))
+    tl_context_after = insertZeroMembers(tl_context_after, len(wordTime.keys()))
+    pos_in_sentence_context = insertZeroMembers(pos_in_sentence_context, len(wordTime.keys()))
+    duration_context = insertZeroMembers(duration_context, len(wordTime.keys()))
     
     # make score lists
+    neighbors_scores = make_scorelist(neighbors_context)
+    words_sentence_scores = make_scorelist(words_sentence_context)
     face_scores = make_scorelist(_faceWord)
     similar_scores = make_scorelist(_similarWords)
     time_short_before_scores = make_scorelist(ts_context_before)
@@ -576,6 +592,8 @@ def generate(predicate, method,
     duration_scores = make_scorelist(duration_context)
 
     #scaling and bounding
+    neighbors_scores = np.array(neighbors_scores).clip(0,neighborsWeight)                #bounded
+    words_sentence_scores = np.array(words_sentence_scores).clip(0,wordsInSentenceWeight) #bounded
     face_scores = np.array(face_scores).clip(0,faceWordWeight)                          #bounded
     similar_scores = np.array(similar_scores)*similarWordsWeight                        #scaled
     time_short_before_scores = np.array(time_short_before_scores)*timeShortBeforeWeight #scaled
@@ -585,21 +603,81 @@ def generate(predicate, method,
     pos_in_sentence_scores = np.array(pos_in_sentence_scores)*posInSentenceWeight       #scaled
     duration_scores = np.array(duration_scores).clip(0,durationWeight)                  #bounded
     
+    if plotting and plotenable: 
+        
+        ax2 = fig.add_subplot(212)
+        fig.subplots_adjust(left=0.08, bottom=0.10, right=0.83, top=0.94, wspace=0.2, hspace=0.2)
+        bar_width = 0.85
+        indices = np.array(range(len(wordTime.keys())))
+        bottomline = None
+        #print '_neighbors_scores',neighbors_scores
+        neighbors_bars = plt.bar(indices, neighbors_scores, bar_width,
+                         alpha=opacity,bottom=bottomline,
+                         color='purple',edgecolor='purple')
+
+        bottomline = neighbors_scores
+        #print 'words_sentence_scores',words_sentence_scores
+        wordsInSentence_bars = plt.bar(indices, words_sentence_scores, bar_width,
+                         alpha=opacity,bottom=bottomline,
+                         color='gray',edgecolor='gray')
+
+        bottomline += words_sentence_scores        
+        #print 'face_scores',face_scores
+        face_bars = plt.bar(indices, face_scores, bar_width,
+                         alpha=opacity,bottom=bottomline,
+                         color='r',edgecolor='r')
+        
+        bottomline += face_scores
+        #print 'similar_scores', similar_scores
+        sim_bars = plt.bar(indices, similar_scores, bar_width,
+                         alpha=opacity,bottom=bottomline,
+                         color='g',edgecolor='g')
+        
+        bottomline += similar_scores
+        #print 'time_short_before_scores',time_short_before_scores
+        tsb_bars = plt.bar(indices, time_short_before_scores, bar_width,
+                         alpha=opacity,bottom=bottomline,
+                         color='b',edgecolor='b')
+        
+        bottomline += time_short_before_scores
+        #print 'time_short_after_scores',time_short_after_scores
+        tsa_bars = plt.bar(indices, time_short_after_scores, bar_width,
+                         alpha=opacity,bottom=bottomline,
+                         color='c',edgecolor='c')
+        
+        bottomline += time_short_after_scores
+        #print 'time_long_before_scores',time_long_before_scores
+        tlb_bars = plt.bar(indices, time_long_before_scores, bar_width,
+                         alpha=opacity,bottom=bottomline,
+                         color='m',edgecolor='m')
+        
+        bottomline += time_long_before_scores
+        #print 'time_long_after_scores',time_long_after_scores
+        tla_bars = plt.bar(indices, time_long_after_scores, bar_width,
+                         alpha=opacity,bottom=bottomline,
+                         color='y',edgecolor='y')
+        
+        bottomline += time_long_after_scores
+        #print 'pos_in_sentence_scores',pos_in_sentence_scores
+        pis_bars = plt.bar(indices, pos_in_sentence_scores, bar_width,
+                         alpha=opacity,bottom=bottomline,
+                         color='k',edgecolor='k')
+        
+        bottomline += pos_in_sentence_scores
+        #print 'duration_scores',duration_scores
+        dur_bars = plt.bar(indices, duration_scores, bar_width,
+                         alpha=opacity,bottom=bottomline,
+                         color='w',edgecolor='b')
+        
+        plt.axis([0, n_ids, 0, maxval*2])
+        plt.xlabel('audio ids')
+        plt.ylabel('Scores')
+        plt.title('Stacked (bounded/scaled) scores for predicate {}'.format(predicate))
+        plt.draw()
+
     #SUM!
-    temp = face_scores+similar_scores+time_short_before_scores+time_short_after_scores+time_long_before_scores+time_long_after_scores+pos_in_sentence_scores+duration_scores
+    temp = neighbors_scores+words_sentence_scores+face_scores+similar_scores+time_short_before_scores+time_short_after_scores+time_long_before_scores+time_long_after_scores+pos_in_sentence_scores+duration_scores
     
-    '''
-    temp = boundedSum(temp, 1.0, _faceWord, faceWordWeight)
-    temp = weightedSum(temp, 1.0, _similarWords, similarWordsWeight)
-    temp = weightedSum(temp, 1.0, timeShortContextBefore, timeShortBeforeWeight)
-    temp = weightedSum(temp, 1.0, timeShortContextAfter, timeShortAfterWeight)
-    temp = boundedSum(temp, 1.0, timeLongContextBefore, timeLongBeforeWeight)
-    temp = boundedSum(temp, 1.0, timeLongContextAfter, timeLongAfterWeight)
-    #print 'temp2', temp
-    temp = weightedSum(temp, 1.0, posInSentenceContext, posInSentenceWeight)
-    temp = boundedSum(temp, 1.0, durationContext, durationWeight) 
-    #print 'generate temp', temp       
-    '''
     # select the one with the highest score
     if len(temp) < 1:
         nextWord = predicate
