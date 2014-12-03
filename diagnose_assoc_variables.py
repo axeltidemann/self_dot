@@ -48,6 +48,8 @@ brain_name = find_last_valid_brain()
 
 print '*BRAIN*', brain_name
 
+r_sound_to_face, r_wordFace, r_face_to_sound, r_faceWord, r_video_producer, r_wavs, r_wav_audio_ids, r_audio_classifier, r_maxlen, r_NAP_hashes, r_face_id, r_face_recognizer = load('{}.{}'.format(brain_name, 'RESPONDER'))
+
 currentSettings, wordTime, time_word, duration_word, similarWords, neighbors, neighborAfter, \
 wordFace, faceWord, sentencePosition_item, wordsInSentence, numWords, \
 method, neighborsWeight, wordsInSentenceWeight, similarWordsWeight, wordFaceWeight, faceWordWeight, \
