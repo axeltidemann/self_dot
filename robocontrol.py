@@ -32,7 +32,7 @@ except:
 
 connected = False
 pan1 = 70
-tilt1 = 45
+tilt1 = 20
 pan2 = 30
 tilt2 = 45
 if serialAvailable:
@@ -106,10 +106,11 @@ def robocontrol(host):
                 #print 'head 1 tiltposition', value
                 # send til position to head (eg. 'p 60')
                 #tilt1 += int((value-0.5)*3)
-                tilt1 += int((value)*50)
-                #tilt1 = np.clip(tilt1, 20, 90)
-                if tilt1 > 90: tilt1 = 90-(tilt1-90)                
-                if tilt1 < 20: tilt1 = 20-(tilt1-20)                
+                tilt1 += int((value)*90)
+                #print 'head 1 scaled tiltposition', value
+                tilt1 = np.clip(tilt1, 2, 45)
+                #if tilt1 > 45: tilt1 = 45-(tilt1-45)                
+                #if tilt1 < 2: tilt1 = 2-(tilt1-2)                
                 #print 'head 1 tiltposition', tilt1
                 ser.write('t %03dn'%tilt1)
             
