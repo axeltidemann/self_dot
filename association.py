@@ -192,22 +192,22 @@ def analyze(wav_file,wav_segments,segment_ids,wavs,similar_ids,_wordFace,_faceWo
 
     markerfile = wav_file[:-4]+'.txt'
     startTime,totalDur,_,_ = utils.getSoundInfo(markerfile)
-    
+
     for i in range(len(segment_ids)):
         audio_id = segment_ids[i]
-        
+
         # get timing and duration for segment    
         segmentStart = wav_segments[(wav_file,audio_id)][0]
         segmentDur = int((wav_segments[(wav_file,audio_id)][1]-segmentStart)*10)/10.0
-        
+
         segmentStart += startTime
         time_word.append((segmentStart, audio_id))
         wordTime.setdefault(audio_id, []).append(segmentStart)
         duration_word.append((segmentDur, audio_id))   
-        
+
         wordTime.setdefault(audio_id, []).append(segmentStart)
         duration_word.append((segmentDur, audio_id))   
-        
+
         similar_ids_this = similar_ids[i]
         #if max(similar_ids_this) == 0:
         #    similarScaler = 1
@@ -215,7 +215,7 @@ def analyze(wav_file,wav_segments,segment_ids,wavs,similar_ids,_wordFace,_faceWo
         #    similarScaler = 1/float(max(similar_ids_this))
         #similarWords[audio_id] = scale(similar_ids_this, similarScaler)
         similarWords[audio_id] = similar_ids_this
-        
+
         # fill in our best estimates for hamming distances between this id and earlier ids
         # (these will be updated with better values when a new sound similar to any earlier id comes in) 
         for k in similarWords.keys():
@@ -223,7 +223,7 @@ def analyze(wav_file,wav_segments,segment_ids,wavs,similar_ids,_wordFace,_faceWo
             if len(similarWords[k]) < len(similarWords[audio_id]):
                 #print 'adding id %i, distance %f to %i'%(audio_id,similarWords[audio_id][k], k)
                 similarWords[k].append(similarWords[audio_id][k])
-    
+
     # analysis of the segment's relationship to the sentence it occured in
     print 'update segments in sentence...'
     updateWordsInSentence(segment_ids)

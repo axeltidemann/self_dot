@@ -49,6 +49,9 @@ def load(filename):
     print 'Part of brain loaded from file {} ({})'.format(filename, filesize(filename))
     return data
 
+def filetime(filename):
+    return time.mktime(time.strptime(filename[filename.rfind('/')+1:filename.rfind('.wav')], '%Y_%m_%d_%H_%M_%S'))
+
 def plot_NAP_and_energy(NAP, plt):
     plt.clf()
     plt.subplot(211)

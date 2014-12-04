@@ -416,7 +416,7 @@ def _recognize_audio_id(audio_recognizer, NAP):
 
 def _project(audio_id, sound_to_face, NAP, video_producer):
     stride = IO.VIDEO_SAMPLE_TIME / (IO.NAP_RATE/IO.NAP_STRIDE)
-    length = np.floor(NAP.shape[0]*.8)
+    length = np.floor(NAP.shape[0]*.8).astype('int')
     NAP = NAP[:length:stride]
     try: 
         face_id = np.random.choice(sound_to_face[audio_id])
