@@ -385,14 +385,18 @@ def new_respond(control_host, learn_host, debug=False):
                             start2 = 0.7 #  set delay between voice 1 and 2
                             speed2 = 0.7
                             amp2 = -10 # voice amplitude in dB
-                            segstart2, segend2 = wav_audio_ids[(soundfile2, word_id2)]
-                            dur2 = segend2-segstart2
-                            #totalDur2, maxamp2 = utils.getSoundParmFromFile(soundfile2)
-                            _,totalDur2,maxamp2,_ = utils.getSoundInfo(soundfile)
-                            if dur2 <= 0: dur2 = totalDur2
-                            voice2 = 'playfile {} {} {} {} {} {} {} {} {}'.format(voiceChannel2, voiceType2, start2, soundfile2, speed2, segstart2, segend2, amp2, maxamp2)
-                            wordSpacing2 = wordSpace2 + np.random.random()*wordSpaceDev2
-                            nextTime2 += (dur2/speed2)+wordSpacing2
+                            try:
+                                segstart2, segend2 = wav_audio_ids[(soundfile2, word_id2)]
+                                dur2 = segend2-segstart2
+                                #totalDur2, maxamp2 = utils.getSoundParmFromFile(soundfile2)
+                                _,totalDur2,maxamp2,_ = utils.getSoundInfo(soundfile)
+                                if dur2 <= 0: dur2 = totalDur2
+                                voice2 = 'playfile {} {} {} {} {} {} {} {} {}'.format(voiceChannel2, voiceType2, start2, soundfile2, speed2, segstart2, segend2, amp2, maxamp2)
+                                wordSpacing2 = wordSpace2 + np.random.random()*wordSpaceDev2
+                                nextTime2 += (dur2/speed2)+wordSpacing2
+                            except:
+                                voice2 = ''
+                                utils.print_exception('VOICE 2 tried to access an illegal soundfile/audio_id combination.')
                             #enableVoice2 = 0
                         # trig another word in voice 2 only if word 2 has finished playing (and sync to start of voice 1)
                         if nextTime1 > nextTime2: enableVoice2 = 1 
@@ -492,6 +496,13 @@ def new_respond(control_host, learn_host, debug=False):
                     play_events.append([ dur, voice1, voice2, projection, FRAME_SIZE ])
                 print 'Dream mode playing back {} memories'.format(len(play_events))
                 scheduler.send_pyobj(play_events)
+
+            if 'save' in pushbutton:
+                utils.save('{}.{}'.format(pushbutton['save'], mp.current_process().name), [ sound_to_face, wordFace, face_to_sound, faceWord, video_producer, wavs, wav_audio_ids, audio_classifier, maxlen, NAP_hashes, face_id, face_recognizer, audio_memory ])
+
+            if 'load' in pushbutton:
+                sound_to_face, wordFace, face_to_sound, faceWord, video_producer, wavs, wav_audio_ids, audio_classifier, maxlen, NAP_hashes, face_id, face_recognizer, audio_memory = utils.load('{}.{}'.format(pushbutton['load'], mp.current_process().name))
+
 
 def learn_audio(host, debug=False):
     context = zmq.Context()
@@ -627,13 +638,13 @@ def learn_audio(host, debug=False):
                 audio.clear()
 
             if 'dream' in pushbutton:
-                dream(audio_memory)
+                new_dream(audio_memory)
                      
             if 'save' in pushbutton:
-                utils.save('{}.{}'.format(pushbutton['save'], mp.current_process().name), [ deleted_ids, NAPs, wavs, wav_audio_ids, NAP_hashes, audio_classifier, maxlen ])
+                utils.save('{}.{}'.format(pushbutton['save'], mp.current_process().name), [ deleted_ids, NAPs, wavs, wav_audio_ids, NAP_hashes, audio_classifier, maxlen, audio_memory ])
                 
             if 'load' in pushbutton:
-                deleted_ids, NAPs, wavs, wav_audio_ids, NAP_hashes, audio_classifier, maxlen = utils.load('{}.{}'.format(pushbutton['load'], mp.current_process().name))
+                deleted_ids, NAPs, wavs, wav_audio_ids, NAP_hashes, audio_classifier, maxlen, audio_memory = utils.load('{}.{}'.format(pushbutton['load'], mp.current_process().name))
 
 
 def new_dream(audio_memory):

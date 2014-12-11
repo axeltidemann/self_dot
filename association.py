@@ -225,11 +225,14 @@ def analyze(wav_file,wav_segments,segment_ids,wavs,similar_ids,_wordFace,_faceWo
 
         # fill in our best estimates for hamming distances between this id and earlier ids
         # (these will be updated with better values when a new sound similar to any earlier id comes in) 
-        for k in similarWords.keys():
-            #print 'checking', similarWords[k], similarWords[audio_id], 'length k, a',len(similarWords[k]), len(similarWords[audio_id])
-            if len(similarWords[k]) < len(similarWords[audio_id]):
-                #print 'adding id %i, distance %f to %i'%(audio_id,similarWords[audio_id][k], k)
-                similarWords[k].append(similarWords[audio_id][k])
+        try:
+            for k in similarWords.keys():
+                #print 'checking', similarWords[k], similarWords[audio_id], 'length k, a',len(similarWords[k]), len(similarWords[audio_id])
+                if len(similarWords[k]) < len(similarWords[audio_id]):
+                    #print 'adding id %i, distance %f to %i'%(audio_id,similarWords[audio_id][k], k)
+                    similarWords[k].append(similarWords[audio_id][k])
+        except:
+            utils.print_exception('UPDATING SIMILARWORDS')
 
     # analysis of the segment's relationship to the sentence it occured in
     print 'update segments in sentence...'
