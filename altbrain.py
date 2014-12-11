@@ -6,37 +6,28 @@ import glob
 import cPickle as pickle
 from subprocess import call
 import time
-import ctypes
 import os
 import itertools
 import random
-from collections import namedtuple
+
 
 import numpy as np
 import zmq
-from sklearn import preprocessing as pp
-from sklearn import svm
-from scipy.io import wavfile
-from scikits.samplerate import resample
-import cv2
-from sklearn.decomposition import RandomizedPCA
-from scipy.signal.signaltools import correlate2d as c2d
-import sai as pysai
-from zmq.utils.jsonapi import dumps
 from scipy.stats import itemfreq
 from scipy.cluster.vq import kmeans, vq
 
 import utils
 import IO
 import association
+import my_sai_test as mysai
 import myCsoundAudioOptions
 
-from brain import _project, _extract_NAP
+from brain import _project, _extract_NAP, _three_amigos
 
 AUDIO_HAMMERTIME = 9
 FRAME_SIZE = (160,120) # Neural network image size, 1/4 of full frame size.
 
-AudioSegment = namedtuple('AudioSegment', ['audio_id', 'crude_hash', 'fine_hash', 'wav_file', 'segment_idxs'])
+AudioSegment = namedtuple('AudioSegment', ['audio_id', 'crude_hash', 'fine_hash', 'wav_file', 'segment_idxs']) #should be times
 
 class AudioMemory:
     def __init__(self):
@@ -95,14 +86,25 @@ class AudioMemory:
         
         return audio_id
 
-    # def find_similar_ids(self, audio_id):
-    #     target = np.random.choice(self.audio_ids[audio_id])
-    
-    # def forget(self, audio_id):
-    #     pass
-        
+    def all_segments(self):
+        return [ audio_segment for key, value in self.audio_ids.iteritems() for audio_segment in value ]
 
-def respond(control_host, learn_host, debug=False):
+    def forget(self, audio_segment):
+        self.audio_ids[audio_segment.audio_id].remove(audio_segment)
+        for _, audio_segments in self.NAP_intervals.iteritems():
+            try:
+                audio_segments.remove(audio_segment)
+            except:
+                continue
+        self._cleanse_keys()
+        
+    def _cleanse_keys(self):
+        for empty_key in [ key for key, value in self.audio_ids.iteritems() if len(value) == 0 ]:
+            del self.audio_ids[empty_key]
+        for empty_key in [ key for key, value in self.NAP_intervals.iteritems() if len(value) == 0 ]:
+            del self.NAP_intervals[empty_key]
+        
+def new_respond(control_host, learn_host, debug=False):
     context = zmq.Context()
     
     eventQ = context.socket(zmq.SUB)
@@ -474,7 +476,22 @@ def respond(control_host, learn_host, debug=False):
                     print_variable = pushbutton['print_me'].split('association ')[-1]
                     association.send_pyobj(['print_me',print_variable])
 
-
+            if 'dream' in pushbutton:
+                play_events = []
+                for audio_segment in audio_memory.all_segments():
+                    segstart, segend = audio_segment.segment_idxs
+                    dur = segend - segstart
+                    NAP = _extract_NAP(segstart, segend, audio_segment.wav_file)
+                    speed = 1
+                    amp = -3
+                    maxamp = 1
+                    start = 0
+                    voice1 = 'playfile {} {} {} {} {} {} {} {} {}'.format(1, 6, np.random.rand()/3, audio_segment.wav_file, speed, segstart, segend, amp, maxamp)
+                    projection = _project(audio_segment.audio_id, sound_to_face, NAP, video_producer)
+                    voice2 = 'playfile {} {} {} {} {} {} {} {} {}'.format(2, 6, np.random.randint(3,6), audio_segment.wav_file, speed, segstart, segend, amp, maxamp)
+                    play_events.append([ dur, voice1, voice2, projection, FRAME_SIZE ])
+                print 'Dream mode playing back {} memories'.format(len(play_events))
+                scheduler.send_pyobj(play_events)
 
 def learn_audio(host, debug=False):
     context = zmq.Context()
@@ -486,8 +503,8 @@ def learn_audio(host, debug=False):
     dreamQ = context.socket(zmq.PUSH)
     dreamQ.connect('tcp://{}:{}'.format(host, IO.DREAM))
 
-    import brain
-    stateQ, eventQ, brainQ = brain._three_amigos(context, host)
+
+    stateQ, eventQ, brainQ = _three_amigos(context, host)
 
     sender = context.socket(zmq.PUSH)
     sender.connect('tcp://{}:{}'.format(host, IO.EXTERNAL))
@@ -609,8 +626,90 @@ def learn_audio(host, debug=False):
 
                 audio.clear()
 
+            if 'dream' in pushbutton:
+                dream(audio_memory)
+                     
             if 'save' in pushbutton:
                 utils.save('{}.{}'.format(pushbutton['save'], mp.current_process().name), [ deleted_ids, NAPs, wavs, wav_audio_ids, NAP_hashes, audio_classifier, maxlen ])
                 
             if 'load' in pushbutton:
                 deleted_ids, NAPs, wavs, wav_audio_ids, NAP_hashes, audio_classifier, maxlen = utils.load('{}.{}'.format(pushbutton['load'], mp.current_process().name))
+
+
+def new_dream(audio_memory):
+    
+    #import matplotlib.pyplot as plt
+    #plt.ion()
+
+    try:
+        print 'Dreaming - removing wrongly binned filenames'
+        mega_filenames_and_indexes = []
+
+        for audio_id, audio_segments in audio_memory.audio_ids.iteritems():
+
+            NAP_detail = 'low'
+            filenames_and_indexes = []
+
+            for audio_segment in audio_segments:
+                segstart, segend = audio_segment.segment_idxs
+                audio_times = utils.get_segments(audio_segments.wav_file)
+                norm_segstart = segstart/audio_times[-1]
+                norm_segend = segend/audio_times[-1]
+                filenames_and_indexes.append([ soundfile, norm_segstart, norm_segend, audio_id, NAP_detail ])
+                
+            mega_filenames_and_indexes.extend(filenames_and_indexes)
+
+            k = 2
+            print 'Examining audio_id {}'.format(audio_id)
+            if len(audio_segments) == 1:
+                print 'Just one member in this audio_id, skipping analysis'
+                continue
+
+            sparse_codes = mysai.experiment(filenames_and_indexes, k)
+            # plt.matshow(sparse_codes, aspect='auto')
+            # plt.colorbar()
+            # plt.draw()
+
+            coarse = np.mean(sparse_codes, axis=1)
+            coarse.shape = (len(coarse), 1)
+
+            codebook,_ = kmeans(coarse, k)
+            instances = [ vq(np.atleast_2d(s), codebook)[0] for s in coarse ]
+
+            freqs = itemfreq(instances)
+            sorted_freqs = sorted(freqs, key=lambda x: x[1])
+            print 'Average sparse codes: {} Class count: {}'.format(list(itertools.chain.from_iterable(coarse)), sorted_freqs)
+
+            if len(sorted_freqs) == 1:
+                print 'Considered to be all the same.'
+                continue
+
+            fewest_class = sorted_freqs[0][0]
+            ousted_audio_segments = [ audio_segment for audio_segment, i in zip(audio_segments, instances) if i == fewest_class ]
+            print 'Class {} has fewest members, deleting audio_segments {}'.format(fewest_class, ousted_audio_segments)
+            filter(audio_memory.forget, ousted_audio_segments)
+
+        print 'Creating mega super self-organized class'
+
+        for row in mega_filenames_and_indexes:
+            row[-1] = 'high'
+
+        high_resolution_k = 256
+        clusters = 24
+        sparse_codes = mysai.experiment(mega_filenames_and_indexes, high_resolution_k)
+        sparse_codes = np.array(sparse_codes)
+        # plt.matshow(sparse_codes, aspect='auto')
+        # plt.colorbar()
+        # plt.draw()
+
+        codebook,_ = kmeans(sparse_codes, clusters)
+        instances = [ vq(np.atleast_2d(s), codebook)[0] for s in sparse_codes ]
+
+        cluster_list = {}
+        for mega, instance in zip(mega_filenames_and_indexes, instances):
+            soundfile,_,_,audio_id,_ = mega
+            cluster_list[(soundfile, audio_id)] = instance
+
+        print cluster_list
+    except:
+        utils.print_exception('NIGHTMARE!')

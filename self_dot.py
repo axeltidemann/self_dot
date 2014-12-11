@@ -19,7 +19,6 @@ import numpy as np
 import IO
 import utils
 import brain
-import altbrain
 import robocontrol
 import association
 
@@ -362,12 +361,10 @@ if __name__ == '__main__':
     print 'SELF MAIN PID', me.pid
 
     utils.MyProcess(target=IO.audio, name='AUDIO').start() 
-    utils.MyProcess(target=IO.video, name='VIDEO').start()
-    utils.MyProcess(target=brain.face_extraction, args=('localhost',False,True,), name='FACE EXTRACTION').start()
-    #utils.MyProcess(target=brain.respond, args=('localhost','localhost',True), name='RESPONDER').start()
-    utils.MyProcess(target=altbrain.respond, args=('localhost','localhost',False,), name='RESPONDER').start()
-    #utils.MyProcess(target=brain.learn_audio, args=('localhost',True), name='AUDIO LEARN').start()
-    utils.MyProcess(target=altbrain.learn_audio, args=('localhost',True), name='AUDIO LEARN').start()
+    # utils.MyProcess(target=IO.video, name='VIDEO').start()
+    # utils.MyProcess(target=brain.face_extraction, args=('localhost',False,True,), name='FACE EXTRACTION').start()
+    utils.MyProcess(target=brain.new_respond, args=('localhost','localhost',True), name='RESPONDER').start()
+    utils.MyProcess(target=brain.new_learn_audio, args=('localhost',True), name='AUDIO LEARN').start()
     utils.MyProcess(target=brain.learn_video, args=('localhost',), name='VIDEO LEARN').start()
     utils.MyProcess(target=brain.learn_faces, args=('localhost',), name='FACES LEARN').start()
     utils.MyProcess(target=robocontrol.robocontrol, args=('localhost',), name='ROBOCONTROL').start()
