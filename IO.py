@@ -113,8 +113,6 @@ def audio():
 
     memRecPath = myCsoundAudioOptions.memRecPath
 
-
-            
     import csnd6
     cs = csnd6.Csound()
 
@@ -124,12 +122,10 @@ def audio():
     arguments.Append("self_dot.csd")
     csoundCommandline = myCsoundAudioOptions.myAudioDevices
     
-
     comlineParmsList = csoundCommandline.split(' ')
     for item in comlineParmsList:
         arguments.Append("%s"%item)
     cs.Compile(arguments.argc(), arguments.argv())
-
 
     stopflag = 0
     zeroChannelsOnNoBrain = 1
