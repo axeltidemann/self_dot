@@ -504,7 +504,7 @@ def new_respond(control_host, learn_host, debug=False):
                 sound_to_face, wordFace, face_to_sound, faceWord, video_producer, wavs, wav_audio_ids, audio_classifier, maxlen, NAP_hashes, face_id, face_recognizer, audio_memory = utils.load('{}.{}'.format(pushbutton['load'], mp.current_process().name))
 
 
-def learn_audio(host, debug=False):
+def new_learn_audio(host, debug=False):
     context = zmq.Context()
 
     mic = context.socket(zmq.SUB)
