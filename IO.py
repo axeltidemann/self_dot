@@ -5,8 +5,8 @@ import multiprocessing as mp
 import os
 import random
 import utils
+import time
 
-import cv2
 import numpy as np
 import zmq
 from scipy.io import wavfile
@@ -43,6 +43,8 @@ DREAM = 5577
 COUNTER = 5578
 
 def video():
+    import cv2
+
     cv2.namedWindow('Output', cv2.WND_PROP_FULLSCREEN)
     camera = cv2.VideoCapture(0)
 
@@ -109,22 +111,25 @@ def audio():
     poller.register(stateQ, zmq.POLLIN)
     poller.register(eventQ, zmq.POLLIN)
 
-    import time
     memRecPath = myCsoundAudioOptions.memRecPath
-        
+
     import csnd6
     cs = csnd6.Csound()
+
     arguments = csnd6.CsoundArgVList()
+    
     arguments.Append("dummy")
     arguments.Append("self_dot.csd")
     csoundCommandline = myCsoundAudioOptions.myAudioDevices
+    
     comlineParmsList = csoundCommandline.split(' ')
     for item in comlineParmsList:
         arguments.Append("%s"%item)
     cs.Compile(arguments.argc(), arguments.argv())
+
     stopflag = 0
     zeroChannelsOnNoBrain = 1
-    
+
     # optimizations to avoid function lookup inside loop
     tGet = cs.TableGet 
     tSet = cs.TableSet

@@ -31,8 +31,6 @@ import math
 import utils
 import time
 import cPickle as pickle
-import matplotlib.pyplot as plt
-plt.ion()
 
 from pyevolve import G1DList, GSimpleGA, Mutators, Selectors, Initializators, Mutators
 
@@ -467,8 +465,12 @@ def generate(predicate, method,
     #if method == 'boundedAdd': method = boundedSum
     #temp = method(_neighbors, neighborsWeight, _wordsInSentence, wordsInSentenceWeight)
 
+    # THIS TOOK ME 2 HOURS TO FIND OUT A VERY LATE EVENING. PUT THIS HERE, NOT IN THE HEADER.
+    if plotting and plotenable:
+        import matplotlib.pyplot as plt
+        plt.ion()
+    
     if plotting and plotenable: 
-        
         plt.clf()
         n_ids = len(time_word)
         maxval = 1
