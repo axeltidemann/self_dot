@@ -281,43 +281,73 @@ def new_respond(control_host, learn_host, debug=False):
             pushbutton = eventQ.recv_json()
             if 'respond_single' in pushbutton:
                 try:
+                #     filename = pushbutton['filename']
+                #     audio_segments = utils.get_segments(filename)
+                #     print 'Single response to {} duration {} seconds with {} segments'.format(filename, audio_segments[-1], len(audio_segments)-1)
+                #     new_sentence = utils.csv_to_array(filename + 'cochlear')
+                #     norm_segments = np.rint(new_sentence.shape[0]*audio_segments/audio_segments[-1]).astype('int')
+
+                #     segment_id = utils.get_most_significant_word(filename)
+
+                #     NAP = utils.trim_right(new_sentence[norm_segments[segment_id]:norm_segments[segment_id+1]])
+           
+                #     if debug:            
+                #         plt.imshow(NAP.T, aspect='auto')
+                #         plt.draw()
+
+                #     best_match,_,_,_,_ = audio_memory.find(NAP)
+                #     soundfile = best_match.wav_file
+                #     segstart, segend = best_match.segment_idxs
+
+                #     voiceChannel = 1
+                #     speed = 1
+                #     amp = -3 # voice amplitude in dB
+                #     _,dur,maxamp,_ = utils.getSoundInfo(soundfile)
+                    
+                #     start = 0
+                #     voice1 = 'playfile {} {} {} {} {} {} {} {} {}'.format(1, voiceType1, start, soundfile, speed, segstart, segend, amp, maxamp)
+                #     voice2 = ''
+
+                #     print 'Recognized as sound {}'.format(best_match.audio_id)
+
+                #     # sound_to_face, video_producer
+                #     projection = _project(best_match.audio_id, sound_to_face, NAP, video_producer)
+
+                #     scheduler.send_pyobj([[ dur, voice1, voice2, projection, FRAME_SIZE ]])
+                #     print 'Respond time from creation of wav file was {} seconds'.format(time.time() - utils.filetime(filename))
+                # except:
+                #     utils.print_exception('Single response aborted.')
+
                     filename = pushbutton['filename']
                     audio_segments = utils.get_segments(filename)
-                    print 'Single response to {} duration {} seconds with {} segments'.format(filename, audio_segments[-1], len(audio_segments)-1)
+                    print 'Echo response to {} duration {} seconds with {} segments'.format(filename, audio_segments[-1], len(audio_segments)-1)
                     new_sentence = utils.csv_to_array(filename + 'cochlear')
                     norm_segments = np.rint(new_sentence.shape[0]*audio_segments/audio_segments[-1]).astype('int')
-
-                    segment_id = utils.get_most_significant_word(filename)
-
-                    NAP = utils.trim_right(new_sentence[norm_segments[segment_id]:norm_segments[segment_id+1]])
-           
-                    if debug:            
-                        plt.imshow(NAP.T, aspect='auto')
-                        plt.draw()
-
-                    best_match,_,_,_,_ = audio_memory.find(NAP)
-                    soundfile = best_match.wav_file
-                    segstart, segend = best_match.segment_idxs
-
-                    voiceChannel = 1
-                    speed = 1
-                    amp = -3 # voice amplitude in dB
-                    _,dur,maxamp,_ = utils.getSoundInfo(soundfile)
                     
-                    start = 0
-                    voice1 = 'playfile {} {} {} {} {} {} {} {} {}'.format(1, voiceType1, start, soundfile, speed, segstart, segend, amp, maxamp)
-                    voice2 = ''
+                    play_events = []
+                    for NAP in [ utils.trim_right(new_sentence[norm_segments[i]:norm_segments[i+1]]) for i in range(len(norm_segments)-1) ]:
+                        best_match,_,_,_,_ = audio_memory.find(NAP)
+                        soundfile = best_match.wav_file
+                        segstart, segend = best_match.segment_idxs
+                        print 'Recognized as sound {}'.format(best_match.audio_id)
 
-                    print 'Recognized as sound {}'.format(best_match.audio_id)
+                        voiceChannel = 1
+                        speed = 1
+                        amp = -3
+                        _,dur,maxamp,_ = utils.getSoundInfo(soundfile)
 
-                    # sound_to_face, video_producer
-                    projection = _project(best_match.audio_id, sound_to_face, NAP, video_producer)
+                        start = 0
+                        voice1 = 'playfile {} {} {} {} {} {} {} {} {}'.format(1, voiceType1, start, soundfile, speed, segstart, segend, amp, maxamp)
+                        voice2 = 'playfile {} {} {} {} {} {} {} {} {}'.format(2, voiceType1, start, soundfile, speed, segstart, segend, amp, maxamp)
 
-                    scheduler.send_pyobj([[ dur, voice1, voice2, projection, FRAME_SIZE ]])
+                        projection = _project(best_match.audio_id, sound_to_face, NAP, video_producer)
+                        wordSpacing1 = wordSpace1 + np.random.random()*wordSpaceDev1
+                        play_events.append([ dur+wordSpacing1, voice1, voice2, projection, FRAME_SIZE ])
+
+                    scheduler.send_pyobj(play_events)
                     print 'Respond time from creation of wav file was {} seconds'.format(time.time() - utils.filetime(filename))
                 except:
-                    utils.print_exception('Single response aborted.')
-
+                    utils.print_exception('Echo response aborted.')
 
             if 'play_sentence' in pushbutton:
                 try:
