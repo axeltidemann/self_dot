@@ -9,7 +9,7 @@ import time
 import os
 import itertools
 import random
-
+from collections import namedtuple
 
 import numpy as np
 import zmq

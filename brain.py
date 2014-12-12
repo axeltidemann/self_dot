@@ -296,6 +296,10 @@ def new_respond(control_host, learn_host, debug=False):
                         plt.draw()
 
                     best_match,_,_,_,_ = audio_memory.find(NAP)
+
+                    counterQ.send_pyobj(['audio_id', best_match.audio_id])
+                    counterQ.recv_pyobj()
+
                     soundfile = best_match.wav_file
                     segstart, segend = best_match.segment_idxs
 
@@ -679,10 +683,10 @@ def new_learn_audio(host, debug=False):
                 new_dream(audio_memory)
                      
             if 'save' in pushbutton:
-                utils.save('{}.{}'.format(pushbutton['save'], mp.current_process().name), [ deleted_ids, NAPs, wavs, wav_audio_ids, NAP_hashes, audio_classifier, maxlen ])
+                utils.save('{}.{}'.format(pushbutton['save'], mp.current_process().name), [ deleted_ids, NAPs, wavs, wav_audio_ids, NAP_hashes, audio_classifier, maxlen, audio_memory ])
                 
             if 'load' in pushbutton:
-                deleted_ids, NAPs, wavs, wav_audio_ids, NAP_hashes, audio_classifier, maxlen = utils.load('{}.{}'.format(pushbutton['load'], mp.current_process().name))
+                deleted_ids, NAPs, wavs, wav_audio_ids, NAP_hashes, audio_classifier, maxlen, audio_memory = utils.load('{}.{}'.format(pushbutton['load'], mp.current_process().name))
                             
 
 def new_dream(audio_memory):
@@ -1051,7 +1055,7 @@ def _project(audio_id, sound_to_face, NAP, video_producer):
     except:
         matches = filter(lambda key: key[0] == audio_id, video_producer.keys())
         if len(matches):
-            tarantino = utils.load_esn(video_producer[matches[0]])
+            tarantino = utils.load_esn(video_producer[random.choice(matches)])
         else:
             tarantino = utils.load_esn(video_producer[random.choice(video_producer.keys())])
         return tarantino(NAP)
