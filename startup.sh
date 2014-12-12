@@ -25,5 +25,4 @@ python communication.py autorespond_sentence 1
 python communication.py roboActive 1
 python communication.py load
 
-
-
+xte 'mousemove 10 10'
