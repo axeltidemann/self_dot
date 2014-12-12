@@ -31,7 +31,7 @@ except:
     print '*****************************************'
 
 connected = False
-pan1 = 70
+pan1 = 60
 tilt1 = 20
 pan2 = 30
 tilt2 = 45
@@ -89,6 +89,7 @@ def robocontrol(host):
                 # send pan position to head (eg. 'p 60')
                 pan1 += int((value)*120)
                 #pan1 += int((value)*80)
+                pan1 = np.clip(pan1, 5, 60)
                 if pan1 < 5: 
                     pan1 += 180
                     memrec_turnoff = True
@@ -108,7 +109,7 @@ def robocontrol(host):
                 #tilt1 += int((value-0.5)*3)
                 tilt1 += int((value)*90)
                 #print 'head 1 scaled tiltposition', value
-                tilt1 = np.clip(tilt1, 2, 45)
+                tilt1 = np.clip(tilt1, 2, 30)
                 #if tilt1 > 45: tilt1 = 45-(tilt1-45)                
                 #if tilt1 < 2: tilt1 = 2-(tilt1-2)                
                 #print 'head 1 tiltposition', tilt1

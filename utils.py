@@ -36,9 +36,9 @@ find_filename = re.compile('[0-9]+_[0-9]+_[0-9]+_[0-9]+_[0-9]+_[0-9]+\.wav')
 
 
 DREAM_HOUR = 23
-EVOLVE_HOUR = 2
-SAVE_HOUR = 3
-REBOOT_HOUR = 4
+EVOLVE_HOUR = 4
+SAVE_HOUR = 5
+REBOOT_HOUR = 6
 
 def save(filename, data):
     pickle.dump(data, file(filename, 'w'))
