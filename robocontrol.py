@@ -89,12 +89,12 @@ def robocontrol(host):
                 # send pan position to head (eg. 'p 60')
                 pan1 += int((value)*120)
                 #pan1 += int((value)*80)
-                pan1 = np.clip(pan1, 5, 60)
+                #pan1 = np.clip(pan1, 5, 60)
                 if pan1 < 5: 
-                    pan1 += 180
+                    pan1 = random.choice([15, 25])
                     memrec_turnoff = True
-                if pan1 > 205: 
-                    pan1 -= 180
+                if pan1 > 140: 
+                    pan1 = random.choice([130, 120])
                     memrec_turnoff = True
                 if memrec_turnoff:
                     sender.send_json('memoryRecording 0')
@@ -110,8 +110,8 @@ def robocontrol(host):
                 tilt1 += int((value)*90)
                 #print 'head 1 scaled tiltposition', value
                 tilt1 = np.clip(tilt1, 2, 30)
-                #if tilt1 > 45: tilt1 = 45-(tilt1-45)                
-                #if tilt1 < 2: tilt1 = 2-(tilt1-2)                
+                if tilt1 > 29: tilt1 = 25                
+                if tilt1 < 3: tilt1 = 7                
                 #print 'head 1 tiltposition', tilt1
                 ser.write('t %03dn'%tilt1)
             

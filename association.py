@@ -247,45 +247,13 @@ def makeSentence(predicate):
     sentence = [predicate]
     secondaryStream = []
     
-    # secondary association for predicate
-    posInSentence2 = 0
-    posInSentenceWidth2 = 1
-    preferredDuration2 = 2
-    preferredDurationWidth2 = 1
-    secondaryAssoc = generate(predicate, method2,
-                        neighborsWeight2, wordsInSentenceWeight2, similarWordsWeight2, 
-                        wordFaceWeight2,faceWordWeight2, 
-                        timeShortBeforeWeight2, timeShortAfterWeight2, timeShortDistance2, 
-                        timeLongBeforeWeight2, timeLongAfterWeight2, timeLongDistance2, 
-                        posInSentence2, posInSentenceWidth2, posInSentenceWeight2, 
-                        preferredDuration2, preferredDurationWidth2, durationWeight2)
-    secondaryStream.append(secondaryAssoc)
-    
-    #timeThen = time.time()
-    for i in range(numWords):
-        posInSentence = i/float(numWords)
-        posInSentenceWidth = 0.2
-        if posInSentence < 0.5:
-            preferredDuration = posInSentence*20 # longer words in the middle of a sentence (just as a test...)
-        else:
-            preferredDuration = (1-posInSentence)*20
-        preferredDurationWidth = 3
-        prevPredicate = predicate # save it for the secondary association
-        predicate = generate(predicate, method, 
-                            neighborsWeight, wordsInSentenceWeight, similarWordsWeight, 
-                            wordFaceWeight,faceWordWeight,
-                            timeShortBeforeWeight, timeShortAfterWeight, timeShortDistance, 
-                            timeLongBeforeWeight, timeLongAfterWeight, timeLongDistance, 
-                            posInSentence, posInSentenceWidth, posInSentenceWeight, 
-                            preferredDuration, preferredDurationWidth, durationWeight,plotenable=True, figure=i)
-        sentence.append(predicate)
-        
-        # secondary association for the same predicate
-        posInSentence2 = posInSentence
-        posInSentenceWidth2 = posInSentenceWidth
-        preferredDuration2 = preferredDuration*3
-        preferredDurationWidth2 = preferredDurationWidth
-        secondaryAssoc = generate(prevPredicate, method2,
+    try:
+        # secondary association for predicate
+        posInSentence2 = 0
+        posInSentenceWidth2 = 1
+        preferredDuration2 = 2
+        preferredDurationWidth2 = 1
+        secondaryAssoc = generate(predicate, method2,
                             neighborsWeight2, wordsInSentenceWeight2, similarWordsWeight2, 
                             wordFaceWeight2,faceWordWeight2, 
                             timeShortBeforeWeight2, timeShortAfterWeight2, timeShortDistance2, 
@@ -293,7 +261,59 @@ def makeSentence(predicate):
                             posInSentence2, posInSentenceWidth2, posInSentenceWeight2, 
                             preferredDuration2, preferredDurationWidth2, durationWeight2)
         secondaryStream.append(secondaryAssoc)
+    except:
+        utils.print_exception('*** TEST *** makeSentence stage 1')
+        print 'currentSettings at makeSentence stage 1 exception', currentSettings
+
+    #timeThen = time.time()
+    for i in range(numWords):
+        try:
+            posInSentence = i/float(numWords)
+            posInSentenceWidth = 0.2
+            if posInSentence < 0.5:
+                preferredDuration = posInSentence*20 # longer words in the middle of a sentence (just as a test...)
+            else:
+                preferredDuration = (1-posInSentence)*20
+            preferredDurationWidth = 3
+            prevPredicate = predicate # save it for the secondary association
+            predicate = generate(predicate, method, 
+                                neighborsWeight, wordsInSentenceWeight, similarWordsWeight, 
+                                wordFaceWeight,faceWordWeight,
+                                timeShortBeforeWeight, timeShortAfterWeight, timeShortDistance, 
+                                timeLongBeforeWeight, timeLongAfterWeight, timeLongDistance, 
+                                posInSentence, posInSentenceWidth, posInSentenceWeight, 
+                                preferredDuration, preferredDurationWidth, durationWeight,plotenable=True, figure=i)
+            sentence.append(predicate)
+        except:
+            utils.print_exception('*** TEST *** makeSentence stage 2')
+            print 'currentSettings at makeSentence stage 2 exception', currentSettings
+            print 'predicate at makeSentence stage 2 exception', predicate
         
+        try :        
+            # secondary association for the same predicate
+            posInSentence2 = posInSentence
+            posInSentenceWidth2 = posInSentenceWidth
+            preferredDuration2 = preferredDuration*3
+            preferredDurationWidth2 = preferredDurationWidth
+            secondaryAssoc = generate(prevPredicate, method2,
+                                neighborsWeight2, wordsInSentenceWeight2, similarWordsWeight2, 
+                                wordFaceWeight2,faceWordWeight2, 
+                                timeShortBeforeWeight2, timeShortAfterWeight2, timeShortDistance2, 
+                                timeLongBeforeWeight2, timeLongAfterWeight2, timeLongDistance2, 
+                                posInSentence2, posInSentenceWidth2, posInSentenceWeight2, 
+                                preferredDuration2, preferredDurationWidth2, durationWeight2)
+            secondaryStream.append(secondaryAssoc)
+        except:
+            utils.print_exception('*** TEST *** makeSentence stage 3')
+            print 'currentSettings at makeSentence stage 3 exception', currentSettings
+            print 'predicate (second) at makeSentence stage 3 exception', prevPredicate
+    
+    if len(sentence) < 1:
+        sentence = [predicate]    
+    if len(secondaryStream) < 1:
+        if predicate == 0: replacement = 1
+        else: replacement = predicate -1
+        secondaryStream.append(replacement)
     #print 'processing time for %i words: %f secs'%(numWords, time.time() - timeThen)
     return [sentence, secondaryStream]
 

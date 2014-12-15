@@ -550,7 +550,7 @@ def new_respond(control_host, learn_host, debug=False):
 
             if 'dream' in pushbutton:
                 play_events = []
-                for audio_segment in audio_memory.all_segments():
+                for audio_segment in audio_memory.all_segments()[:250]:
                     segstart, segend = audio_segment.segment_idxs
                     dur = segend - segstart
                     NAP = _extract_NAP(segstart, segend, audio_segment.wav_file)
@@ -564,6 +564,13 @@ def new_respond(control_host, learn_host, debug=False):
                     play_events.append([ dur, voice1, voice2, projection, FRAME_SIZE ])
                 print 'Dream mode playing back {} memories'.format(len(play_events))
                 scheduler.send_pyobj(play_events)
+
+            if 'save' in pushbutton:
+                utils.save('{}.{}'.format(pushbutton['save'], mp.current_process().name), [ sound_to_face, wordFace, face_to_sound, faceWord, video_producer, wavs, wav_audio_ids, audio_classifier, maxlen, NAP_hashes, face_id, face_recognizer, audio_memory ])
+
+            if 'load' in pushbutton:
+                sound_to_face, wordFace, face_to_sound, faceWord, video_producer, wavs, wav_audio_ids, audio_classifier, maxlen, NAP_hashes, face_id, face_recognizer, audio_memory = utils.load('{}.{}'.format(pushbutton['load'], mp.current_process().name))
+
 
 def new_learn_audio(host, debug=False):
     context = zmq.Context()
