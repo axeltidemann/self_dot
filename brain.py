@@ -121,7 +121,11 @@ class AudioMemory:
         return [ audio_segment for key, value in self.audio_ids.iteritems() for audio_segment in value ]
 
     def forget(self, audio_segment):
-        self.audio_ids[audio_segment.audio_id].remove(audio_segment)
+        try: 
+            self.audio_ids[audio_segment.audio_id].remove(audio_segment)
+        except:
+            pass
+        
         for _, audio_segments in self.NAP_intervals.iteritems():
             try:
                 audio_segments.remove(audio_segment)
