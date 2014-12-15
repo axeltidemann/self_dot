@@ -131,6 +131,7 @@ class AudioMemory:
                 audio_segments.remove(audio_segment)
             except:
                 continue
+            
         self._cleanse_keys()
         
     def _cleanse_keys(self):
