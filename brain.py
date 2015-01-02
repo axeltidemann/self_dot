@@ -685,18 +685,21 @@ def new_learn_audio(host, debug=False):
                     print 'AUDIO IDs after blacklisting {}'. format(audio_ids)
                     if len(audio_ids):
                         if len(audio_memory.audio_ids.keys()) > AUDIO_MEMORY_SIZE:
-                            counterQ.send_pyobj(['audio_ids_counter', None])
-                            freqs = counterQ.recv_pyobj()
-                            histogram = np.zeros(max(audio_memory.audio_ids.keys()))
-                            for index in freqs.keys():
-                                histogram[index] = freqs[index]
-                            histogram[deleted_ids] = np.inf
-                            protect = int(AUDIO_MEMORY_SIZE*PROTECT_PERCENTAGE)
-                            histogram[-protect:] = np.inf
-                            loner = np.where(histogram == min(histogram))[0][0]
-                            filter(audio_memory.forget, audio_memory.audio_ids[loner])
-                            print 'Forgetting audio_id {} from audio_memory, size after deletion: {}'.format(loner, len(audio_memory.audio_ids.keys()))
-                            deleted_ids.append(loner)
+                            try:
+                                counterQ.send_pyobj(['audio_ids_counter', None])
+                                freqs = counterQ.recv_pyobj()
+                                histogram = np.zeros(max(audio_memory.audio_ids.keys()))
+                                for index in freqs.keys():
+                                    histogram[index] = freqs[index]
+                                histogram[deleted_ids] = np.inf
+                                protect = int(AUDIO_MEMORY_SIZE*PROTECT_PERCENTAGE)
+                                histogram[-protect:] = np.inf
+                                loner = np.where(histogram == min(histogram))[0][0]
+                                filter(audio_memory.forget, audio_memory.audio_ids[loner])
+                                print 'Forgetting audio_id {} from audio_memory, size after deletion: {}'.format(loner, len(audio_memory.audio_ids.keys()))
+                                deleted_ids.append(loner)
+                            except:
+                                utils.print_exception('Tried to delete loner')
 
                         # while len(NAPs) - len(deleted_ids) > AUDIO_MEMORY_SIZE:
                         #     utils.delete_loner(counterQ, NAPs, 'audio_ids_counter', int(AUDIO_MEMORY_SIZE*PROTECT_PERCENTAGE), deleted_ids)

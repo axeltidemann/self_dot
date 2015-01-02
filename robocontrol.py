@@ -92,10 +92,10 @@ def robocontrol(host):
                 #pan1 = np.clip(pan1, 5, 60)
                 if pan1 < 5: 
                     pan1 = random.choice([15, 25])
-                    memrec_turnoff = True
-                if pan1 > 140: 
-                    pan1 = random.choice([130, 120])
-                    memrec_turnoff = True
+                    #memrec_turnoff = True
+                if pan1 > 130: 
+                    pan1 = random.choice([120, 110])
+                    #memrec_turnoff = True
                 if memrec_turnoff:
                     sender.send_json('memoryRecording 0')
                     time_reset_memrec = time.time()
