@@ -70,7 +70,10 @@ class AudioVisualMemory:
         stride = IO.VIDEO_SAMPLE_TIME / (IO.NAP_RATE/IO.NAP_STRIDE)
         length = np.floor(NAP.shape[0]*VIDEO_PERCENT_LENGTH).astype('int')
         NAP = NAP[:length:stride]
-        return np.save('{}_{}'.format(audio_segment.wav_file, uuid4()), video_esn(NAP))
+        projection = video_esn(NAP)
+        projection_filename = '{}_PROJECTION_{}'.format(audio_segment.wav_file, uuid4())
+        np.save(projection_filename, projection)
+        return projection_filename
 
     # LEGACY CRUFT FOR ASSOCIATION
     @property 
@@ -173,7 +176,7 @@ class AudioMemory:
             del self.NAP_intervals[empty_key]
 
 
-def new_respond(control_host, learn_host, debug=False):
+def respond(control_host, learn_host, debug=False):
     context = zmq.Context()
     
     eventQ = context.socket(zmq.SUB)
@@ -543,7 +546,7 @@ def new_respond(control_host, learn_host, debug=False):
                 sound_to_face, wordFace, face_to_sound, faceWord, video_producer, wavs, wav_audio_ids, audio_classifier, maxlen, NAP_hashes, face_id, face_recognizer, audio_memory = utils.load('{}.{}'.format(pushbutton['load'], mp.current_process().name))
 
 
-def new_learn_audio(host, debug=False):
+def learn_audio(host, debug=False):
     context = zmq.Context()
 
     mic = context.socket(zmq.SUB)
@@ -683,7 +686,7 @@ def new_learn_audio(host, debug=False):
                 audio.clear()
 
             if 'dream' in pushbutton:
-                print new_dream(audio_memory)
+                print dream(audio_memory)
                      
             if 'save' in pushbutton:
                 utils.save('{}.{}'.format(pushbutton['save'], mp.current_process().name), [ deleted_ids, NAPs, wavs, wav_audio_ids, NAP_hashes, audio_classifier, maxlen, audio_memory ])
@@ -692,7 +695,7 @@ def new_learn_audio(host, debug=False):
                 deleted_ids, NAPs, wavs, wav_audio_ids, NAP_hashes, audio_classifier, maxlen, audio_memory = utils.load('{}.{}'.format(pushbutton['load'], mp.current_process().name))
                             
 
-def new_dream(audio_memory):
+def dream(audio_memory):
     
     #import matplotlib.pyplot as plt
     #plt.ion()
