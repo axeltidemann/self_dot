@@ -84,47 +84,47 @@ def _valid_file(filename, threshold=.1):
     except:
         return False    
 
-def _cochlear_trim_sai_marginals(filename_and_indexes):
+def _cochlear_trim_sai_marginals(candidate):
     try:
-        filename, norm_segstart, norm_segend, audio_id, NAP_detail = filename_and_indexes
-        sai_video_filename = '{}_sai_video_{}'.format(filename, NAP_detail)
+        audio_segment, NAP_detail = candidate
+        sai_video_filename = '{}_sai_video_{}'.format(audio_segment.wav_file, NAP_detail)
         if os.path.isfile('{}.npy'.format(sai_video_filename)):
           return sai_video_filename
 
         if NAP_detail == 'high':
             try: 
-                NAP = utils.csv_to_array(filename+'cochlear'+NAP_detail)
+                NAP = utils.csv_to_array(audio_segment.wav_file+'cochlear'+NAP_detail)
             except:
                 NAP = brain.cochlear(filename, stride=1, rate=44100, apply_filter=0, suffix='cochlear'+NAP_detail)
         if NAP_detail == 'low':
             try: 
-                NAP = utils.csv_to_array(filename+'cochlear'+NAP_detail)
+                NAP = utils.csv_to_array(audio_segment.wav_file+'cochlear'+NAP_detail)
             except: 
-                NAP = brain.cochlear(filename, stride=IO.NAP_STRIDE, rate=IO.NAP_RATE, apply_filter=0, suffix='cochlear'+NAP_detail) # Seems to work best, in particular when they are all the same.
+                NAP = brain.cochlear(audio_segment.wav_file, stride=IO.NAP_STRIDE, rate=IO.NAP_RATE, apply_filter=0, suffix='cochlear'+NAP_detail) # Seems to work best, in particular when they are all the same.
 
         num_channels = NAP.shape[1]
         input_segment_width = 2048
+        sai_width = 1024
         sai_params = CreateSAIParams(num_channels=num_channels,
                                      input_segment_width=input_segment_width,
                                      trigger_window_width=input_segment_width,
-                                     sai_width=1024)
+                                     sai_width=sai_width)
 
         sai = pysai.SAI(sai_params)
 
-        NAP = utils.trim_right(NAP[ np.int(np.rint(NAP.shape[0]*norm_segstart)) : np.int(np.rint(NAP.shape[0]*norm_segend)) ], threshold=.05)
+        NAP = utils.trim_right(NAP[ NAP.shape[0]*audio_segment.normalized_start : NAP.shape[0]*audio_segment.normalized_end ], threshold=.05)
         sai_video = [ np.copy(sai.RunSegment(input_segment.T)) for input_segment in utils.chunks(NAP, input_segment_width) ]
-        del NAP        
         np.save(sai_video_filename, np.array([ sai_rectangles(frame) for frame in sai_video ]))
         return sai_video_filename
 
     except:
-        print utils.print_exception('Calculation SAI video failed for file {}, NAP detail {}'.format(filename, NAP_detail))
+        print utils.print_exception('Calculation SAI video failed for file {}, NAP detail {}'.format(audio_segment.wav_file, NAP_detail))
         return False
 
-def experiment(filenames, k):
+def experiment(candidates, k):
     t0 = time.time()
     pool = mp.Pool() 
-    sai_video_marginals = pool.map(_cochlear_trim_sai_marginals, filenames)
+    sai_video_marginals = pool.map(_cochlear_trim_sai_marginals, candidates)
     pool.close()
     t1 = time.time()
     print 'Cochlear SAI marginals calculated in {} seconds'.format(t1 - t0)

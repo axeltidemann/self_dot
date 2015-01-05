@@ -360,8 +360,8 @@ if __name__ == '__main__':
     me = mp.current_process()
     print 'SELF MAIN PID', me.pid
 
-    utils.MyProcess(target=IO.audio, name='AUDIO').start() 
-    utils.MyProcess(target=IO.video, name='VIDEO').start()
+    utils.MyProcess(target=IO.audio, name='AUDIO IO').start() 
+    utils.MyProcess(target=IO.video, name='VIDEO IO').start()
     utils.MyProcess(target=brain.face_extraction, args=('localhost',False,True,), name='FACE EXTRACTION').start()
     utils.MyProcess(target=brain.new_respond, args=('localhost','localhost',True), name='RESPONDER').start()
     utils.MyProcess(target=brain.new_learn_audio, args=('localhost',True), name='AUDIO LEARN').start()

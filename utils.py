@@ -49,6 +49,12 @@ def load(filename):
     print 'Part of brain loaded from file {} ({})'.format(filename, filesize(filename))
     return data
 
+def insert(D, key, value):
+    if key in D:
+        D[key].append(value)
+    else:
+        D[key] = [ value ]
+
 def filetime(filename):
     return time.mktime(time.strptime(filename[filename.rfind('/')+1:filename.rfind('.wav')], '%Y_%m_%d_%H_%M_%S'))
 
@@ -447,7 +453,7 @@ def scheduler(host):
             wait_time, voice1, voice2, projection, frame_size = to_be_played.pop(0)
             sender.send_json(voice1)
             sender.send_json(voice2)
-            for row in projection:
+            for row in np.load('{}.npy'.format(projection)):
                 send_array(projector, np.resize(row, frame_size[::-1]))
                 
             if len(to_be_played) == 0:
@@ -647,6 +653,9 @@ def find_last_valid_brain():
     return []
 
 def daily_routine(host):
+    print 'DAILY GRIND DISABLED'
+    return 
+
     grind = sched.scheduler(time.time, time.sleep)
     context = zmq.Context()
 
