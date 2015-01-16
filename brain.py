@@ -693,10 +693,10 @@ def learn_audio(host, debug=False):
                 print dream(audio_memory)
                      
             if 'save' in pushbutton:
-                utils.save('{}.{}'.format(pushbutton['save'], mp.current_process().name), [ deleted_ids, NAPs, wavs, wav_audio_ids, NAP_hashes, audio_classifier, maxlen, audio_memory ])
+                utils.save('{}.{}'.format(pushbutton['save'], mp.current_process().name), [ deleted_ids, NAPs, wavs, wav_audio_ids, NAP_hashes, audio_memory ])
                 
             if 'load' in pushbutton:
-                deleted_ids, NAPs, wavs, wav_audio_ids, NAP_hashes, audio_classifier, maxlen, audio_memory = utils.load('{}.{}'.format(pushbutton['load'], mp.current_process().name))
+                deleted_ids, NAPs, wavs, wav_audio_ids, NAP_hashes, audio_memory = utils.load('{}.{}'.format(pushbutton['load'], mp.current_process().name))
                             
 
 def dream(audio_memory):

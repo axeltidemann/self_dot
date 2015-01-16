@@ -653,9 +653,6 @@ def find_last_valid_brain():
     return []
 
 def daily_routine(host):
-    print 'DAILY GRIND DISABLED'
-    return 
-
     grind = sched.scheduler(time.time, time.sleep)
     context = zmq.Context()
 

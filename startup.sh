@@ -2,6 +2,7 @@
 
 sleep 5
 qjackctl -s &
+sleep 10
 
 cd /home/self/Projects/self_dot/
 
@@ -9,7 +10,7 @@ now=$(date +"%Y_%m_%d_%H_%M_%S")
 
 python -u self_dot.py &> "OUTPUT_$now" &
 
-gnome-terminal --window-with-profile=self_output -e "tail -f `ls -t OUTPUT* | head -1`" &
+gnome-terminal --window-with-profile=self_output -e "tail -f OUTPUT_$now" &
 
 sleep 10
 

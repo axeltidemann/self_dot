@@ -179,7 +179,7 @@ def audio():
         if i_am_speaking != prev_i_am_speaking:         # send if changed
             sender.send_json('i_am_speaking {}'.format(int(i_am_speaking)))
         prev_i_am_speaking = i_am_speaking
-        
+        markerTempTab = cGet("giMarkerTemp")        
         panposition = cs.GetChannel("panalyzer_pan")
         in_amp = cs.GetChannel("followdb") #rather use envelope follower in dB than pure rms channel "in_amp")
         in_pitch = cs.GetChannel("in_pitch")
@@ -258,7 +258,7 @@ def audio():
                 segmentlist = segmentstring.split('\n')
                 segmentlist.pop() # ditch the empty list item at the end
                 markertablist = []
-                markerTempTab = cGet("giMarkerTemp")
+
                 for i in range(32):
                     markertime = tGet(int(markerTempTab), i)
                     markertablist.append(markertime)
