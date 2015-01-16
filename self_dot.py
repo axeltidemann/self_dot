@@ -180,7 +180,7 @@ class Controller:
                 try:
                     brain.cochlear(utils.wait_for_wav(wav_file), stride=IO.NAP_STRIDE, rate=IO.NAP_RATE)
                 except:
-                    print 'SHOULD {} BE BLACKLISTED?'.format(wav_file)
+                    print 'SHOULD {} BE BLACKLISTED?'.format(wav_file) # YES.
                     black_list.append(wav_file)
                 print 'Calculating cochlear neural activation patterns took {} seconds'.format(time.time() - t0)
             

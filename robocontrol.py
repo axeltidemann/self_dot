@@ -87,6 +87,8 @@ def robocontrol(host):
             memrec_turnon = False
             print 'ROBONCTROL TURN ON MEMREC AFTER HEAD SPIN'
         if robohead == 1:
+            if axis == 'pan': #when we have adjustment due to sound input...
+                search_pan_index = 0 #do only fine adjustment
             if axis == 'search': #searching for a face
                 pan1 += (random.random()-0.5)*20
                 search_pan_index += 1

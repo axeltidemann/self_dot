@@ -130,6 +130,8 @@ class AudioMemory:
     
     def learn(self, NAP, wav_file, segstart, segend, total_duration):
         best_match, crude_hash, fine_hash, clean_key, overlap_key = self.find(NAP)
+
+        # This is where the logging of the audio_id counter should take place.
         
         if not len(best_match):
             audio_id = self.audio_id_counter
@@ -153,7 +155,9 @@ class AudioMemory:
         if len(self.audio_ids[audio_id]) > MAX_CATEGORY_SIZE:
             self.forget(self.audio_ids[audio_id][0])
             print 'Forgetting oldest member of audio_id {}, size after deletion: '.format(audio_id, len(self.audio_ids[audio_id]))
-        
+
+        # Check to see if we have too many memories, delete the oldest least used.
+
         return audio_segment
 
     def all_segments(self):
@@ -540,10 +544,10 @@ def respond(control_host, learn_host, debug=False):
                 scheduler.send_pyobj(play_events)
 
             if 'save' in pushbutton:
-                utils.save('{}.{}'.format(pushbutton['save'], mp.current_process().name), [ sound_to_face, wordFace, face_to_sound, faceWord, video_producer, wavs, wav_audio_ids, audio_classifier, maxlen, NAP_hashes, face_id, face_recognizer, audio_memory ])
+                utils.save('{}.{}'.format(pushbutton['save'], mp.current_process().name), [ sound_to_face, wordFace, face_to_sound, faceWord, video_producer, wavs, wav_audio_ids, NAP_hashes, face_id, face_recognizer, audio_memory, AV_memory ])
 
             if 'load' in pushbutton:
-                sound_to_face, wordFace, face_to_sound, faceWord, video_producer, wavs, wav_audio_ids, audio_classifier, maxlen, NAP_hashes, face_id, face_recognizer, audio_memory = utils.load('{}.{}'.format(pushbutton['load'], mp.current_process().name))
+                sound_to_face, wordFace, face_to_sound, faceWord, video_producer, wavs, wav_audio_ids, NAP_hashes, face_id, face_recognizer, audio_memory, AV_memory = utils.load('{}.{}'.format(pushbutton['load'], mp.current_process().name))
 
 
 def learn_audio(host, debug=False):
@@ -576,11 +580,11 @@ def learn_audio(host, debug=False):
     wav_audio_ids = {}
     NAP_hashes = {}
 
-    audio_classifier = []
-    audio_recognizer = []
-    global_audio_recognizer = []
-    mixture_audio_recognizer = []
-    maxlen = []
+    # audio_classifier = []
+    # audio_recognizer = []
+    # global_audio_recognizer = []
+    # mixture_audio_recognizer = []
+    # maxlen = []
 
     deleted_ids = []
     

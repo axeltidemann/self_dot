@@ -9,6 +9,8 @@ now=$(date +"%Y_%m_%d_%H_%M_%S")
 
 python -u self_dot.py &> "OUTPUT_$now" &
 
+gnome-terminal --window-with-profile=self_output -e "tail -f `ls -t OUTPUT* | head -1`" &
+
 sleep 10
 
 python communication.py calibrateAudio
@@ -26,3 +28,5 @@ python communication.py roboActive 1
 python communication.py load
 
 xte 'mousemove 10 10'
+
+wmctrl -a Output
