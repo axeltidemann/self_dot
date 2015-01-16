@@ -374,4 +374,5 @@ if __name__ == '__main__':
     utils.MyProcess(target=idle, args=('localhost',), name='IDLER').start()
     utils.MyProcess(target=utils.counter, args=('localhost',), name='COUNTER').start()
     utils.MyProcess(target=utils.sentinel, args=('localhost',), name='SENTINEL').start()
+    utils.MyProcess(target=utils.VIDIOC_DQBUF, args=('localhost',), name='VIDEO BUFFER WATCHER').start()
     utils.daily_routine('localhost')
