@@ -65,8 +65,7 @@ def idle(host):
                       
         if time.time() - face_timer > np.random.rand()*1.5 + 1:
             print '[self.] searches for a face'
-            robocontrol.send_json([ 1, 'pan', (2*np.random.rand() -1)/10 ])
-            robocontrol.send_json([ 1, 'tilt', (2*np.random.rand()-1)/10])
+            robocontrol.send_json([ 1, 'search', 0])
             face_timer = time.time()
 
         if stateQ in events:

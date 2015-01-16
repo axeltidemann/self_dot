@@ -75,6 +75,9 @@ def robocontrol(host):
     time_reset_memrec = time.time()
     memrec_turnon = False
     memrec_turnoff = False
+    search_pan_index = 0
+    search_tilt_index = 0
+    search_tiltpos = [20, 10, 30, 20, 5, 15, 25, 35, 20, 25, 15, 5, 0, 10, 20, 30, 40, 30]
     while True:
     	#print 'robocontrol is running %i', time.time()-timeStamp
     	time.sleep(.05)
@@ -84,16 +87,23 @@ def robocontrol(host):
             memrec_turnon = False
             print 'ROBONCTROL TURN ON MEMREC AFTER HEAD SPIN'
         if robohead == 1:
+            if axis == 'search': #searching for a face
+                pan1 += (random.random()-0.5)*20
+                search_pan_index += 1
+                search_pan_index %= 1000
+                if search_pan_index%random.choice([5,6,8,10,12]) == 0:
+                    pan1 += random.choice([-30, 30])
+                axis = 'pan' # activates write to pan, with range control
+                search_tilt_index = (search_tilt_index+1)%len(search_tiltpos)
+                tilt1 = search_tiltpos[search_tilt_index]
+                ser.write('t %03dn'%tilt1) # directly write tilt, since value is not random
             if axis == 'pan':
-                #dprint 'head 1 panposition', value
                 # send pan position to head (eg. 'p 60')
                 pan1 += int((value)*120)
-                #pan1 += int((value)*80)
-                pan1 = np.clip(pan1, 5, 60)
                 if pan1 < 5: 
                     pan1 += 180
                     memrec_turnoff = True
-                if pan1 > 205: 
+                if pan1 > 230: 
                     pan1 -= 180
                     memrec_turnoff = True
                 if memrec_turnoff:
@@ -104,15 +114,10 @@ def robocontrol(host):
                     print 'ROBONCTROL TURN OFF MEMREC BEFORE HEAD SPIN'
                 ser.write('p %03dn'%pan1)
             if axis == 'tilt':
-                #print 'head 1 tiltposition', value
-                # send til position to head (eg. 'p 60')
-                #tilt1 += int((value-0.5)*3)
+                # send tilt position to head (eg. 'p 60')
                 tilt1 += int((value)*90)
-                #print 'head 1 scaled tiltposition', value
-                tilt1 = np.clip(tilt1, 2, 30)
-                #if tilt1 > 45: tilt1 = 45-(tilt1-45)                
-                #if tilt1 < 2: tilt1 = 2-(tilt1-2)                
-                #print 'head 1 tiltposition', tilt1
+                if tilt1 > 40: tilt1 = 40-(tilt1-45)                
+                if tilt1 < 2: tilt1 = 2-(tilt1-2)                
                 ser.write('t %03dn'%tilt1)
             
         if robohead == 2:
