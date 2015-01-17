@@ -473,6 +473,7 @@ def reboot():
     call(['ps', 'aux'], stdout=status)
     call(['df', '-h'], stdout=status)
     status.close()
+    call(['/etc/init.d/networking', 'stop'])
     call(['shutdown', '-r', 'now'])
     
 def counter(host):
