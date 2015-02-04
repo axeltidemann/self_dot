@@ -2,6 +2,7 @@
 ; map channels to channels, with scaling
 ; use for testing how the different input parameters affect the sound directly (not going through the NN)
 
+
 ; ******************************
 ; test, for spectral synth
 ; get spectral profile from sound file, 
