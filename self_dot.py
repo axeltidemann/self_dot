@@ -289,6 +289,10 @@ class Controller:
 
             if 'musicMode' in message:
                 self.event.send_json({ 'musicMode': message[10:] })
+                if int(message[10:]) > 0:
+                    self.event.send_json({ 'csinstr': 'i 22 0 2 "statusThresh" 4' }) # change release threshold for music mode
+                else:
+                    self.event.send_json({ 'csinstr': 'i 22 0 2 "statusThresh" 9' }) # set it back to the original (here be dragons)
 
             if 'inputLevel' in message:
                 self.event.send_json({ 'inputLevel': message[11:] })
