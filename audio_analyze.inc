@@ -49,12 +49,6 @@
 	;iStatusThresh	= 9					    ; status release threshold, signal must drop this much below transient level before we say that the audio segment is finished
 	kStatusRel  chnget "statusRel"      ; status release time, hold status=1 for this long after signal has dropped below
     ;iStatusRel	= 0.4;0.2					; status release time, hold status=1 for this long after signal has dropped below threshold
-;	iDecResponse	= 100					; decay rate analysis response time
-;	krms1F		tonek krms1, 5
-;	krms1F_dB	= ampdbfs(krms1F)
-;	krms1F_dBdel	delayk	krms1F_dB, iDecResponse/1000	; delay with response time for comparision of levels
-;	kDecayRate_dB	limit krms1F_dBdel-krms1F_dB, 0, 1		; decay rate  ...
-;	kStatusRel2	= (kDecayRate_dB < .01 ? (.01-kDecayRate_dB)*5 : 1/kr) ; prolong status release when decay rate is very slow
 	kstate		init 0
 	kstate		= (ktrig1 > 0 ? 1 : kstate)
 	ksegStart	trigger kstate, 0.5, 0
@@ -65,20 +59,54 @@
 	if kstaTrigRel > 0 then
 	reinit releaseState
 	endif
+		
 releaseState:
     iStatusRel      = i(kStatusRel)
 	kreleaseFlag	linseg 1, iStatusRel, 0, .1, 0
 	kreleaseFlagT	trigger kreleaseFlag, 0.02, 1		; trig when release ends
 rireturn
-;	if kreleaseFlagT > 0 then 
-;	reinit release2
-;	endif
-;release2:
-;	kreleaseFlag2	linseg 1, i(kStatusRel2), 0, .1, 0
-;rireturn
+
+; for music mode:
+; - trig on transient, as now
+; - start timer on start
+; - stop rec if state goes zero
+; - stop rec if more than 2 seconds since start
+; - on record stop: start pausetimer (can use same timer with offset)
+; - clamp state to zero until pausetimer > 5 sec
+; - do this after the releaseState business?
+; - allow signal to be processed as usual, but
+;   - reset thresholds and triggers before re-enabling (after pause timer)
+    
 	kstate_Rel	= ((kstate == 0) && (kreleaseFlag < 0.01)? 0 : 1)
 	kstatus		= kstate_Rel
 	kstatusTrigOn	trigger kstatus, 0.5, 0
+
+    kMusicTimer init 0
+    kMusicTimerMute init 0
+    kMusicMode  chnget "musicMode"
+    if (kMusicMode > 0) && (kMusicTimerMute == 0) then
+    if (kMusicTimer > 3) then
+    kstatus  = 0
+    endif
+    if (kMusicTimer < 10) then
+    kstatusTrigOn  = 0
+    else
+    kMusicTimerMute = 1
+    endif
+    endif
+    
+    if (kMusicTimerMute == 1) && (ktrig1 == 1) then
+    kMusicTimerMute = 0
+    reinit musicTimer
+    endif
+    
+    if kstatusTrigOn > 0 then
+    reinit musicTimer
+    endif    
+musicTimer:
+    kMusicTimer line 0, 1, 1
+rireturn
+
 	kstatusTrigOff	trigger kstatus, 0.5, 1
 	kstatusTrig	= kstatusTrigOn-kstatusTrigOff	; pulse 1 at start, pulse -1 at end of segment
 
@@ -88,8 +116,14 @@ printk2 ktrig1, 10
 printk2 kstatus, 15
 endif
 
-
-
+    Smute   sprintfk "*--*--*Music timer mute = %i", kMusicTimerMute
+            puts Smute, kMusicTimerMute+1
+    Strig   sprintfk " * ktrig1 = %i", ktrig1
+            puts Strig, ktrig1+1
+    Sstate  sprintfk " ** ** kstate = %i", kstate
+            puts Sstate, kstate+1
+    Sstatus sprintfk " *** *** *** kstatus = %i", kstatus
+            puts Sstatus, kstatus+1
 /*
 
 ; ***************

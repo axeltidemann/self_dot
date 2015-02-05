@@ -8,6 +8,8 @@
         ;;;NO!;chnset -10, "td_AmpAdjust"      ; approximate amp compensation for EQ
         
         chnset -60, "inputNoisefloor"
+        chnset 0, "musicMode"
+
 
         ; transient detect parameters
         chnset 1.7, "in_envelopeRelease"    ; envelope follower release

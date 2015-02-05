@@ -494,4 +494,9 @@ def audio():
 
                 except Exception, e:
                     print e, 'Playfile aborted.'
+        
+            if 'musicMode' in pushbutton:
+                value = pushbutton['musicMode']
+                cs.InputMessage('i 22 0 1 "musicMode" %i'%int(value))
+
 

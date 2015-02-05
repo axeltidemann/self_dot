@@ -287,6 +287,9 @@ class Controller:
             if 'autorespond_sentence' in message:
                 self.state['autorespond_sentence'] = message[21:] in ['True', '1']
 
+            if 'musicMode' in message:
+                self.event.send_json({ 'musicMode': message[10:] })
+
             if 'inputLevel' in message:
                 self.event.send_json({ 'inputLevel': message[11:] })
 

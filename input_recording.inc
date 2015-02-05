@@ -10,6 +10,10 @@
         Swavname        strget p4
         a1              chnget "rec_in1"
 
+        ; release flag handling, trigger off gate also on external termination of instr instance
+                        xtratim 1/kr
+        kreleaseFlag    release
+
         ; write pitch data to a separate file
         istrlen         strlen Swavname
         Spitchfile      strsub Swavname, 0, istrlen-4
@@ -79,6 +83,7 @@ rireturn
 
         kgatetrig       trigger kgate, 0.5, 0
         kgatetrig_off   trigger kgate, 0.5, 1
+        kgatetrig_off   += kreleaseFlag
         ;Sgatetrig       sprintfk "* Gate trigger on %i at time %f", kgatetrig, krunning_time
         ;puts Sgatetrig, kgatetrig+1
         
@@ -169,7 +174,7 @@ endif
 
 
                         xtratim 1/kr
-        krelease        release
+        kreleaseFlag    release
 
         ; save max amp for this sound file so we can normalize each segment on the fly later
         kmetro          metro 5
@@ -178,7 +183,7 @@ endif
         kmaxamp         max, kmaxamp, kmaxa
                         chnset kmaxamp, "memRecMaxAmp"            
 
-        kactive         = 1-krelease
+        kactive         = 1-kreleaseFlag
                         chnset kactive, "memRecActive"          ; tell Python that we're recording
 
 
