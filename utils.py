@@ -538,21 +538,10 @@ def delete_loner(counterQ, data, query, protect, deleted_ids):
     
     print '{} delete_id = {}'.format(query, loner)
 
-def VIDIOC_DQBUF(host):
-    context = zmq.Context()
-    life_signal_Q = context.socket(zmq.PUSH)
-    life_signal_Q.connect('tcp://{}:{}'.format(host, IO.SENTINEL))
-
-    output_file = max(glob.glob('OUTPUT*'), key=os.path.getctime).rstrip()
-
-    f = open(output_file)
-    while True:
-        time.sleep(IO.VIDIOC_DQBUF_SEARCH_TIME)
-        s = mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_READ)
-        if s.find('VIDIOC_DQBUF: No such device') > -1:
-            print 'SHUTTING DOWN BECAUSE OF VIDEO BUFFER ERROR.'
-            life_signal_Q.send_pyobj('VIDIOC_DQBUF')
-            break
+def inside(r, q):
+    (rx, ry), (rw, rh) = r
+    (qx, qy), (qw, qh) = q
+    return rx > qx and ry > qy and rx + rw < qx + qw and ry + rh < qy + qh
 
 def warm_restart():
     print 'Doing a warm restart'

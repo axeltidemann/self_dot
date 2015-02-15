@@ -29,6 +29,12 @@ cd Oger/src
 python setup.py install
 ```
 
+```
+git clone https://github.com/pykalman/pykalman.git
+cd pykalman
+python setup.py install
+```
+
 Note: when you install the following software, it is advised that you
 install it into $VIRTUAL_ENV, so it will be contained within
 the virtualenv, and more robust. This is shown as an example under

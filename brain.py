@@ -32,6 +32,7 @@ import IO
 import association
 import my_sai_test as mysai
 import myCsoundAudioOptions
+from pykalman import KalmanFilter
 
 try:
     opencv_prefix = os.environ['VIRTUAL_ENV']
@@ -910,8 +911,9 @@ def cognition(host):
                  
 # LOOK AT EYES? CAN YOU DETERMINE ANYTHING FROM THEM?
 # PRESENT VISUAL INFORMATION - MOVE UP OR DOWN
-def face_extraction(host, extended_search=False, show=False):
+def people_detection(host, extended_search, people_detect, show):
     import cv2
+    window_name = 'Visual detection'
 
     eye_cascade = cv2.cv.Load(EYE_HAAR_CASCADE_PATH)
     face_cascade = cv2.cv.Load(FACE_HAAR_CASCADE_PATH)
@@ -929,14 +931,40 @@ def face_extraction(host, extended_search=False, show=False):
     robocontrol.connect('tcp://localhost:{}'.format(IO.ROBO))
 
     if show:
-        cv2.namedWindow('Faces', cv2.WINDOW_NORMAL)
-    i = 0
-    j = 1
+        cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
+
+    face_detection_frame = 2
+    motor_command_frame = 1
+    i,j = [0,0]
+
+    # We track object with constant velocity (assume people don't accelerate), measure just position
+    transition_matrix=[[1,0,1,0],[0,1,0,1],[0,0,1,0],[0,0,0,1]]
+    observation_matrix=[[1,0,0,0],[0,1,0,0]]
+
+    init_frame = utils.recv_array(camera).copy()
+    init_state = [init_frame.shape[1]/2, init_frame.shape[0]/2, 0, 0] # Dead center, no velocity
+    init_cov = 1.0e-3*np.eye(4)
+    transistion_cov = 1.0e-4*np.eye(4)
+    observation_cov = 1.0e-1*np.eye(2)
+
+    kf=KalmanFilter(transition_matrices=transition_matrix,
+            observation_matrices=observation_matrix,
+            initial_state_mean=init_state,
+            initial_state_covariance=init_cov,
+            transition_covariance=transistion_cov,
+            observation_covariance=observation_cov)
+
+    no_faces = np.ma.array([0,0])
+    no_faces.mask = np.ma.masked
+    # Bootstrapping the Kalman filter as if there was someone right in front of self.
+    means, covs = kf.filter(np.tile(init_state[:2], [2,1])) 
+    means = means[-1]
+    covs = covs[-1]
     while True:
         frame = utils.recv_array(camera).copy() # Weird, but necessary to do a copy.
 
-        if j%2 == 0: # Every N'th frame we do face extraction.
-            j = 1
+        if j%face_detection_frame == 0: 
+            j = 0
         else:
             j += 1
             continue
@@ -975,19 +1003,58 @@ def face_extraction(host, extended_search=False, show=False):
             
             utils.send_array(publisher, gray_face)
             i += 1
-            if i%1 == 0:
+            if i%motor_command_frame == 0:
                 if abs(x_diff) > .1:
                     robocontrol.send_json([ 1, 'pan', .25*np.sign(x_diff)*x_diff**2]) 
                 robocontrol.send_json([ 1, 'tilt', .5*np.sign(y_diff)*y_diff**2])
                 i = 0
-    
+                
+        # People detection
+        found_filtered = []
+        if people_detect:
+            found = list(cv2.cv.HOGDetectMultiScale(cv2.cv.fromarray(frame), storage, win_stride=(8,8), padding=(32,32), scale=1.05, group_threshold=2))
+            for r in found:
+                insidef = False
+                for q in found:
+                    if utils.inside(r, q):
+                        insidef = True
+                        break
+                if not insidef:
+                    found_filtered.append(r)
+
         if show:
+            # Show Kalman filter prediction
+            measurement = [ x + w/2, y + h/2 ] if faces else no_faces
+            means, covs = kf.filter_update(means, covs, measurement)
+            center = tuple(map(int, means[:2]))
+            radius = 10
+            print covs
+            cv2.circle(frame, center, radius, (255,255,255))
+            # Print covariance ellipse
+            covar = np.array(covs)
+            covar = covar[:2,:2]
+            v, w = np.linalg.eigh(covar)
+            u = w[0] / np.linalg.norm(w[0])
+            angle = np.arctan(u[1] / u[0])
+            angle = 180 * angle / np.pi
+            chisquare_val = 2.4477
+            halfmajoraxissize=chisquare_val*np.sqrt(v[0])
+            halfminoraxissize=chisquare_val*np.sqrt(v[1])
+            cv2.ellipse(frame, center, 
+
+            for r in found_filtered:
+                (rx, ry), (rw, rh) = r
+                tl = (rx + int(rw*0.1), ry + int(rh*0.07))
+                br = (rx + int(rw*0.9), ry + int(rh*0.87))
+                cv2.rectangle(frame, tl, br, (0, 255, 0), 3)
+
             if faces:
                 cv2.rectangle(frame, (x,y), (x+w,y+h), (0, 0, 255), 2)
                 cv2.line(frame, (x + w/2, y + h/2), (rows/2, cols/2), (255,0,0), 2)
                 frame[-100:,-100:] = resized_face
                 cv2.waitKey(1)
-            cv2.imshow('Faces', frame)
+
+            cv2.imshow(window_name, frame)
 
 
 def train_network(x, y, output_dim=100, leak_rate=.9, bias_scaling=.2, reset_states=True, use_pinv=True):

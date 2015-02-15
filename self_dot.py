@@ -368,7 +368,7 @@ if __name__ == '__main__':
 
     utils.MyProcess(target=IO.audio, name='AUDIO IO').start() 
     utils.MyProcess(target=IO.video, name='VIDEO IO').start()
-    utils.MyProcess(target=brain.face_extraction, args=('localhost',False,True,), name='FACE EXTRACTION').start()
+    utils.MyProcess(target=brain.people_detection, args=('localhost',False,False,True), name='FACE EXTRACTION').start()
     utils.MyProcess(target=brain.respond, args=('localhost','localhost',True), name='RESPONDER').start()
     utils.MyProcess(target=brain.learn_audio, args=('localhost',True), name='AUDIO LEARN').start()
     utils.MyProcess(target=brain.learn_video, args=('localhost',), name='VIDEO LEARN').start()
@@ -381,5 +381,4 @@ if __name__ == '__main__':
     utils.MyProcess(target=idle, args=('localhost',), name='IDLER').start()
     utils.MyProcess(target=utils.counter, args=('localhost',), name='COUNTER').start()
     utils.MyProcess(target=utils.sentinel, args=('localhost',), name='SENTINEL').start()
-    utils.MyProcess(target=utils.VIDIOC_DQBUF, args=('localhost',), name='VIDEO BUFFER WATCHER').start()
-    utils.daily_routine('localhost')
+    #utils.daily_routine('localhost')
