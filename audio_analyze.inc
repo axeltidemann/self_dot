@@ -7,8 +7,10 @@
 	ktd_LoShelfFq	chnget "td_LoShelfFq"
 	ktd_LoShelfGain	chnget "td_LoShelfGain"
 	;;ktd_AmpAdjust	chnget "td_AmpAdjust"
-	
-    atd_input	pareq a1, ktd_HiShelfFq, ampdb(ktd_HiShelfGain), 0.7,  2
+
+    kmusicAmpResetter init 1
+    printk2 kmusicAmpResetter	
+    atd_input	pareq a1*kmusicAmpResetter, ktd_HiShelfFq, ampdb(ktd_HiShelfGain), 0.7,  2
     atd_input	pareq atd_input, ktd_HiShelfFq, ampdb(ktd_LoShelfGain), 0.7,  1
     ;;atd_input	= atd_input*ampdb(ktd_AmpAdjust)
 
@@ -84,25 +86,36 @@ rireturn
     kMusicTimer init 0
     kMusicTimerMute init 0
     kMusicMode  chnget "musicMode"
+    
     if (kMusicMode > 0) && (kMusicTimerMute == 0) then
-    if (kMusicTimer > 3) then
-    kstatus  = 0
+      
+      if (kMusicTimer > 3) then
+      kstatus  = 0
+      endif
+      
+      if (kMusicTimer < 10) then
+      kstatusTrigOn  = 0
+      else
+      kMusicTimerMute = 1
+      reinit musicAmpResetter
+      endif
+    
     endif
-    if (kMusicTimer < 10) then
-    kstatusTrigOn  = 0
-    else
-    kMusicTimerMute = 1
-    endif
-    endif
+
+musicAmpResetter:
+    iresetTime          rnd31 4, 1
+    kmusicAmpResetter   linseg 0, iresetTime, 0, 0.5, 1, 1, 1
+rireturn
     
     if (kMusicTimerMute == 1) && (ktrig1 == 1) then
-    kMusicTimerMute = 0
-    reinit musicTimer
+      kMusicTimerMute = 0
+      reinit musicTimer
     endif
     
     if kstatusTrigOn > 0 then
-    reinit musicTimer
+      reinit musicTimer
     endif    
+
 musicTimer:
     kMusicTimer line 0, 1, 1
 rireturn
