@@ -35,7 +35,7 @@ from brain import NUMBER_OF_BRAINS
 import IO
 findfloat=re.compile(r"[0-9.]*")
 find_filename = re.compile('[0-9]+_[0-9]+_[0-9]+_[0-9]+_[0-9]+_[0-9]+\.wav')
-
+import myCsoundAudioOptions
 
 DREAM_HOUR = 23
 EVOLVE_HOUR = 4
@@ -350,7 +350,7 @@ def getLatestMemoryWavs(howmany):
     '''
     Find the N latest recorded memory wave files. LIMITS TO 100 latest.
     '''
-    path = '/media/scrooge/' #'./memory_recordings/'
+    path = myCsoundAudioOptions.memRecPath
     infiles = os.listdir(path)
     wavfiles = []
     for f in infiles:

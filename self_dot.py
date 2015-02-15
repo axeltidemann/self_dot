@@ -288,8 +288,9 @@ class Controller:
                 self.state['autorespond_sentence'] = message[21:] in ['True', '1']
 
             if 'musicMode' in message:
-                self.event.send_json({ 'musicMode': message[10:] })
-                if int(message[10:]) > 0:
+                _, value = message.split()
+                self.state['musicMode'] = value in ['True', '1']
+                if int(value) > 0:
                     self.event.send_json({ 'csinstr': 'i 22 0 2 "statusThresh" 4' }) # change release threshold for music mode
                 else:
                     self.event.send_json({ 'csinstr': 'i 22 0 2 "statusThresh" 9' }) # set it back to the original (here be dragons)
@@ -361,14 +362,15 @@ if __name__ == '__main__':
                          'ambientSound': False,
                          'fullscreen': 0,
                          'display2': 0,
-                         'facerecognition': False,}
+                         'facerecognition': False,
+                         'musicMode': False,}
 
     me = mp.current_process()
     print 'SELF MAIN PID', me.pid
 
     utils.MyProcess(target=IO.audio, name='AUDIO IO').start() 
     utils.MyProcess(target=IO.video, name='VIDEO IO').start()
-    utils.MyProcess(target=brain.people_detection, args=('localhost',False,False,True), name='FACE EXTRACTION').start()
+    utils.MyProcess(target=brain.people_detection, args=('localhost',False,True,True), name='FACE EXTRACTION').start()
     utils.MyProcess(target=brain.respond, args=('localhost','localhost',True), name='RESPONDER').start()
     utils.MyProcess(target=brain.learn_audio, args=('localhost',True), name='AUDIO LEARN').start()
     utils.MyProcess(target=brain.learn_video, args=('localhost',), name='VIDEO LEARN').start()

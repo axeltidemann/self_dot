@@ -120,6 +120,14 @@ class AudioMemory:
 
         return clean_key, overlap_key
 
+    def find_nearest(self, NAP):
+        best_match, crude_hash, fine_hash, clean_key, overlap_key = self.find(NAP)
+        
+        if not len(best_match):
+            closest_key = min(self.NAP_intervals, key = lambda x: abs(x[0] - clean_key[0]))
+            return sorted(self.NAP_intervals[closest_key], key = lambda x: utils.hamming_distance(fine_hash, x.fine_hash))[0] if len(closest_key) else []
+        return best_match
+
     def find(self, NAP):
         crude_hash = utils.d_hash(NAP, hash_size=8)
         fine_hash = utils.d_hash(NAP, hash_size=16)
@@ -325,7 +333,7 @@ def respond(control_host, learn_host, debug=False):
                     
                     play_events = []
                     for NAP in [ utils.trim_right(new_sentence[norm_segments[i]:norm_segments[i+1]]) for i in range(len(norm_segments)-1) ]:
-                        best_match,_,_,_,_ = audio_memory.find(NAP)
+                        best_match = audio_memory.find_nearest(NAP)
                         
                         print 'Recognized as sound {}'.format(best_match.audio_id)
 
@@ -395,7 +403,7 @@ def respond(control_host, learn_host, debug=False):
 
                     NAP = utils.trim_right(new_sentence[norm_segments[segment_id]:norm_segments[segment_id+1]])
 
-                    best_match,_,_,_,_ = audio_memory.find(NAP)
+                    best_match = audio_memory.find_nearest(NAP)
         
                     numWords = len(audio_segments)-1
                     print numWords
@@ -942,21 +950,21 @@ def people_detection(host, extended_search, people_detect, show):
     observation_matrix=[[1,0,0,0],[0,1,0,0]]
 
     init_frame = utils.recv_array(camera).copy()
-    init_state = [init_frame.shape[1]/2, init_frame.shape[0]/2, 0, 0] # Dead center, no velocity
+    init_state = [init_frame.shape[1]/2, init_frame.shape[0]/2, 0, 0] # Someone standing still right in front of self
     init_cov = 1.0e-3*np.eye(4)
-    transistion_cov = 1.0e-4*np.eye(4)
+    transition_cov = 1.0e-4*np.eye(4)
     observation_cov = 1.0e-1*np.eye(2)
 
     kf=KalmanFilter(transition_matrices=transition_matrix,
             observation_matrices=observation_matrix,
             initial_state_mean=init_state,
             initial_state_covariance=init_cov,
-            transition_covariance=transistion_cov,
+            transition_covariance=transition_cov,
             observation_covariance=observation_cov)
 
     no_faces = np.ma.array([0,0])
     no_faces.mask = np.ma.masked
-    # Bootstrapping the Kalman filter as if there was someone right in front of self.
+    # Bootstrapping the Kalman filter with the inital state
     means, covs = kf.filter(np.tile(init_state[:2], [2,1])) 
     means = means[-1]
     covs = covs[-1]

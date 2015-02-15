@@ -66,27 +66,29 @@ def robocontrol(host):
     sender = context.socket(zmq.PUSH)
     sender.connect('tcp://{}:{}'.format(host, IO.EXTERNAL))
 
-    #roboback = context.socket(zmq.PUB)
-    #roboback.bind('tcp://*:{}'.format(IO.ROBOBACK))
-
     timeStamp = time.time()
     global pan1, tilt1, pan2, tilt2
-    #print 'robocontrol entering loop %i', time.time()-timeStamp
     time_reset_memrec = time.time()
     memrec_turnon = False
     memrec_turnoff = False
     search_pan_index = 0
     search_tilt_index = 0
     search_tiltpos = [20, 10, 30, 20, 5, 15, 25, 35, 20, 25, 15, 5, 0, 10, 20, 30, 40, 30]
+
+    gain = lambda x: .5 + np.exp(-x) # Exponential decay, the constant is percentwise increase.
+    i = 0
     while True:
-    	#print 'robocontrol is running %i', time.time()-timeStamp
     	time.sleep(.05)
         robohead,axis,value = robo.recv_json()
         if memrec_turnon and (time.time()-time_reset_memrec > 1.7):
             sender.send_json('memoryRecording 1')
             memrec_turnon = False
-            print 'ROBONCTROL TURN ON MEMREC AFTER HEAD SPIN'
+            print 'ROBOCTRL TURN ON MEMREC AFTER HEAD SPIN'
         if robohead == 1:
+            if axis == 'transient':
+                print 'ROBOCTRL TRANSIENT, GAINING OUTPUT {}'.format(gain(0))
+                i = 0
+
             if axis == 'pan': #when we have adjustment due to sound input...
                 search_pan_index = 0 #do only fine adjustment
             if axis == 'search': #searching for a face
@@ -101,7 +103,7 @@ def robocontrol(host):
                 ser.write('t %03dn'%tilt1) # directly write tilt, since value is not random
             if axis == 'pan':
                 # send pan position to head (eg. 'p 60')
-                pan1 += int((value)*120)
+                pan1 += int((value)*120)*gain(i)
                 if pan1 < 5: 
                     pan1 += 180
                     memrec_turnoff = True
@@ -113,11 +115,11 @@ def robocontrol(host):
                     time_reset_memrec = time.time()
                     memrec_turnon = True
                     memrec_turnoff = False
-                    print 'ROBONCTROL TURN OFF MEMREC BEFORE HEAD SPIN'
+                    print 'ROBOCTRL TURN OFF MEMREC BEFORE HEAD SPIN'
                 ser.write('p %03dn'%pan1)
             if axis == 'tilt':
                 # send tilt position to head (eg. 'p 60')
-                tilt1 += int((value)*90)
+                tilt1 += int((value)*90)*gain(i)
                 if tilt1 > 40: tilt1 = 40-(tilt1-45)                
                 if tilt1 < 2: tilt1 = 2-(tilt1-2)                
                 ser.write('t %03dn'%tilt1)
@@ -135,7 +137,7 @@ def robocontrol(host):
                 ser.write('o %03dn'%pan2)
                 ser.write('r %03dn'%tilt2)
 
-            
+        i += 1
 
 
 if __name__ == '__main__':

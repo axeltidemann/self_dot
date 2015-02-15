@@ -186,6 +186,9 @@ def audio():
         in_pitch = cs.GetChannel("in_pitch")
         in_centroid = cs.GetChannel("in_centroid")
         
+        if state['roboActive'] and state['musicMode'] and transient > 0:
+            robocontrol.send_json([1, 'transient', None])
+
         if state['roboActive'] > 0:
             if (panposition < 0.48) or (panposition > 0.52):
                 print 'panposition', panposition
