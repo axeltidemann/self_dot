@@ -1,9 +1,7 @@
 #!/bin/bash          
 
-sleep 5
-qjackctl -s &
-sleep 10
-
+killall -9 python
+sudo ./usbreset `lsusb | grep Webcam | awk '{printf "/dev/bus/usb/%s/%s", $2, $4}' | sed -e 's/://'`
 cd /home/self/Projects/self_dot/
 
 now=$(date +"%Y_%m_%d_%H_%M_%S")
@@ -11,8 +9,6 @@ now=$(date +"%Y_%m_%d_%H_%M_%S")
 python -u self_dot.py &> "OUTPUT_$now" &
 
 gnome-terminal --window-with-profile=self_output -e "tail -f OUTPUT_$now" &
-
-sleep 10
 
 python communication.py calibrateAudio
 

@@ -1011,11 +1011,12 @@ def people_detection(host, extended_search, people_detect, show):
             
             utils.send_array(publisher, gray_face)
             i += 1
-            if i%motor_command_frame == 0:
-                if abs(x_diff) > .1:
-                    robocontrol.send_json([ 1, 'pan', .25*np.sign(x_diff)*x_diff**2]) 
-                robocontrol.send_json([ 1, 'tilt', .5*np.sign(y_diff)*y_diff**2])
-                i = 0
+            # CHANGE TO KALMAN FILTER DIRECTED SEARCH
+            # if i%motor_command_frame == 0:
+            #     if abs(x_diff) > .1:
+            #         robocontrol.send_json([ 1, 'pan', .25*np.sign(x_diff)*x_diff**2]) 
+            #     robocontrol.send_json([ 1, 'tilt', .5*np.sign(y_diff)*y_diff**2])
+            #     i = 0
                 
         # People detection
         found_filtered = []
