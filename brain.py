@@ -1028,19 +1028,19 @@ def people_detection(host, extended_search, people_detect, show):
             means, covs = kf.filter_update(means, covs, measurement)
             center = tuple(map(int, means[:2]))
             radius = 10
-            print covs
             cv2.circle(frame, center, radius, (255,255,255))
             # Print covariance ellipse
-            covar = np.array(covs)
-            covar = covar[:2,:2]
-            v, w = np.linalg.eigh(covar)
-            u = w[0] / np.linalg.norm(w[0])
-            angle = np.arctan(u[1] / u[0])
-            angle = 180 * angle / np.pi
-            chisquare_val = 2.4477
-            halfmajoraxissize=chisquare_val*np.sqrt(v[0])
-            halfminoraxissize=chisquare_val*np.sqrt(v[1])
-            cv2.ellipse(frame, center, 
+            # covar = np.array(covs)
+            # covar = covar[:2,:2]
+            # v, w = np.linalg.eigh(covar)
+            # u = w[0] / np.linalg.norm(w[0])
+            # angle = np.arctan(u[1] / u[0])
+            # angle = 180 * angle / np.pi
+            # chisquare_val = 2.4477
+            # halfmajoraxissize=chisquare_val*np.sqrt(v[0])
+            # halfminoraxissize=chisquare_val*np.sqrt(v[1])
+            # rotated_rect = 
+            # cv2.ellipse(frame, center, 
 
             for r in found_filtered:
                 (rx, ry), (rw, rh) = r
