@@ -291,9 +291,11 @@ class Controller:
                 _, value = message.split()
                 self.state['musicMode'] = value in ['True', '1']
                 if int(value) > 0:
-                    self.event.send_json({ 'csinstr': 'i 22 0 2 "statusThresh" 4' }) # change release threshold for music mode
+                    self.event.send_json({ 'csinstr': 'i 22 0 1 "statusThresh" 4' }) # change release threshold for music mode
+                    self.event.send_json({ 'csinstr': 'i 22 0 1 "musicMode" 1' }) # set input recording to music mode
                 else:
-                    self.event.send_json({ 'csinstr': 'i 22 0 2 "statusThresh" 9' }) # set it back to the original (here be dragons)
+                    self.event.send_json({ 'csinstr': 'i 22 0 1 "statusThresh" 9' }) # set it back to the original (here be dragons)
+                    self.event.send_json({ 'csinstr': 'i 22 0 1 "musicMode" 0' }) # set input recording back to normal
 
             if 'inputLevel' in message:
                 self.event.send_json({ 'inputLevel': message[11:] })
