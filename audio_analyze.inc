@@ -9,7 +9,8 @@
 	;;ktd_AmpAdjust	chnget "td_AmpAdjust"
 
     kmusicAmpResetter init 1
-    printk2 kmusicAmpResetter	
+    kmusicAmpResetterP  = int(kmusicAmpResetter*10)/10
+    printk2 kmusicAmpResetterP	
     atd_input	pareq a1*kmusicAmpResetter, ktd_HiShelfFq, ampdb(ktd_HiShelfGain), 0.7,  2
     atd_input	pareq atd_input, ktd_HiShelfFq, ampdb(ktd_LoShelfGain), 0.7,  1
     ;;atd_input	= atd_input*ampdb(ktd_AmpAdjust)
@@ -104,6 +105,8 @@ rireturn
 
 musicAmpResetter:
     iresetTime          rnd31 4, 1
+    iresetTime          = abs(iresetTime) + 0.5
+    print iresetTime
     kmusicAmpResetter   linseg 0, iresetTime, 0, 0.5, 1, 1, 1
 rireturn
     

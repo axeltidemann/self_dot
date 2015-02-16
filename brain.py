@@ -640,7 +640,7 @@ def learn_audio(host, debug=False):
                     
                     for segment, new_sound in enumerate([ utils.trim_right(new_sentence[norm_segments[i]:norm_segments[i+1]]) for i in range(len(norm_segments)-1) ]):
                         # We filter out short, abrupt sounds with lots of noise.
-                        if np.mean(new_sound) < 2 or new_sound.shape[0] == 0:
+                        if np.mean(new_sound) < 0.7 or new_sound.shape[0] == 0:
                           black_list.write('{} {}\n'.format(filename, segment))
                           print 'BLACKLISTED segment {} in file {}'.format(segment, filename)
                           continue

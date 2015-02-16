@@ -37,7 +37,7 @@
         krms_rec_max    init -96
 
 	    knoiseFloor_dB	chnget "inputNoisefloor"
-        ikeep_thresh    = 20                ; we want to skip recorded segments with a max amplitude below this level 
+        ikeep_thresh    = 8                ; we want to skip recorded segments with a max amplitude below this level 
                                             ; (relative to noise floor), so the effective skipping thresh is noisefloor+keep_thresh
         i_max_segment_len   = 12
         i_max_sentence_len  = 25
