@@ -21,19 +21,20 @@ import utils
 import brain
 import robocontrol
 import association
+import zmq_ports
 
 def idle(host):
     context = zmq.Context()
 
     face = context.socket(zmq.SUB)
-    face.connect('tcp://{}:{}'.format(host, IO.FACE))
+    face.connect('tcp://{}:{}'.format(host, zmq_ports.FACE))
     face.setsockopt(zmq.SUBSCRIBE, b'')
 
     robocontrol = context.socket(zmq.PUSH)
-    robocontrol.connect('tcp://{}:{}'.format(host, IO.ROBO))
+    robocontrol.connect('tcp://{}:{}'.format(host, zmq_ports.ROBO))
 
     stateQ = context.socket(zmq.SUB)
-    stateQ.connect('tcp://{}:{}'.format(host, IO.STATE))
+    stateQ.connect('tcp://{}:{}'.format(host, zmq_ports.STATE))
     stateQ.setsockopt(zmq.SUBSCRIBE, b'') 
 
     state = stateQ.recv_json()
@@ -43,7 +44,7 @@ def idle(host):
     poller.register(stateQ, zmq.POLLIN)
 
     sender = context.socket(zmq.PUSH)
-    sender.connect('tcp://{}:{}'.format(host, IO.EXTERNAL))
+    sender.connect('tcp://{}:{}'.format(host, zmq_ports.EXTERNAL))
 
     face_timer = 0
     saysomething_timer = 0
@@ -65,7 +66,7 @@ def idle(host):
                       
         if time.time() - face_timer > np.random.rand()*1.5 + 1:
             print '[self.] searches for a face'
-            robocontrol.send_json([ 1, 'search', 0])
+            robocontrol.send_pyobj(utils.MotorCommand(1, 'search', 0, 0))
             face_timer = time.time()
 
         if stateQ in events:
@@ -89,19 +90,19 @@ class Controller:
         context = zmq.Context()
         
         self.publisher = context.socket(zmq.PUB)
-        self.publisher.bind('tcp://*:{}'.format(IO.STATE))
+        self.publisher.bind('tcp://*:{}'.format(zmq_ports.STATE))
         
         self.event = context.socket(zmq.PUB)
-        self.event.bind('tcp://*:{}'.format(IO.EVENT))
+        self.event.bind('tcp://*:{}'.format(zmq_ports.EVENT))
 
         snapshot = context.socket(zmq.ROUTER)
-        snapshot.bind('tcp://*:{}'.format(IO.SNAPSHOT))
+        snapshot.bind('tcp://*:{}'.format(zmq_ports.SNAPSHOT))
 
         self.association = context.socket(zmq.REQ)
-        self.association.connect('tcp://{}:{}'.format(host, IO.ASSOCIATION))
+        self.association.connect('tcp://{}:{}'.format(host, zmq_ports.ASSOCIATION))
 
         incoming = context.socket(zmq.PULL)
-        incoming.bind('tcp://*:{}'.format(IO.EXTERNAL))
+        incoming.bind('tcp://*:{}'.format(zmq_ports.EXTERNAL))
 
         poller = zmq.Poller()
         poller.register(incoming, zmq.POLLIN)
@@ -372,7 +373,7 @@ if __name__ == '__main__':
 
     utils.MyProcess(target=IO.audio, name='AUDIO IO').start() 
     utils.MyProcess(target=IO.video, name='VIDEO IO').start()
-    utils.MyProcess(target=brain.people_detection, args=('localhost',False,True,True), name='FACE EXTRACTION').start()
+    utils.MyProcess(target=brain.people_detection, args=('localhost',False,False,True), name='PEOPLE DETECTION').start()
     utils.MyProcess(target=brain.respond, args=('localhost','localhost',True), name='RESPONDER').start()
     utils.MyProcess(target=brain.learn_audio, args=('localhost',True), name='AUDIO LEARN').start()
     utils.MyProcess(target=brain.learn_video, args=('localhost',), name='VIDEO LEARN').start()

@@ -6,7 +6,6 @@ from uuid import uuid4
 from collections import deque
 import sys
 import glob
-import cPickle as pickle
 from subprocess import call
 import time
 import os
@@ -33,6 +32,7 @@ import association
 import my_sai_test as mysai
 import myCsoundAudioOptions
 from pykalman import KalmanFilter
+import zmq_ports
 
 try:
     opencv_prefix = os.environ['VIRTUAL_ENV']
@@ -53,8 +53,6 @@ AUDIO_MEMORY_SIZE = 500
 MAX_CATEGORY_SIZE = 10
 PROTECT_PERCENTAGE = .2
 VIDEO_PERCENT_LENGTH = .8
-
-NUMBER_OF_BRAINS = 5
 
 AudioVisualSegment = namedtuple('AudioVisualSegment', ['audio_segment', 'face_id', 'video_esn'])
 VisualSegment = namedtuple('VisualSegment', 'face_id, video_esn')
@@ -193,35 +191,35 @@ def respond(control_host, learn_host, debug=False):
     context = zmq.Context()
     
     eventQ = context.socket(zmq.SUB)
-    eventQ.connect('tcp://{}:{}'.format(control_host, IO.EVENT))
+    eventQ.connect('tcp://{}:{}'.format(control_host, zmq_ports.EVENT))
     eventQ.setsockopt(zmq.SUBSCRIBE, b'') 
 
     projector = context.socket(zmq.PUSH)
-    projector.connect('tcp://{}:{}'.format(control_host, IO.PROJECTOR)) 
+    projector.connect('tcp://{}:{}'.format(control_host, zmq_ports.PROJECTOR)) 
 
     sender = context.socket(zmq.PUSH)
-    sender.connect('tcp://{}:{}'.format(control_host, IO.EXTERNAL))
+    sender.connect('tcp://{}:{}'.format(control_host, zmq_ports.EXTERNAL))
 
     brainQ = context.socket(zmq.PULL)
-    brainQ.bind('tcp://*:{}'.format(IO.BRAIN))
+    brainQ.bind('tcp://*:{}'.format(zmq_ports.BRAIN))
 
     counterQ = context.socket(zmq.REQ)
-    counterQ.connect('tcp://{}:{}'.format(control_host, IO.COUNTER))
+    counterQ.connect('tcp://{}:{}'.format(control_host, zmq_ports.COUNTER))
     
     cognitionQ = context.socket(zmq.PUSH)
-    cognitionQ.connect('tcp://{}:{}'.format(control_host, IO.COGNITION))
+    cognitionQ.connect('tcp://{}:{}'.format(control_host, zmq_ports.COGNITION))
 
     association = context.socket(zmq.REQ)
-    association.connect('tcp://{}:{}'.format(learn_host, IO.ASSOCIATION))
+    association.connect('tcp://{}:{}'.format(learn_host, zmq_ports.ASSOCIATION))
 
     snapshot = context.socket(zmq.REQ)
-    snapshot.connect('tcp://{}:{}'.format(control_host, IO.SNAPSHOT))
+    snapshot.connect('tcp://{}:{}'.format(control_host, zmq_ports.SNAPSHOT))
 
     scheduler = context.socket(zmq.PUSH)
-    scheduler.connect('tcp://{}:{}'.format(control_host, IO.SCHEDULER))
+    scheduler.connect('tcp://{}:{}'.format(control_host, zmq_ports.SCHEDULER))
 
     dreamQ = context.socket(zmq.PULL)
-    dreamQ.bind('tcp://*:{}'.format(IO.DREAM))
+    dreamQ.bind('tcp://*:{}'.format(zmq_ports.DREAM))
 
     snapshot.send_json('Give me state!')
     state = snapshot.recv_json()
@@ -563,20 +561,20 @@ def learn_audio(host, debug=False):
     context = zmq.Context()
 
     mic = context.socket(zmq.SUB)
-    mic.connect('tcp://{}:{}'.format(host, IO.MIC))
+    mic.connect('tcp://{}:{}'.format(host, zmq_ports.MIC))
     mic.setsockopt(zmq.SUBSCRIBE, b'')
 
     dreamQ = context.socket(zmq.PUSH)
-    dreamQ.connect('tcp://{}:{}'.format(host, IO.DREAM))
+    dreamQ.connect('tcp://{}:{}'.format(host, zmq_ports.DREAM))
 
 
     stateQ, eventQ, brainQ = _three_amigos(context, host)
 
     sender = context.socket(zmq.PUSH)
-    sender.connect('tcp://{}:{}'.format(host, IO.EXTERNAL))
+    sender.connect('tcp://{}:{}'.format(host, zmq_ports.EXTERNAL))
 
     counterQ = context.socket(zmq.REQ)
-    counterQ.connect('tcp://{}:{}'.format(host, IO.COUNTER))
+    counterQ.connect('tcp://{}:{}'.format(host, zmq_ports.COUNTER))
     
     poller = zmq.Poller()
     poller.register(mic, zmq.POLLIN)
@@ -783,29 +781,29 @@ def cognition(host):
     context = zmq.Context()
 
     eventQ = context.socket(zmq.SUB)
-    eventQ.connect('tcp://{}:{}'.format(host, IO.EVENT))
+    eventQ.connect('tcp://{}:{}'.format(host, zmq_ports.EVENT))
     eventQ.setsockopt(zmq.SUBSCRIBE, b'') 
 
     stateQ = context.socket(zmq.SUB)
-    stateQ.connect('tcp://{}:{}'.format(host, IO.STATE))
+    stateQ.connect('tcp://{}:{}'.format(host, zmq_ports.STATE))
     stateQ.setsockopt(zmq.SUBSCRIBE, b'') 
     state = stateQ.recv_json()
 
     face = context.socket(zmq.SUB)
-    face.connect('tcp://{}:{}'.format(host, IO.FACE))
+    face.connect('tcp://{}:{}'.format(host, zmq_ports.FACE))
     face.setsockopt(zmq.SUBSCRIBE, b'')
 
     association = context.socket(zmq.REQ)
-    association.connect('tcp://{}:{}'.format(host, IO.ASSOCIATION))
+    association.connect('tcp://{}:{}'.format(host, zmq_ports.ASSOCIATION))
 
     counterQ = context.socket(zmq.REQ)
-    counterQ.connect('tcp://{}:{}'.format(host, IO.COUNTER))
+    counterQ.connect('tcp://{}:{}'.format(host, zmq_ports.COUNTER))
 
     cognitionQ = context.socket(zmq.PULL)
-    cognitionQ.bind('tcp://*:{}'.format(IO.COGNITION))
+    cognitionQ.bind('tcp://*:{}'.format(zmq_ports.COGNITION))
 
     sender = context.socket(zmq.PUSH)
-    sender.connect('tcp://{}:{}'.format(host, IO.EXTERNAL))
+    sender.connect('tcp://{}:{}'.format(host, zmq_ports.EXTERNAL))
 
     poller = zmq.Poller()
     poller.register(eventQ, zmq.POLLIN)
@@ -929,21 +927,23 @@ def people_detection(host, extended_search, people_detect, show):
 
     context = zmq.Context()
     camera = context.socket(zmq.SUB)
-    camera.connect('tcp://{}:{}'.format(host, IO.CAMERA))
+    camera.connect('tcp://{}:{}'.format(host, zmq_ports.CAMERA))
     camera.setsockopt(zmq.SUBSCRIBE, b'')
 
     publisher = context.socket(zmq.PUB)
-    publisher.bind('tcp://*:{}'.format(IO.FACE))
+    publisher.bind('tcp://*:{}'.format(zmq_ports.FACE))
 
     robocontrol = context.socket(zmq.PUSH)
-    robocontrol.connect('tcp://localhost:{}'.format(IO.ROBO))
+    robocontrol.connect('tcp://localhost:{}'.format(zmq_ports.ROBO))
 
     if show:
         cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
 
     face_detection_frame = 2
     motor_command_frame = 1
-    i,j = [0,0]
+    lost_track_counter = 0
+    lost_track_counter_max = 20
+    j = 0
 
     # We track object with constant velocity (assume people don't accelerate), measure just position
     transition_matrix=[[1,0,1,0],[0,1,0,1],[0,0,1,0],[0,0,0,1]]
@@ -1000,23 +1000,13 @@ def people_detection(host, extended_search, people_detect, show):
             except Exception, e:
                 print e, 'Eye detection failed.'
 
-        # We select the biggest face.
         if faces:
-            faces_sorted = sorted(faces, key=lambda x: x[2]*x[3], reverse=True)
+            faces_sorted = sorted(faces, key=lambda x: x[2]*x[3], reverse=True) # We select the biggest face.
             x,y,w,h = faces_sorted[0]
-            x_diff = (rows/2. - (x + w/2.))/rows
-            y_diff = (y + h/2. - cols/2.)/cols
             resized_face = cv2.resize(frame[y:y+h, x:x+w], (100,100))
             gray_face = cv2.cvtColor(resized_face, cv2.COLOR_BGR2GRAY) / 255.
             
             utils.send_array(publisher, gray_face)
-            i += 1
-            # CHANGE TO KALMAN FILTER DIRECTED SEARCH
-            # if i%motor_command_frame == 0:
-            #     if abs(x_diff) > .1:
-            #         robocontrol.send_json([ 1, 'pan', .25*np.sign(x_diff)*x_diff**2]) 
-            #     robocontrol.send_json([ 1, 'tilt', .5*np.sign(y_diff)*y_diff**2])
-            #     i = 0
                 
         # People detection
         found_filtered = []
@@ -1031,10 +1021,25 @@ def people_detection(host, extended_search, people_detect, show):
                 if not insidef:
                     found_filtered.append(r)
 
+        # Kalman filter directed face search
+        measurement = [ x + w/2, y + h/2 ] if faces else no_faces
+        means, covs = kf.filter_update(means, covs, measurement)
+        x_kf,y_kf = means[:2]
+        x_diff = (rows/2. - x_kf)/rows
+        y_diff = (y_kf - cols/2.)/cols
+
+        if not len(faces) and lost_track_counter < lost_track_counter_max:
+            lost_track_counter += 1
+            print 'We have lost track of the face, continuing with Kalman filter estimations.'
+
+        if faces:
+            lost_track_counter = 0
+
+        if faces or lost_track_counter < lost_track_counter_max:
+            robocontrol.send_pyobj(utils.MotorCommand(1, 'face', x_diff, y_diff))
+            
         if show:
             # Show Kalman filter prediction
-            measurement = [ x + w/2, y + h/2 ] if faces else no_faces
-            means, covs = kf.filter_update(means, covs, measurement)
             center = tuple(map(int, means[:2]))
             radius = 10
             cv2.circle(frame, center, radius, (255,255,255))
@@ -1198,7 +1203,7 @@ def learn_video(host, debug=False):
     context = zmq.Context()
 
     camera = context.socket(zmq.SUB)
-    camera.connect('tcp://{}:{}'.format(host, IO.CAMERA))
+    camera.connect('tcp://{}:{}'.format(host, zmq_ports.CAMERA))
     camera.setsockopt(zmq.SUBSCRIBE, b'')
 
     stateQ, eventQ, brainQ = _three_amigos(context, host)
@@ -1263,13 +1268,13 @@ def learn_faces(host, debug=False):
     context = zmq.Context()
 
     face = context.socket(zmq.SUB)
-    face.connect('tcp://{}:{}'.format(host, IO.FACE))
+    face.connect('tcp://{}:{}'.format(host, zmq_ports.FACE))
     face.setsockopt(zmq.SUBSCRIBE, b'')
 
     stateQ, eventQ, brainQ = _three_amigos(context, host)
 
     counterQ = context.socket(zmq.REQ)
-    counterQ.connect('tcp://{}:{}'.format(host, IO.COUNTER))
+    counterQ.connect('tcp://{}:{}'.format(host, zmq_ports.COUNTER))
     
     poller = zmq.Poller()
     poller.register(face, zmq.POLLIN)
@@ -1359,14 +1364,14 @@ def learn_faces(host, debug=False):
 
 def _three_amigos(context, host):
     stateQ = context.socket(zmq.SUB)
-    stateQ.connect('tcp://{}:{}'.format(host, IO.STATE))
+    stateQ.connect('tcp://{}:{}'.format(host, zmq_ports.STATE))
     stateQ.setsockopt(zmq.SUBSCRIBE, b'') 
 
     eventQ = context.socket(zmq.SUB)
-    eventQ.connect('tcp://{}:{}'.format(host, IO.EVENT))
+    eventQ.connect('tcp://{}:{}'.format(host, zmq_ports.EVENT))
     eventQ.setsockopt(zmq.SUBSCRIBE, b'') 
 
     brainQ = context.socket(zmq.PUSH)
-    brainQ.connect('tcp://{}:{}'.format(host, IO.BRAIN))
+    brainQ.connect('tcp://{}:{}'.format(host, zmq_ports.BRAIN))
 
     return stateQ, eventQ, brainQ

@@ -21,7 +21,7 @@ faceWord = all words said by this face
 
 import multiprocessing as mp
 import zmq
-import IO
+import zmq_ports
 import re
 findfloat=re.compile(r"[0-9.]*")
 import copy
@@ -88,10 +88,10 @@ def association(host):
     context = zmq.Context()
 
     association = context.socket(zmq.ROUTER)
-    association.bind('tcp://*:{}'.format(IO.ASSOCIATION))
+    association.bind('tcp://*:{}'.format(zmq_ports.ASSOCIATION))
 
     eventQ = context.socket(zmq.SUB)
-    eventQ.connect('tcp://{}:{}'.format(host, IO.EVENT))
+    eventQ.connect('tcp://{}:{}'.format(host, zmq_ports.EVENT))
     eventQ.setsockopt(zmq.SUBSCRIBE, b'') 
 
     poller = zmq.Poller()

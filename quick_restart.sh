@@ -23,7 +23,7 @@ python communication.py ambientSound 1
 python communication.py autorespond_sentence 1
 python communication.py roboActive 1
 python communication.py load
-python communication.py musicMode 1
+#python communication.py musicMode 1
 
 xte 'mousemove 10 10'
 

@@ -21,6 +21,7 @@ import sched
 import datetime
 import mmap
 import subprocess
+from collections import namedtuple
 
 import numpy as np
 import zmq
@@ -30,12 +31,17 @@ from sklearn.covariance import EmpiricalCovariance, MinCovDet
 import cv2
 from scipy.stats import itemfreq
 
-from brain import cochlear
-from brain import NUMBER_OF_BRAINS
-import IO
+import myCsoundAudioOptions
+import zmq_ports
+
+MotorCommand = namedtuple('MotorCommand', ['robohead', 'mode', 'x_diff', 'y_diff'])
+
+NUMBER_OF_BRAINS = 5
+PROCESS_TIME_OUT = 5*60 
+SYSTEM_TIME_OUT = 30*60 
+
 findfloat=re.compile(r"[0-9.]*")
 find_filename = re.compile('[0-9]+_[0-9]+_[0-9]+_[0-9]+_[0-9]+_[0-9]+\.wav')
-import myCsoundAudioOptions
 
 DREAM_HOUR = 23
 EVOLVE_HOUR = 4
@@ -392,20 +398,20 @@ def scheduler(host):
     context = zmq.Context()
     
     play_events = context.socket(zmq.PULL)
-    play_events.bind('tcp://*:{}'.format(IO.SCHEDULER))
+    play_events.bind('tcp://*:{}'.format(zmq_ports.SCHEDULER))
     
     eventQ = context.socket(zmq.SUB)
-    eventQ.connect('tcp://{}:{}'.format(host, IO.EVENT))
+    eventQ.connect('tcp://{}:{}'.format(host, zmq_ports.EVENT))
     eventQ.setsockopt(zmq.SUBSCRIBE, b'') 
 
     sender = context.socket(zmq.PUSH)
-    sender.connect('tcp://{}:{}'.format(host, IO.EXTERNAL))
+    sender.connect('tcp://{}:{}'.format(host, zmq_ports.EXTERNAL))
 
     projector = context.socket(zmq.PUSH)
-    projector.connect('tcp://{}:{}'.format(host, IO.PROJECTOR)) 
+    projector.connect('tcp://{}:{}'.format(host, zmq_ports.PROJECTOR)) 
 
     stateQ = context.socket(zmq.SUB)
-    stateQ.connect('tcp://{}:{}'.format(host, IO.STATE))
+    stateQ.connect('tcp://{}:{}'.format(host, zmq_ports.STATE))
     stateQ.setsockopt(zmq.SUBSCRIBE, b'') 
     state = stateQ.recv_json()
 
@@ -480,10 +486,10 @@ def counter(host):
     context = zmq.Context()
 
     counterQ = context.socket(zmq.ROUTER)
-    counterQ.bind('tcp://*:{}'.format(IO.COUNTER))
+    counterQ.bind('tcp://*:{}'.format(zmq_ports.COUNTER))
 
     eventQ = context.socket(zmq.SUB)
-    eventQ.connect('tcp://{}:{}'.format(host, IO.EVENT))
+    eventQ.connect('tcp://{}:{}'.format(host, zmq_ports.EVENT))
     eventQ.setsockopt(zmq.SUBSCRIBE, b'') 
 
     poller = zmq.Poller()
@@ -551,10 +557,10 @@ def sentinel(host):
     context = zmq.Context()
     
     life_signal_Q = context.socket(zmq.PULL)
-    life_signal_Q.bind('tcp://*:{}'.format(IO.SENTINEL))
+    life_signal_Q.bind('tcp://*:{}'.format(zmq_ports.SENTINEL))
 
     sender = context.socket(zmq.PUSH)
-    sender.connect('tcp://{}:{}'.format(host, IO.EXTERNAL))
+    sender.connect('tcp://{}:{}'.format(host, zmq_ports.EXTERNAL))
 
     poller = zmq.Poller()
     poller.register(life_signal_Q, zmq.POLLIN)
@@ -564,20 +570,20 @@ def sentinel(host):
     save_time = 0
 
     while True:
-        events = dict(poller.poll(timeout=IO.PROCESS_TIME_OUT*2))
+        events = dict(poller.poll(timeout=PROCESS_TIME_OUT*2))
 
         if life_signal_Q in events:
             process = life_signal_Q.recv_pyobj()
             book[process] = time.time()
 
         for process in book.keys():
-            if not save_name and time.time() - book[process] > IO.PROCESS_TIME_OUT*2:
+            if not save_name and time.time() - book[process] > PROCESS_TIME_OUT*2:
                 print '{} HAS DIED, SAVING'.format(process)
                 save_name = brain_name()
                 save_time = time.time()
                 sender.send_json('save {}'.format(save_name))
 
-        if save_name and (len(glob.glob('{}*'.format(save_name))) == NUMBER_OF_BRAINS or time.time() - save_time > IO.SYSTEM_TIME_OUT):
+        if save_name and (len(glob.glob('{}*'.format(save_name))) == NUMBER_OF_BRAINS or time.time() - save_time > SYSTEM_TIME_OUT):
             warm_restart()
                 
 class AliveNotifier(threading.Thread):
@@ -587,12 +593,12 @@ class AliveNotifier(threading.Thread):
         print self.name
         context = zmq.Context()
         self.life_signal_Q = context.socket(zmq.PUSH)
-        self.life_signal_Q.connect('tcp://{}:{}'.format(host, IO.SENTINEL))
+        self.life_signal_Q.connect('tcp://{}:{}'.format(host, zmq_ports.SENTINEL))
 
         self.start()
 
     def run(self):
-        while true_wait(IO.PROCESS_TIME_OUT):
+        while true_wait(PROCESS_TIME_OUT):
             self.life_signal_Q.send_pyobj(self.name)
 
 class SimpleLogger:
@@ -610,7 +616,7 @@ class Logger:
     def __init__(self, host='localhost'):
         context = zmq.Context()
         self.logger = context.socket(zmq.PUSH)
-        self.logger.connect('tcp://{}:{}'.format(host, IO.LOGGER))
+        self.logger.connect('tcp://{}:{}'.format(host, zmq_ports.LOGGER))
     
     def write(self, txt):
         if len(txt.rstrip()):
@@ -622,7 +628,7 @@ class Logger:
 def log_sink():
     context = zmq.Context()
     logger = context.socket(zmq.PULL)
-    logger.bind('tcp://*:{}'.format(IO.LOGGER))
+    logger.bind('tcp://*:{}'.format(zmq_ports.LOGGER))
 
     output = open('LOG_{}'.format(time.strftime('%Y_%m_%d_%H_%M_%S')), 'w')
     
@@ -669,7 +675,7 @@ def daily_routine(host):
     context = zmq.Context()
 
     sender = context.socket(zmq.PUSH)
-    sender.connect('tcp://{}:{}'.format(host, IO.EXTERNAL))
+    sender.connect('tcp://{}:{}'.format(host, zmq_ports.EXTERNAL))
 
     dream_time = datetime.datetime.combine(datetime.datetime.now(), datetime.time(DREAM_HOUR))
     grind.enterabs(time.mktime(dream_time.timetuple()), 1,

@@ -4,44 +4,23 @@
 import multiprocessing as mp
 import os
 import random
-import utils
 import time
+import cPickle as pickle
 
 import numpy as np
 import zmq
 from scipy.io import wavfile
 
-from utils import send_array, recv_array
+import utils
 import myCsoundAudioOptions
+import zmq_ports
+from mc import MotorCommand
 
 VIDEO_SAMPLE_TIME = 100 # Milliseconds
 NAP_STRIDE = 441
 NAP_RATE = 22050
 
 FRAME_SIZE = (640,480)
-PROCESS_TIME_OUT = 5*60 
-SYSTEM_TIME_OUT = 30*60 
-VIDIOC_DQBUF_SEARCH_TIME = 60
-
-# ØMQ ports
-CAMERA = 5561
-PROJECTOR = 5562
-MIC = 5563
-SPEAKER = 5564
-STATE = 5565
-EXTERNAL = 5566 # If you change this, you're out of luck.
-SNAPSHOT= 5567
-EVENT = 5568
-SCHEDULER = 5569
-ROBO = 5570
-COGNITION = 5571
-FACE = 5572
-BRAIN = 5573
-ASSOCIATION = 5574
-SENTINEL = 5575
-LOGGER = 5576
-DREAM = 5577
-COUNTER = 5578
 
 def video():
     import cv2
@@ -51,13 +30,13 @@ def video():
 
     context = zmq.Context()
     publisher = context.socket(zmq.PUB)
-    publisher.bind('tcp://*:{}'.format(CAMERA))
+    publisher.bind('tcp://*:{}'.format(zmq_ports.CAMERA))
 
     projector = context.socket(zmq.PULL)
-    projector.bind('tcp://*:{}'.format(PROJECTOR))
+    projector.bind('tcp://*:{}'.format(zmq_ports.PROJECTOR))
     
     eventQ = context.socket(zmq.SUB)
-    eventQ.connect('tcp://localhost:{}'.format(EVENT))
+    eventQ.connect('tcp://localhost:{}'.format(zmq_ports.EVENT))
     eventQ.setsockopt(zmq.SUBSCRIBE, b'')
 
     poller = zmq.Poller()
@@ -75,37 +54,37 @@ def video():
                 cv2.setWindowProperty('Output', cv2.WND_PROP_FULLSCREEN, cv2.cv.CV_WINDOW_FULLSCREEN)
 
         if projector in events:
-            cv2.imshow('Output', cv2.resize(recv_array(projector), FRAME_SIZE))
+            cv2.imshow('Output', cv2.resize(utils.recv_array(projector), FRAME_SIZE))
         else:
             cv2.imshow('Output', np.zeros(FRAME_SIZE[::-1]))
         
         _, frame = camera.read()
         frame = cv2.resize(frame, FRAME_SIZE)
-        send_array(publisher, frame)
+        utils.send_array(publisher, frame)
 
         cv2.waitKey(VIDEO_SAMPLE_TIME)
 
 def audio():
     context = zmq.Context()
     publisher = context.socket(zmq.PUB)
-    publisher.bind('tcp://*:{}'.format(MIC))
+    publisher.bind('tcp://*:{}'.format(zmq_ports.MIC))
 
     robocontrol = context.socket(zmq.PUSH)
-    robocontrol.connect('tcp://localhost:{}'.format(ROBO))
+    robocontrol.connect('tcp://localhost:{}'.format(zmq_ports.ROBO))
 
     subscriber = context.socket(zmq.PULL)
-    subscriber.bind('tcp://*:{}'.format(SPEAKER))
+    subscriber.bind('tcp://*:{}'.format(zmq_ports.SPEAKER))
 
     stateQ = context.socket(zmq.SUB)
-    stateQ.connect('tcp://localhost:{}'.format(STATE))
+    stateQ.connect('tcp://localhost:{}'.format(zmq_ports.STATE))
     stateQ.setsockopt(zmq.SUBSCRIBE, b'') 
 
     eventQ = context.socket(zmq.SUB)
-    eventQ.connect('tcp://localhost:{}'.format(EVENT))
+    eventQ.connect('tcp://localhost:{}'.format(zmq_ports.EVENT))
     eventQ.setsockopt(zmq.SUBSCRIBE, b'') 
 
     sender = context.socket(zmq.PUSH)
-    sender.connect('tcp://localhost:{}'.format(EXTERNAL))
+    sender.connect('tcp://localhost:{}'.format(zmq_ports.EXTERNAL))
 
     poller = zmq.Poller()
     poller.register(subscriber, zmq.POLLIN)
@@ -186,9 +165,10 @@ def audio():
         in_pitch = cs.GetChannel("in_pitch")
         in_centroid = cs.GetChannel("in_centroid")
         
-        if state['roboActive'] and state['musicMode'] and transient > 0:
+        #if state['roboActive'] and state['musicMode'] and transient > 0:
+        if state['roboActive'] and transient > 0: # We want the transients either way, no?
             if (panposition < 0.48) or (panposition > 0.52):
-                robocontrol.send_json([1,'transient',panposition-.5])
+                robocontrol.send_pyobj(utils.MotorCommand(1,'transient', panposition-.5, 0))
 
         # if state['roboActive'] > 0:
         #     if (panposition < 0.48) or (panposition > 0.52):

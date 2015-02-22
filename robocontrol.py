@@ -6,11 +6,14 @@ import zmq
 import IO
 import time
 import random
+from collections import namedtuple
+import cPickle as pickle
 
 # connect to arduino
 import serial
 import numpy as np
-import utils
+
+import zmq_ports
 
 class NoSerial:
     def readline(self):
@@ -61,11 +64,18 @@ def robocontrol(host):
     context = zmq.Context()
 
     robo = context.socket(zmq.PULL)
-    robo.bind('tcp://*:{}'.format(IO.ROBO))
+    robo.bind('tcp://*:{}'.format(zmq_ports.ROBO))
+
+    stateQ = context.socket(zmq.SUB)
+    stateQ.connect('tcp://{}:{}'.format(host, zmq_ports.STATE))
+    stateQ.setsockopt(zmq.SUBSCRIBE, b'') 
+
     poller = zmq.Poller()
     poller.register(robo, zmq.POLLIN)
+    poller.register(stateQ, zmq.POLLIN)
+
     sender = context.socket(zmq.PUSH)
-    sender.connect('tcp://{}:{}'.format(host, IO.EXTERNAL))
+    sender.connect('tcp://{}:{}'.format(host, zmq_ports.EXTERNAL))
 
     timeStamp = time.time()
     global pan1, tilt1, pan2, tilt2
@@ -76,10 +86,40 @@ def robocontrol(host):
     search_tilt_index = 0
     search_tiltpos = [20, 10, 30, 20, 5, 15, 25, 35, 20, 25, 15, 5, 0, 10, 20, 30, 40, 30]
 
-    gain = lambda g, x: g*np.exp(-x)
+    exp_decay = lambda g, a, x: g*np.exp(-a*x)
+
     i = 1000
-    axis = ''
-    g = 5 # HAIRY AS HELL.
+    pan1_k = 0
+    tilt1_k = 0
+
+    pan_direction = -1
+
+    stop = lambda x: 0
+    pan1_movement_func = stop
+    tilt1_movement_func = stop
+
+    def pan_seq(x):
+        x = np.mod(x,20)
+        if x < 7:
+            return 1
+        if x < 14:
+            return 0
+        return -5
+
+    def tilt_seq(x):
+        x = np.mod(x,2)
+        if x < 1:
+            return 5
+        if x < 2:
+            return -5
+
+    movement_functions = [ [lambda x: exp_decay(pan_direction*30, 10, x), stop], # left - right
+                           [lambda x: exp_decay(pan_direction*30, 10, x), lambda x: 10*np.sin(-2*np.pi*x/.8) if x < .8 else 0 ], # headbanging
+                           [pan_seq, tilt_seq] ] # stupid, but demo of sequences
+
+    transient_timer = time.time()
+    state = stateQ.recv_json()
+
     while True:
     	time.sleep(.05)
         events = dict(poller.poll(timeout=100))
@@ -89,53 +129,73 @@ def robocontrol(host):
             memrec_turnon = False
             print 'ROBOCTRL TURN ON MEMREC AFTER HEAD SPIN'
 
-        if robo in events:
-            robohead,axis,value = robo.recv_json()
-            if robohead == 1:
-                if axis == 'transient':
-                    i = 0
-                    print 'ROBOCTRL TRANSIENT {}'.format(value)
-                    g = 5*abs(value)/.5
-                    value = .01 if value > 0 else -.01
-            axis = 'pan' #HAIRY STUFF. CHANGE THE LOGIC.
+        if stateQ in events:
+            state = stateQ.recv_json()
 
-        if axis == 'pan': #when we have adjustment due to sound input...
-            search_pan_index = 0 #do only fine adjustment
-        # if axis == 'search': #searching for a face
-        #     pan1 += (random.random()-0.5)*20
-        #     search_pan_index += 1
-        #     search_pan_index %= 1000
-        #     if search_pan_index%random.choice([5,6,8,10,12]) == 0:
-        #         pan1 += random.choice([-30, 30])
-        #     axis = 'pan' # activates write to pan, with range control
-        #     search_tilt_index = (search_tilt_index+1)%len(search_tiltpos)
-        #     tilt1 = search_tiltpos[search_tilt_index]
-        #     ser.write('t %03dn'%tilt1) # directly write tilt, since value is not random
-        if axis == 'pan':
-            # send pan position to head (eg. 'p 60')
-            pan1 += int((value)*120)*gain(g,i)
-            if pan1 < 5: 
-                pan1 += 180
-                memrec_turnoff = True
-            if pan1 > 230: 
-                pan1 -= 180
-                memrec_turnoff = True
-            if memrec_turnoff:
-                sender.send_json('memoryRecording 0')
-                time_reset_memrec = time.time()
-                memrec_turnon = True
-                memrec_turnoff = False
-                print 'ROBOCTRL TURN OFF MEMREC BEFORE HEAD SPIN'
-            ser.write('p %03dn'%pan1)
-        if axis == 'tilt':
-            # send tilt position to head (eg. 'p 60')
-            tilt1 += int((value)*90) # NOT GAINED
-            if tilt1 > 40: tilt1 = 40-(tilt1-45)                
-            if tilt1 < 2: tilt1 = 2-(tilt1-2)                
-            ser.write('t %03dn'%tilt1)
+        if robo in events:
+            motor_cmd = robo.recv_pyobj()
+            if motor_cmd.robohead == 1:
+                if state['musicMode']:
+                    if motor_cmd.mode == 'transient':
+                        i = 0
+                        pan_direction = -pan_direction
+                        if time.time() - transient_timer > 10:
+                            pan1_movement_func, tilt1_movement_func = random.choice(movement_functions)
+                            transient_timer = time.time()
+                else:
+                    if motor_cmd.mode == 'transient': 
+                        i = 0
+                        pan1_movement_func = lambda x: exp_decay(10*motor_cmd.x_diff, 2, x)
+                        tilt1_movement_func = stop
+                        transient_timer = time.time()
+
+                    if motor_cmd.mode == 'face' and time.time() - transient_timer > 2:
+                        i = 0
+                        pan1_movement_func = lambda x: exp_decay(motor_cmd.x_diff, 2, x)
+                        tilt1_movement_func = lambda x: exp_decay(motor_cmd.y_diff, 2, x)
+
+        # robohead 1 movement
+        # if mode == 'pan': #when we have adjustment due to sound input...
+        #     search_pan_index = 0 #do only fine adjustment
+        if motor_cmd.mode == 'search': #searching for a face
+
+            # Also ugly - search parameters should be determined where they are sent from.
+            pan1_movement_func = stop
+            tilt1_movement_func = stop
+
+            pan1 += (random.random()-0.5)*20
+            search_pan_index += 1
+            search_pan_index %= 1000
+            if search_pan_index%random.choice([5,6,8,10,12]) == 0:
+                pan1 += random.choice([-30, 30])
+            search_tilt_index = (search_tilt_index+1)%len(search_tiltpos)
+            tilt1 = search_tiltpos[search_tilt_index]
+            ser.write('t %03dn'%tilt1) # directly write tilt, since value is not random
+        #if mode == 'pan':
+        # send pan position to head (eg. 'p 60')
+        pan1 += pan1_movement_func(i)
+        if pan1 < 5: 
+            pan1 += 180
+            memrec_turnoff = True
+        if pan1 > 230: 
+            pan1 -= 180
+            memrec_turnoff = True
+        if memrec_turnoff:
+            sender.send_json('memoryRecording 0')
+            time_reset_memrec = time.time()
+            memrec_turnon = True
+            memrec_turnoff = False
+            print 'ROBOCTRL TURN OFF MEMREC BEFORE HEAD SPIN'
+        ser.write('p %03dn'%pan1)
+        #if mode == 'tilt':
+        # send tilt position to head (eg. 't 60')
+        tilt1 += tilt1_movement_func(i)
+        if tilt1 > 40: tilt1 = 40-(tilt1-45)                
+        if tilt1 < 2: tilt1 = 2-(tilt1-2)                
+        ser.write('t %03dn'%tilt1)
 
         # if robohead == 2:
-        #     if axis == 'pan' and value == -1:
+        #     if mode == 'pan' and value == -1:
         #         seed = (random.random()-0.5)*2
         #         distance = 30            
         #         pan2 = int(pan2+(seed*distance))
