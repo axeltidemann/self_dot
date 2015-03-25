@@ -13,6 +13,7 @@ import cPickle as pickle
 import serial
 import numpy as np
 
+import utils
 import zmq_ports
 
 class NoSerial:
@@ -119,6 +120,9 @@ def robocontrol(host):
 
     transient_timer = time.time()
     state = stateQ.recv_json()
+    transient_face_mask_time = 3
+
+    motor_cmd = utils.MotorCommand(1, 'dummy', 0, 0)
 
     while True:
     	time.sleep(.05)
@@ -138,27 +142,30 @@ def robocontrol(host):
                 if state['musicMode']:
                     if motor_cmd.mode == 'transient':
                         i = 0
+                        print '\t|\\-. Transient'
                         pan_direction = -pan_direction
-                        if time.time() - transient_timer > 10:
-                            pan1_movement_func, tilt1_movement_func = random.choice(movement_functions)
-                            transient_timer = time.time()
+                        pan1_movement_func, tilt1_movement_func = movement_functions[0]
+                        # if time.time() - transient_timer > 10:
+                        #     pan1_movement_func, tilt1_movement_func = random.choice(movement_functions)
+                        #     transient_timer = time.time()
                 else:
                     if motor_cmd.mode == 'transient': 
                         i = 0
                         pan1_movement_func = lambda x: exp_decay(10*motor_cmd.x_diff, 2, x)
                         tilt1_movement_func = stop
                         transient_timer = time.time()
+                        print '\t|\\-. Transient, face search suppressed for {} seconds'.format(transient_face_mask_time)
 
-                    if motor_cmd.mode == 'face' and time.time() - transient_timer > 2:
-                        i = 0
-                        pan1_movement_func = lambda x: exp_decay(motor_cmd.x_diff, 2, x)
-                        tilt1_movement_func = lambda x: exp_decay(motor_cmd.y_diff, 2, x)
+                if motor_cmd.mode == 'face' and time.time() - transient_timer > transient_face_mask_time:
+                    i = 0
+                    pan1_movement_func = lambda x: exp_decay(motor_cmd.x_diff, 2, x)
+                    tilt1_movement_func = lambda x: exp_decay(motor_cmd.y_diff, 2, x)
 
         # robohead 1 movement
         # if mode == 'pan': #when we have adjustment due to sound input...
         #     search_pan_index = 0 #do only fine adjustment
-        if motor_cmd.mode == 'search': #searching for a face
-
+        if motor_cmd.mode == 'search' and time.time() - transient_timer > 2: #Face search
+            
             # Also ugly - search parameters should be determined where they are sent from.
             pan1_movement_func = stop
             tilt1_movement_func = stop

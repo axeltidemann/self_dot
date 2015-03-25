@@ -35,6 +35,20 @@ import myCsoundAudioOptions
 import zmq_ports
 
 MotorCommand = namedtuple('MotorCommand', ['robohead', 'mode', 'x_diff', 'y_diff'])
+_Rectangle = namedtuple('_Rectangle', ['x', 'y', 'w', 'h'])
+
+class Rectangle(_Rectangle):
+    @property
+    def center(self):
+        return (self.x + self.w/2, self.y + self.h/2)
+
+    @property
+    def topleft(self):
+        return (self.x, self.y)
+
+    @property
+    def bottomright(self):
+        return (self.x+self.w,self.y+self.h)
 
 NUMBER_OF_BRAINS = 5
 PROCESS_TIME_OUT = 5*60 

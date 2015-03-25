@@ -373,7 +373,7 @@ if __name__ == '__main__':
 
     utils.MyProcess(target=IO.audio, name='AUDIO IO').start() 
     utils.MyProcess(target=IO.video, name='VIDEO IO').start()
-    utils.MyProcess(target=brain.people_detection, args=('localhost',False,False,True), name='PEOPLE DETECTION').start()
+    utils.MyProcess(target=brain.people_detection, args=('localhost',False,True), name='PEOPLE DETECTION').start()
     utils.MyProcess(target=brain.respond, args=('localhost','localhost',True), name='RESPONDER').start()
     utils.MyProcess(target=brain.learn_audio, args=('localhost',True), name='AUDIO LEARN').start()
     utils.MyProcess(target=brain.learn_video, args=('localhost',), name='VIDEO LEARN').start()

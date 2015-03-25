@@ -14,7 +14,6 @@ from scipy.io import wavfile
 import utils
 import myCsoundAudioOptions
 import zmq_ports
-from mc import MotorCommand
 
 VIDEO_SAMPLE_TIME = 100 # Milliseconds
 NAP_STRIDE = 441

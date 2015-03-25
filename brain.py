@@ -545,7 +545,7 @@ def respond(control_host, learn_host, debug=False):
                     start = 0
                     voice1 = 'playfile {} {} {} {} {} {} {} {} {}'.format(1, 6, np.random.rand()/3, audio_segment.wav_file, speed, audio_segment.start, audio_segment.end, amp, maxamp)
                     projection = AV_memory.project(audio_segment, NAP)
-                    voice2 = 'playfile {} {} {} {} {} {} {} {} {}'.format(2, 6, np.random.randint(3,6), audio_segment.wav_file, speed, audio_segemtn.start, audio_segment.end, amp, maxamp)
+                    voice2 = 'playfile {} {} {} {} {} {} {} {} {}'.format(2, 6, np.random.randint(3,6), audio_segment.wav_file, speed, audio_segment.start, audio_segment.end, amp, maxamp)
                     play_events.append([ audio_segment.duration, voice1, voice2, projection, FRAME_SIZE ])
                 print 'Dream mode playing back {} memories'.format(len(play_events))
                 scheduler.send_pyobj(play_events)
@@ -917,9 +917,9 @@ def cognition(host):
                  
 # LOOK AT EYES? CAN YOU DETERMINE ANYTHING FROM THEM?
 # PRESENT VISUAL INFORMATION - MOVE UP OR DOWN
-def people_detection(host, extended_search, people_detect, show):
+def people_detection(host, people_detect, show):
     import cv2
-    window_name = 'Visual detection'
+    window_name = 'Input'
 
     eye_cascade = cv2.cv.Load(EYE_HAAR_CASCADE_PATH)
     face_cascade = cv2.cv.Load(FACE_HAAR_CASCADE_PATH)
@@ -968,6 +968,7 @@ def people_detection(host, extended_search, people_detect, show):
     means, covs = kf.filter(np.tile(init_state[:2], [2,1])) 
     means = means[-1]
     covs = covs[-1]
+
     while True:
         frame = utils.recv_array(camera).copy() # Weird, but necessary to do a copy.
 
@@ -980,33 +981,24 @@ def people_detection(host, extended_search, people_detect, show):
         rows = frame.shape[1]
         cols = frame.shape[0]
 
-        faces = [ (x,y,w,h) for (x,y,w,h),n in 
+        faces = [ utils.Rectangle(x,y,w,h) for (x,y,w,h),n in 
                   cv2.cv.HaarDetectObjects(cv2.cv.fromarray(frame), face_cascade, storage, 1.2, 2, cv2.cv.CV_HAAR_DO_CANNY_PRUNING, (50,50)) ] 
-
-        if extended_search:
-            eyes = [ (x,y,w,h) for (x,y,w,h),n in 
-                     cv2.cv.HaarDetectObjects(cv2.cv.fromarray(frame), eye_cascade, storage, 1.2, 2, cv2.cv.CV_HAAR_DO_CANNY_PRUNING, (20,20)) ] 
-
-            try: 
-                if len(eyes) == 2:
-                    x, y, _, _ = eyes[0]
-                    x_, y_, _, _ = eyes[1]
-                    angle = np.rad2deg(np.arctan( float((y_ - y))/(x_ - x) ))
-                    rotation = cv2.getRotationMatrix2D((rows/2, cols/2), angle, 1)
-                    frame = cv2.warpAffine(frame, rotation, (rows,cols))
-
-                    faces.extend([ (x,y,w,h) for (x,y,w,h),n in 
-                                   cv2.cv.HaarDetectObjects(cv2.cv.fromarray(frame), face_cascade, storage, 1.2, 2, cv2.cv.CV_HAAR_DO_CANNY_PRUNING, (50,50)) ])
-            except Exception, e:
-                print e, 'Eye detection failed.'
-
+        eyes = []
+        resized_face = []
         if faces:
-            faces_sorted = sorted(faces, key=lambda x: x[2]*x[3], reverse=True) # We select the biggest face.
-            x,y,w,h = faces_sorted[0]
-            resized_face = cv2.resize(frame[y:y+h, x:x+w], (100,100))
+            faces_sorted = sorted(faces, key=lambda rect: rect.w*rect.h, reverse=True) # We select the biggest face.
+            face = faces_sorted[0]
+            resized_face = cv2.resize(frame[face.y:face.y+face.h, face.x:face.x+face.w], (100,100))
+        else:
+            eyes = [ utils.Rectangle(x,y,w,h) for (x,y,w,h),n in 
+                     cv2.cv.HaarDetectObjects(cv2.cv.fromarray(frame), eye_cascade, storage, 1.2, 2, cv2.cv.CV_HAAR_DO_CANNY_PRUNING, (20,20)) ] 
+            if len(eyes) == 2:
+                resized_face = cv2.resize(frame, (100,100))
+
+        if len(resized_face):
             gray_face = cv2.cvtColor(resized_face, cv2.COLOR_BGR2GRAY) / 255.
-            
             utils.send_array(publisher, gray_face)
+            lost_track_counter = 0
                 
         # People detection
         found_filtered = []
@@ -1022,20 +1014,25 @@ def people_detection(host, extended_search, people_detect, show):
                     found_filtered.append(r)
 
         # Kalman filter directed face search
-        measurement = [ x + w/2, y + h/2 ] if faces else no_faces
+        measurement = no_faces
+        if faces:
+            measurement = face.center
+        if len(eyes) == 2:
+            measurement = (np.array(eyes[0].center) + np.array(eyes[1].center))/2
+
         means, covs = kf.filter_update(means, covs, measurement)
         x_kf,y_kf = means[:2]
         x_diff = (rows/2. - x_kf)/rows
         y_diff = (y_kf - cols/2.)/cols
 
-        if not len(faces) and lost_track_counter < lost_track_counter_max:
+        if not len(faces) and not len(eyes) == 2 and lost_track_counter < lost_track_counter_max:
+            if lost_track_counter == 0:
+                print '[self.] lost track of the face, continuing with Kalman filter estimations.'
+            else:
+                print lost_track_counter,
             lost_track_counter += 1
-            print 'We have lost track of the face, continuing with Kalman filter estimations.'
 
-        if faces:
-            lost_track_counter = 0
-
-        if faces or lost_track_counter < lost_track_counter_max:
+        if lost_track_counter < lost_track_counter_max:
             robocontrol.send_pyobj(utils.MotorCommand(1, 'face', x_diff, y_diff))
             
         if show:
@@ -1063,11 +1060,17 @@ def people_detection(host, extended_search, people_detect, show):
                 cv2.rectangle(frame, tl, br, (0, 255, 0), 3)
 
             if faces:
-                cv2.rectangle(frame, (x,y), (x+w,y+h), (0, 0, 255), 2)
-                cv2.line(frame, (x + w/2, y + h/2), (rows/2, cols/2), (255,0,0), 2)
-                frame[-100:,-100:] = resized_face
-                cv2.waitKey(1)
+                cv2.rectangle(frame, face.topleft, face.bottomright, (0, 0, 255), 2)
+                cv2.line(frame, face.center, (rows/2, cols/2), (255,0,0), 2)
 
+            if len(eyes) == 2:
+                for eye in eyes:
+                    cv2.rectangle(frame, eye.topleft, eye.bottomright, (255,0,0), 2)
+
+            if len(resized_face):
+                frame[-100:,-100:] = resized_face
+
+            cv2.waitKey(1)
             cv2.imshow(window_name, frame)
 
 
