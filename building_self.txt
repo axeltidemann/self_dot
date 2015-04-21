@@ -1,0 +1,24 @@
+The robot was built by modifying an off-the-shelf moving head for stage lighting (Stairville MH-X50), stripping it for all components except the motors. A video projector, usb camera, 2 microphones and a small speaker was mounted on the remaining motorized frame. Some practical issues were encountered in fitting all cabling through the
+“neck” of the moving head. The limited available space made it challenging to accomodate all necessary cabling (usb cable for camera, 2 microphone cables, power for the projector, speaker cable, and video). The wear and tear on cables due to head movement is problematic, especially for sensitive signals like HDMI and USB camera. No external signs of damage is observed, but it seems twisted shield cables will deteriorate due to mechanical stress in this situation and some
+more experimentation in this field may be necessary.
+
+Projector
+A projector of type InFocus 1110a was mounted on the moving head. It was chosen due to an appropriately powerful projection source and also for the practical consideration of an appropriate size to fit the available space from mounting.
+
+Speaker
+On top of the projector a satellite speaker is mounted (taken from a Boston Acoustics BA-635 kit). This provides playback of [self.]'s main voice
+
+Camera
+The camera (Logitech HD Webcam C525) was mounted on the projector, pointing in the opposite direction of the lens. This made it possible for the person interacting with [self.] to be in focus of the camera and observe the visual output at the same time.
+
+Microphones
+The microphones (Stageline ECM-250) were mounted in a simple X-Y stereo configuration, for the purpose of sensing the horizontal position of the sound source (person talking to [self.]). An additional acoustic absorber was placed between the microphones to enhance stereo separation, somewhat similar to the use of a Jecklin disk. One would normally use omnidirectional microphones for a Jecklin disk type recording setup, but these were here replaced with cardioid microphones to minimize ambient room noise and enhance directivity towards the interacting spectator.
+
+Secondary moving head
+A secondary moving head (not pictured) is placed a few metres from the main moving head. This is similar to the main head, except it only contains an ultrasonic speaker (Tarvo E-S 100). The purpose of an ultrasonic speaker is to create a tight sound beam, and we use the motorized head to direct this bean around the room. This speaker is used to play back [self.]’s secondary associations to the sounds it perceives, somewhat akin to ”what you think about while speaking”.
+
+Head movement control
+Head movement is controlled via an Arduino with a DMS shield. Sending DMX messages to the two moving heads, as is a standard way of communicating with stage lighting equipment.
+
+Other audio hardware
+Audio playback from the computer (running Ubuntu) is done via an RME Babyface audio interface.
