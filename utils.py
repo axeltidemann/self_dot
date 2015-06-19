@@ -1,6 +1,29 @@
 #!/usr/bin/python
 # -*- coding: latin-1 -*-
 
+#    Copyright 2014 Oeyvind Brandtsegg and Axel Tidemann
+#
+#    This file is part of [self.]
+#
+#    [self.] is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License version 3 
+#    as published by the Free Software Foundation.
+#
+#    [self.] is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with [self.].  If not, see <http://www.gnu.org/licenses/>.
+
+''' [self.]
+
+@author: Axel Tidemann, Øyvind Brandtsegg
+@contact: axel.tidemann@gmail.com, obrandts@gmail.com
+@license: GPL
+'''
+
 import os
 import wave
 import csv

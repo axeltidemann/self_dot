@@ -1,7 +1,14 @@
-self_dot
+self_dot 
+(also written [self.])
 ========
-
+	
 An artificial being. Uses evolution to write its own program.
+
+Copyright 2014 Oeyvind Brandtsegg and Axel Tidemann
+[self.] is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License version 3 
+as published by the Free Software Foundation.
+
 
 ## Requirements: 
 
