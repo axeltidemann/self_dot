@@ -44,7 +44,7 @@ def load(filename):
     print 'Part of brain loaded from file {} ({})'.format(filename, filesize(filename))
     return data
 
-brain_name = find_last_valid_brain()
+brain_name = 'BRAIN_2014_11_21_15_35_40'#find_last_valid_brain()
 
 print '*BRAIN*', brain_name
 
