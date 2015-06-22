@@ -19,14 +19,14 @@ VIDEO_SAMPLE_TIME = 100 # Milliseconds
 NAP_STRIDE = 441
 NAP_RATE = 22050
 
-FRAME_SIZE = (640,480)
+FRAME_SIZE = (800,600) #(640,480) # Directly corresponds to external monitor resolution
 
 def video():
     import cv2
 
     cv2.namedWindow('Output', cv2.WND_PROP_FULLSCREEN)
-    camera = cv2.VideoCapture(0)
-
+    camera = cv2.VideoCapture(0) # Selects appropriate camera input. Sometimes a bit fiddly whether 0 is internal camera or not.
+    
     context = zmq.Context()
     publisher = context.socket(zmq.PUB)
     publisher.bind('tcp://*:{}'.format(zmq_ports.CAMERA))
@@ -58,8 +58,11 @@ def video():
             cv2.imshow('Output', np.zeros(FRAME_SIZE[::-1]))
         
         _, frame = camera.read()
-        frame = cv2.resize(frame, FRAME_SIZE)
-        utils.send_array(publisher, frame)
+        try: 
+            frame = cv2.resize(frame, FRAME_SIZE)
+            utils.send_array(publisher, frame)
+        except:
+            utils.print_exception('Dropped frame.')
 
         cv2.waitKey(VIDEO_SAMPLE_TIME)
 

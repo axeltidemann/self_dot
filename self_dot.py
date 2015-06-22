@@ -19,7 +19,7 @@ import numpy as np
 import IO
 import utils
 import brain
-import robocontrol
+#import robocontrol
 import association
 import zmq_ports
 
@@ -371,14 +371,18 @@ if __name__ == '__main__':
     me = mp.current_process()
     print 'SELF MAIN PID', me.pid
 
+    # Problem under Mac to use external camera in a multiprocessing environment. Solution: start up the
+    # IO.video thread in a separate python command line launch, e.g. python video.py. See file hack_start.py.
+    # Embarassing, Apple.
+    #utils.MyProcess(target=IO.video, name='VIDEO IO').start()
+    
     utils.MyProcess(target=IO.audio, name='AUDIO IO').start() 
-    utils.MyProcess(target=IO.video, name='VIDEO IO').start()
     utils.MyProcess(target=brain.people_detection, args=('localhost',False,True), name='PEOPLE DETECTION').start()
     utils.MyProcess(target=brain.respond, args=('localhost','localhost',True), name='RESPONDER').start()
     utils.MyProcess(target=brain.learn_audio, args=('localhost',True), name='AUDIO LEARN').start()
     utils.MyProcess(target=brain.learn_video, args=('localhost',), name='VIDEO LEARN').start()
     utils.MyProcess(target=brain.learn_faces, args=('localhost',), name='FACES LEARN').start()
-    utils.MyProcess(target=robocontrol.robocontrol, args=('localhost',), name='ROBOCONTROL').start()
+    #utils.MyProcess(target=robocontrol.robocontrol, args=('localhost',), name='ROBOCONTROL').start() desperately trying stuff
     utils.MyProcess(target=association.association, args=('localhost',), name='ASSOCIATION').start()
     utils.MyProcess(target=brain.cognition, args=('localhost',), name='COGNITION').start()
     utils.MyProcess(target=utils.scheduler, args=('localhost',), name='SCHEDULER').start()

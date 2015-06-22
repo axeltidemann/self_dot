@@ -24,44 +24,46 @@ class NoSerial:
     def write(self, arg):
         pass
     
-try:
-    ser = serial.Serial("/dev/ttyUSB0", 9600, timeout=0)
-    serialAvailable = 1
-except:
-    ser = NoSerial()
-    serialAvailable = 0
-    print '*****************************************'
-    print 'Robot not connected or comunication error'
-    print '*****************************************'
-
-connected = False
-pan1 = 60
-tilt1 = 20
-pan2 = 30
-tilt2 = 45
-if serialAvailable:
-    while not connected:
-        serin = ser.read()
-        connected = True
-        print 'Robot connected'
-        
-    time.sleep(2)
-    print 'set initial position'
-    ser.write('t %03dn'%tilt1)
-    time.sleep(.2)
-    print '...' 
-    ser.write('p %03dn'%pan1)
-    time.sleep(.2)
-    print '...' 
-    ser.write('r %03dn'%tilt1)
-    time.sleep(.2)
-    print '...' 
-    ser.write('o %03dn'%pan1)
-    print '...' 
-    print 'initial position is set'
-    time.sleep(1)
-
 def robocontrol(host):
+
+    try:
+        # ser = serial.Serial("/dev/ttyUSB0", 9600, timeout=0) LINUX VERSION
+        ser = serial.Serial('/dev/tty.usbserial-A7006SVx', 9600, timeout=0) # MacBook Pro version
+        serialAvailable = 1
+    except:
+        ser = NoSerial()
+        serialAvailable = 0
+        print '*****************************************'
+        print 'Robot not connected or comunication error'
+        print '*****************************************'
+
+    connected = False
+    pan1 = 60
+    tilt1 = 20
+    pan2 = 30
+    tilt2 = 45
+    if serialAvailable:
+        while not connected:
+            serin = ser.read()
+            connected = True
+            print 'Robot connected'
+
+        time.sleep(2)
+        print 'set initial position'
+        ser.write('t %03dn'%tilt1)
+        time.sleep(.2)
+        print '...' 
+        ser.write('p %03dn'%pan1)
+        time.sleep(.2)
+        print '...' 
+        ser.write('r %03dn'%tilt1)
+        time.sleep(.2)
+        print '...' 
+        ser.write('o %03dn'%pan1)
+        print '...' 
+        print 'initial position is set'
+        time.sleep(1)
+
     context = zmq.Context()
 
     robo = context.socket(zmq.PULL)
@@ -79,7 +81,7 @@ def robocontrol(host):
     sender.connect('tcp://{}:{}'.format(host, zmq_ports.EXTERNAL))
 
     timeStamp = time.time()
-    global pan1, tilt1, pan2, tilt2
+    #global pan1, tilt1, pan2, tilt2
     time_reset_memrec = time.time()
     memrec_turnon = False
     memrec_turnoff = False
