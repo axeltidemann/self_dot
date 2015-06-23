@@ -28,7 +28,7 @@ def robocontrol(host):
 
     try:
         # ser = serial.Serial("/dev/ttyUSB0", 9600, timeout=0) LINUX VERSION
-        ser = serial.Serial('/dev/tty.usbserial-A7006SVx', 9600, timeout=0) # MacBook Pro version
+        ser = serial.Serial('/dev/cu.usbserial-A7006SVx', 9600, timeout=0) # MacBook Pro version
         serialAvailable = 1
     except:
         ser = NoSerial()

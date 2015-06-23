@@ -48,7 +48,7 @@ def video():
         if eventQ in events:
             pushbutton = eventQ.recv_json()
             if 'display2' in pushbutton:
-                cv2.moveWindow('Output', 2000, 100)
+                cv2.moveWindow('Output', 1438, 100)
             if 'fullscreen' in pushbutton:
                 cv2.setWindowProperty('Output', cv2.WND_PROP_FULLSCREEN, cv2.cv.CV_WINDOW_FULLSCREEN)
 

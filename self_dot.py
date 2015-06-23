@@ -19,7 +19,7 @@ import numpy as np
 import IO
 import utils
 import brain
-#import robocontrol
+import robocontrol
 import association
 import zmq_ports
 
@@ -372,8 +372,8 @@ if __name__ == '__main__':
     print 'SELF MAIN PID', me.pid
 
     # Problem under Mac to use external camera in a multiprocessing environment. Solution: start up the
-    # IO.video thread in a separate python command line launch, e.g. python video.py. See file hack_start.py.
-    # Embarassing, Apple.
+    # IO.video thread in a separate python command line launch, e.g. python video.py. See file hack_start.sh.
+    # Embarassing, Apple. But now glad we used ØMQ from the beginning, since this is super easy to do.
     #utils.MyProcess(target=IO.video, name='VIDEO IO').start()
     
     utils.MyProcess(target=IO.audio, name='AUDIO IO').start() 
@@ -382,7 +382,7 @@ if __name__ == '__main__':
     utils.MyProcess(target=brain.learn_audio, args=('localhost',True), name='AUDIO LEARN').start()
     utils.MyProcess(target=brain.learn_video, args=('localhost',), name='VIDEO LEARN').start()
     utils.MyProcess(target=brain.learn_faces, args=('localhost',), name='FACES LEARN').start()
-    #utils.MyProcess(target=robocontrol.robocontrol, args=('localhost',), name='ROBOCONTROL').start() desperately trying stuff
+    utils.MyProcess(target=robocontrol.robocontrol, args=('localhost',), name='ROBOCONTROL').start()
     utils.MyProcess(target=association.association, args=('localhost',), name='ASSOCIATION').start()
     utils.MyProcess(target=brain.cognition, args=('localhost',), name='COGNITION').start()
     utils.MyProcess(target=utils.scheduler, args=('localhost',), name='SCHEDULER').start()

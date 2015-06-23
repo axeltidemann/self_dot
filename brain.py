@@ -917,7 +917,7 @@ def cognition(host):
                  
 # LOOK AT EYES? CAN YOU DETERMINE ANYTHING FROM THEM?
 # PRESENT VISUAL INFORMATION - MOVE UP OR DOWN
-def people_detection(host, people_detect, show):
+def people_detection(host, full_frame, show):
     import cv2
     window_name = 'Input'
 
@@ -940,7 +940,6 @@ def people_detection(host, people_detect, show):
         cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
 
     face_detection_frame = 2
-    motor_command_frame = 1
     lost_track_counter = 0
     lost_track_counter_max = 20
     j = 0
@@ -1000,9 +999,9 @@ def people_detection(host, people_detect, show):
             utils.send_array(publisher, gray_face)
             lost_track_counter = 0
                 
-        # People detection
+        # Full frame people detection
         found_filtered = []
-        if people_detect:
+        if full_frame:
             found = list(cv2.cv.HOGDetectMultiScale(cv2.cv.fromarray(frame), storage, win_stride=(8,8), padding=(32,32), scale=1.05, group_threshold=2))
             for r in found:
                 insidef = False
